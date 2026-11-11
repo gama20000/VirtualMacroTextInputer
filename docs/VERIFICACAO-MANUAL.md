@@ -86,7 +86,7 @@ Preparação: abra o Bloco de Notas e use o conjunto **Predefinido**, em que 1 �
 | 36 | Preferências ▸ Tema ▸ Diurno | interface clara; barra de título preta com texto e botões legíveis (configuração, painel e caixas de diálogo) | ☐ |
 | 37 | Tema ▸ Noturno | interface e barra de título escuras | ☐ |
 | 38 | Tema ▸ Automático; mude o modo das aplicações no Windows (claro/escuro) | o Macropad acompanha em poucos segundos | ☐ |
-| 39 | Separadores | Macros · Preferências do painel · Âmbito · Preferências | ☐ |
+| 39 | Separadores | Macros · Painel · Âmbito · Preferências | ☐ |
 | 40 | Botões **Ativo**/**Suspenso**: clique e use Tab + Espaço | mudam o estado; foco visível; cores distintas | ☐ |
 | 41 | Preferências do painel: mude colunas, tamanho, cores, estilos | a pré-visualização muda logo; o painel real (se aberto) também | ☐ |
 | 42 | **Repor predefinição** | volta ao aspeto original | ☐ |
@@ -101,3 +101,16 @@ Preparação: abra o Bloco de Notas e use o conjunto **Predefinido**, em que 1 �
 | 51 | Restaurar uma macro cuja tecla está ocupada: Cancelar / Substituir | Cancelar não muda nada; Substituir troca as duas (a ativa vai para o arquivo) | ☐ |
 | 52 | Preferências ▸ Idioma ▸ English | toda a interface, menu do ícone e diálogos em inglês; títulos das macros inalterados | ☐ |
 | 53 | Feche e reabra o programa | tema, idioma e estilo do painel mantêm-se | ☐ |
+
+## Versão 0.3 — painel e seleção
+
+| # | Ação | Esperado | OK |
+|---|---|---|---|
+| 54 | Arraste uma macro ativa para baixo da linha «Arquivo» e largue | contorno tracejado ao passar; arquivada logo; teclas das outras não mudam | ☐ |
+| 55 | Ctrl+clique em 3 macros, depois Shift+clique noutra | seleção individual / intervalo; editor indica «n macros selecionadas» | ☐ |
+| 56 | Com várias selecionadas: arrastar para «Arquivo» | todas arquivadas | ☐ |
+| 57 | Com várias selecionadas: Delete | confirmação com a quantidade; Cancelar não apaga | ☐ |
+| 58 | Separador «Painel» com a janela maximizada | pré-visualização centrada e igual ao painel real | ☐ |
+| 59 | Botões Ativo/Suspenso no painel (com o cursor no Bloco de Notas) | mudam o estado; o Bloco de Notas mantém o foco; configuração e ícone acompanham | ☐ |
+| 60 | Roda do rato sobre o painel | para cima mais opaco, para baixo mais transparente; mostra «Opacidade n %»; outras janelas inalteradas | ☐ |
+| 61 | Caixas de verificação e setas dos campos numéricos (pasta com acentos/espaços) | visíveis e com o estado correto | ☐ |

@@ -19,8 +19,8 @@ from PySide6.QtWidgets import (QAbstractSpinBox, QApplication, QButtonGroup, QCh
 
 from ..core import macro_ops as ops
 from ..core.commands import CommandError, describe_steps, parse_action
-from ..core.configio import (ConfigError, Issue, macro_from_clipboard, macro_label,
-                             macro_to_clipboard, validate_macros)
+from ..core.configio import (ConfigError, Issue, macro_label, macros_from_clipboard,
+                             macros_to_clipboard, validate_macros)
 from ..core.keys import KeyBindingError, parse_binding
 from ..core.model import (MAX_INTERVAL_MS, MAX_REPEAT, PANEL_PRESETS, PANEL_RANGES, MacroSet,
                           PanelSettings, Settings, apply_preset, matching_preset)
@@ -29,7 +29,7 @@ from ..i18n import tr
 from . import theme
 from .dialogs import ask, get_text, info
 from .panel import PanelPreview
-from .widgets import KeyCaptureEdit, MacroGrid
+from .widgets import ArchiveDropZone, KeyCaptureEdit, MacroGrid
 
 if TYPE_CHECKING:
     from .app import MacropadApp
@@ -82,7 +82,8 @@ class ConfigWindow(QWidget):
         self.resize(700, 860)
         self.ms: Optional[MacroSet] = None       # cópia de trabalho do conjunto ativo
         self.settings: Settings = app.store.settings.clone()
-        self.cur = -1                            # índice real da macro selecionada
+        self.cur = -1                            # índice real da macro atual (editor)
+        self.selected: list[int] = []            # índices reais selecionados
         self._loading = False
         self._last_add = 0.0
         self._save_set_timer = QTimer(self, singleShot=True, interval=450,
@@ -136,7 +137,7 @@ class ConfigWindow(QWidget):
         # Estado: dois botões exclusivos, claramente clicáveis
         row.addWidget(QLabel(tr("state.label")))
         self.btn_on = QPushButton("●  " + tr("state.active"), objectName="stateOn")
-        self.btn_off = QPushButton("⏸  " + tr("state.suspended"), objectName="stateOff")
+        self.btn_off = QPushButton(theme.PAUSE + "  " + tr("state.suspended"), objectName="stateOff")
         grp = QButtonGroup(self)
         grp.setExclusive(True)
         for b in (self.btn_on, self.btn_off):
@@ -183,7 +184,7 @@ class ConfigWindow(QWidget):
         gl.setSpacing(8)
 
         self.grid = MacroGrid(self.pal)
-        self.grid.currentRowChanged.connect(lambda r: self._on_select(self.grid, r))
+        self.grid.itemSelectionChanged.connect(lambda: self._on_selection(self.grid))
         self.grid.reordered.connect(lambda o: self._on_reordered(False, o))
         gl.addWidget(self.grid)
         self.empty_label = QLabel(tr("macros.empty"), objectName="hint")
@@ -197,7 +198,12 @@ class ConfigWindow(QWidget):
         brow.addWidget(QLabel(tr("macros.drag_hint"), objectName="hint"))
         gl.addLayout(brow)
 
-        # divisória «Arquivo»
+        # divisória «Arquivo» — também é zona para largar macros a arquivar
+        self.archive_zone = ArchiveDropZone(self.pal)
+        self.archive_zone.archive_requested.connect(self._archive_indices)
+        zl = QVBoxLayout(self.archive_zone)
+        zl.setContentsMargins(8, 6, 8, 8)
+        zl.setSpacing(6)
         arow = QHBoxLayout()
         self.archive_title = QLabel(objectName="section")
         arow.addWidget(self.archive_title)
@@ -210,14 +216,17 @@ class ConfigWindow(QWidget):
         self.archive_search.setMinimumWidth(280)
         self.archive_search.textChanged.connect(lambda _t: self._refresh_grid())
         arow.addWidget(self.archive_search)
-        gl.addSpacing(6)
-        gl.addLayout(arow)
+        zl.addLayout(arow)
         self.archive_grid = MacroGrid(self.pal, archived=True)
-        self.archive_grid.currentRowChanged.connect(lambda r: self._on_select(self.archive_grid, r))
+        self.archive_grid.itemSelectionChanged.connect(lambda: self._on_selection(self.archive_grid))
         self.archive_grid.reordered.connect(lambda o: self._on_reordered(True, o))
-        gl.addWidget(self.archive_grid)
+        zl.addWidget(self.archive_grid)
         self.archive_empty = QLabel(objectName="hint")
-        gl.addWidget(self.archive_empty)
+        self.archive_empty.setMinimumHeight(48)
+        zl.addWidget(self.archive_empty)
+        zl.addWidget(QLabel(tr("archive.drop_hint"), objectName="hint", wordWrap=True))
+        gl.addSpacing(6)
+        gl.addWidget(self.archive_zone)
         gl.addStretch(1)
         scroll.setWidget(well)
         v.addWidget(scroll, 5)
@@ -261,6 +270,7 @@ class ConfigWindow(QWidget):
         clear.setToolTip(tr("field.no_key_tip"))
         clear.clicked.connect(lambda: self._on_key_captured(""))
         krow.addWidget(clear)
+        self.no_key_btn = clear
         form.addRow(tr("field.key"), krow)
 
         self.f_text = QPlainTextEdit()
@@ -377,7 +387,8 @@ class ConfigWindow(QWidget):
         self.p_show_icon = QCheckBox(tr("panel.show_icon"))
         self.p_show_key = QCheckBox(tr("panel.show_key"))
         self.p_show_status = QCheckBox(tr("panel.show_status"))
-        for cb in (self.p_show_icon, self.p_show_key, self.p_show_status):
+        self.p_show_controls = QCheckBox(tr("panel.show_controls"))
+        for cb in (self.p_show_icon, self.p_show_key, self.p_show_status, self.p_show_controls):
             cb.toggled.connect(self._on_panel_edit)
             show.addWidget(cb)
         show.addStretch(1)
@@ -397,6 +408,7 @@ class ConfigWindow(QWidget):
         orow.addWidget(self.p_opacity, 1)
         orow.addWidget(self.p_opacity_lbl)
         win.addRow(tr("panel.opacity"), orow)
+        win.addRow("", QLabel(tr("panel.wheel_tip"), objectName="hint", wordWrap=True))
         showp = QPushButton(tr("panel.toggle"))
         showp.clicked.connect(self.app.toggle_panel)
         win.addRow("", showp)
@@ -509,8 +521,10 @@ class ConfigWindow(QWidget):
             if not (0 <= self.cur < len(self.ms.macros)):
                 act = self.ms.active_indices()
                 self.cur = act[0] if act else (0 if self.ms.macros else -1)
+                self.selected = [self.cur] if self.cur >= 0 else []
         else:
             self.cur = -1
+            self.selected = []
         self._loading = True
         self.set_combo.clear()
         for s in sorted(st.sets.values(), key=lambda s: (s.nome.lower(), s.id)):
@@ -548,6 +562,7 @@ class ConfigWindow(QWidget):
         self.p_show_icon.setChecked(p.mostrar_icone)
         self.p_show_key.setChecked(p.mostrar_tecla)
         self.p_show_status.setChecked(p.mostrar_estado)
+        self.p_show_controls.setChecked(p.mostrar_controlos)
         self.p_ontop.setChecked(p.sempre_por_cima)
         self.p_opacity.setValue(round(p.opacidade * 100))
         self.p_opacity_lbl.setText(f"{round(p.opacidade * 100)} %")
@@ -599,14 +614,19 @@ class ConfigWindow(QWidget):
             self.editor.setEnabled(False)
             self.archive_title.setText(tr("archive.title", n=0))
             return
+        n = len(self.ms.macros)
+        self.selected = [i for i in self.selected if 0 <= i < n]
+        if not self.selected and 0 <= self.cur < n:
+            self.selected = [self.cur]
         bad = {i.macro_index for i in self._issues() if i.macro_index is not None}
         dups = ops.duplicate_groups(self.ms.macros)
         act = self.ms.active_indices()
         arch = self.ms.archived_indices()
         q = self.archive_search.text()
         shown = [i for i in arch if ops.matches_query(self.ms.macros[i], q)]
-        self.grid.set_tiles([self._tile(i, bad, dups) for i in act], self.cur)
-        self.archive_grid.set_tiles([self._tile(i, bad, dups) for i in shown], self.cur)
+        sel = set(self.selected)
+        self.grid.set_tiles([self._tile(i, bad, dups) for i in act], sel, self.cur)
+        self.archive_grid.set_tiles([self._tile(i, bad, dups) for i in shown], sel, self.cur)
         self.empty_label.setVisible(not act)
         self.grid.setVisible(bool(act))
         self.archive_title.setText(tr("archive.title", n=len(arch)))
@@ -614,20 +634,31 @@ class ConfigWindow(QWidget):
         self.archive_empty.setVisible(not shown)
         self.archive_empty.setText(tr("archive.no_results") if arch and q.strip()
                                    else tr("archive.empty"))
-        self.editor.setEnabled(0 <= self.cur < len(self.ms.macros))
+        self.editor.setEnabled(0 <= self.cur < n)
+
+    def _sel_macros(self) -> list:
+        if not self.ms:
+            return []
+        return [self.ms.macros[i] for i in self.selected if 0 <= i < len(self.ms.macros)]
+
+    def _multi(self) -> bool:
+        return len(self.selected) > 1
 
     def _load_editor(self) -> None:
         self._loading = True
         m = self._macro()
-        if m is None:
+        multi = self._multi()
+        for wdg in (self.f_title, self.f_key, self.f_text, self.f_repeat, self.f_interval,
+                    self.left_btn, self.right_btn, self.no_key_btn):
+            wdg.setEnabled(m is not None and not multi)
+        if m is None or multi:
             self.f_title.setText("")
             self.f_key.set_binding("")
             self.f_text.setPlainText("")
             self.f_preview.clear()
             self.f_error.clear()
             self.f_dup.clear()
-            self.editor_title.setText(tr("editor.none"))
-            self.editor.setEnabled(False)
+            self.editor.setEnabled(multi)
         else:
             self.editor.setEnabled(True)
             self.f_title.setText(m.titulo)
@@ -641,9 +672,21 @@ class ConfigWindow(QWidget):
 
     def _update_editor_header(self) -> None:
         m = self._macro()
-        archived = bool(m and m.arquivada)
-        self.editor_title.setText(tr("editor.header_archived" if archived else "editor.header"))
-        self.archive_btn.setText(tr("macros.restore") if archived else tr("macros.archive"))
+        if m is None:
+            self.editor_title.setText(tr("editor.none"))
+            return
+        archived = m.arquivada
+        if self._multi():
+            n = len(self.selected)
+            self.editor_title.setText(tr("editor.multi", n=n))
+            self.archive_btn.setText(tr("macros.restore_n", n=n) if archived
+                                     else tr("macros.archive_n", n=n))
+            self.del_btn.setToolTip(tr("macros.delete_n_tip", n=n))
+        else:
+            self.editor_title.setText(tr("editor.header_archived" if archived
+                                         else "editor.header"))
+            self.archive_btn.setText(tr("macros.restore") if archived else tr("macros.archive"))
+            self.del_btn.setToolTip(tr("macros.delete_tip"))
         self.archive_btn.setToolTip(tr("macros.restore_tip") if archived
                                     else tr("macros.archive_tip"))
 
@@ -655,7 +698,7 @@ class ConfigWindow(QWidget):
     def _update_preview_and_errors(self) -> list[Issue]:
         m = self._macro()
         issues = self._issues()
-        if m is not None:
+        if m is not None and not self._multi():
             if not m.texto:
                 self.f_preview.setText(tr("editor.empty_text"))
             else:
@@ -677,19 +720,27 @@ class ConfigWindow(QWidget):
         return issues
 
     # ============================================================ edição
-    def _on_select(self, grid: MacroGrid, row: int) -> None:
-        if row < 0 or self._loading:
+    def _on_selection(self, grid: MacroGrid) -> None:
+        """Seleção numa grelha (clique, Ctrl+clique, Shift+clique). A seleção
+        fica sempre numa só grelha (ativas ou arquivo)."""
+        if self._loading:
+            return
+        sel = grid.selected_real()
+        if not sel:
             return
         other = self.archive_grid if grid is self.grid else self.grid
         other.blockSignals(True)
         other.clearSelection()
         other.setCurrentRow(-1)
         other.blockSignals(False)
-        self.cur = grid.real_index(row)
+        self.selected = sel
+        cur_item = grid.currentItem()
+        ci = grid.real_index(grid.row(cur_item)) if cur_item is not None else -1
+        self.cur = ci if ci in sel else sel[0]
         self._load_editor()
 
     def _on_edit(self, *_):
-        if self._loading:
+        if self._loading or self._multi():
             return
         m = self._macro()
         if m is None:
@@ -702,7 +753,7 @@ class ConfigWindow(QWidget):
 
     def _on_key_captured(self, b: str) -> None:
         m = self._macro()
-        if m is None:
+        if m is None or self._multi():
             return
         m.tecla = b
         self.f_key.set_binding(b)
@@ -755,7 +806,11 @@ class ConfigWindow(QWidget):
             self._save_settings_now()
 
     def _select(self, real_index: int) -> None:
-        self.cur = real_index
+        self._select_many([real_index] if real_index >= 0 else [])
+
+    def _select_many(self, idxs: list[int]) -> None:
+        self.selected = list(idxs)
+        self.cur = idxs[0] if idxs else -1
         self._refresh_grid()
         self._load_editor()
 
@@ -774,12 +829,19 @@ class ConfigWindow(QWidget):
         self.f_text.setFocus()
 
     def _delete_macro(self) -> None:
-        m = self._macro()
-        if m is None:
+        """Elimina a macro selecionada, ou todas as selecionadas."""
+        targets = self._sel_macros()
+        if not targets:
             return
-        if self.app.store.settings.confirmar_eliminacao:
+        if len(targets) > 1:
+            # várias: confirmação sempre, com a quantidade
+            ok, _ = ask(self, tr("delete.many_title"), tr("delete.many_text", n=len(targets)),
+                        yes=tr("delete.confirm_n", n=len(targets)), danger=True)
+            if not ok:
+                return
+        elif self.app.store.settings.confirmar_eliminacao:
             ok, dont_ask = ask(self, tr("delete.title"),
-                               tr("delete.text", title=m.display_title()),
+                               tr("delete.text", title=targets[0].display_title()),
                                yes=tr("delete.confirm"), checkbox=tr("delete.dont_ask"),
                                danger=True)
             if not ok:
@@ -793,66 +855,95 @@ class ConfigWindow(QWidget):
                 self._loading = True
                 self.p_confirm.setChecked(False)
                 self._loading = False
-        was_archived = m.arquivada
-        del self.ms.macros[self.cur]
+        was_archived = targets[0].arquivada
+        first = min(self.selected)
+        ops.delete_many(self.ms, self.selected)
         group = self.ms.archived_indices() if was_archived else self.ms.active_indices()
-        self.cur = (max([i for i in group if i < self.cur], default=group[0] if group else -1))
-        self._select(self.cur)
+        nxt = max([i for i in group if i < first], default=group[0] if group else -1)
+        self._select(nxt)
         self._changed()
-        self.show_status(tr("status.deleted"))
+        self.show_status(tr("status.deleted") if len(targets) == 1
+                         else tr("status.deleted_n", n=len(targets)))
 
     def _move(self, delta: int) -> None:
-        if self._macro() is None:
+        if self._macro() is None or self._multi():
             return
-        self.cur = ops.move(self.ms, self.cur, delta)
-        self._refresh_grid()
+        self._select(ops.move(self.ms, self.cur, delta))
         self._changed()
 
     def _on_reordered(self, archived: bool, order: list) -> None:
         if not self.ms:
             return
+        sel = self._sel_macros()
         cur_macro = self._macro()
         ops.reorder_group(self.ms, archived, order)
+        self.selected = [ops.index_of(self.ms, m) for m in sel]
         if cur_macro is not None:
-            self.cur = next(i for i, m in enumerate(self.ms.macros) if m is cur_macro)
+            self.cur = ops.index_of(self.ms, cur_macro)
         self._refresh_grid()
         self._changed()
 
-    def _toggle_archive(self) -> None:
-        m = self._macro()
-        if m is None:
+    def _archive_indices(self, idxs: list[int]) -> None:
+        """Arquiva as macros ativas indicadas (botão, menu ou arrasto)."""
+        if not self.ms:
             return
-        if not m.arquivada:
-            self._select(ops.archive(self.ms, self.cur))
-            self._changed()
-            self.show_status(tr("status.archived", title=m.display_title()))
+        idxs = [i for i in idxs if 0 <= i < len(self.ms.macros) and not self.ms.macros[i].arquivada]
+        if not idxs:
             return
-        j = ops.key_conflict(self.ms, self.cur)
-        if j is None:
-            self._select(ops.restore(self.ms, self.cur))
-        else:
-            other = self.ms.macros[j]
-            ok, _ = ask(self, tr("restore.title"),
-                        tr("restore.conflict", key=m.tecla, title=m.display_title(),
-                           other=other.display_title()),
-                        yes=tr("restore.replace"))
-            if not ok:
-                return
-            self._select(ops.restore_replacing(self.ms, self.cur, j))
+        titles = [self.ms.macros[i].display_title() for i in idxs]
+        self._select_many(ops.archive_many(self.ms, idxs))
         self._changed()
-        self.show_status(tr("status.restored", title=m.display_title()))
+        self.show_status(tr("status.archived", title=titles[0]) if len(titles) == 1
+                         else tr("status.archived_n", n=len(titles)))
+
+    def _restore_indices(self, idxs: list[int]) -> None:
+        """Restaura macros arquivadas, pedindo confirmação em caso de conflito
+        de tecla (Substituir troca-a com a ativa; Cancelar não altera essa)."""
+        targets = [self.ms.macros[i] for i in idxs if self.ms.macros[i].arquivada]
+        restored = []
+        for m in targets:
+            i = ops.index_of(self.ms, m)
+            j = ops.key_conflict(self.ms, i)
+            if j is None:
+                ops.restore(self.ms, i)
+            else:
+                other = self.ms.macros[j]
+                ok, _ = ask(self, tr("restore.title"),
+                            tr("restore.conflict", key=m.tecla, title=m.display_title(),
+                               other=other.display_title()),
+                            yes=tr("restore.replace"))
+                if not ok:
+                    continue
+                ops.restore_replacing(self.ms, i, j)
+            restored.append(m)
+        if not restored:
+            return
+        self._select_many([ops.index_of(self.ms, m) for m in restored])
+        self._changed()
+        self.show_status(tr("status.restored", title=restored[0].display_title())
+                         if len(restored) == 1 else tr("status.restored_n", n=len(restored)))
+
+    def _toggle_archive(self) -> None:
+        targets = self._sel_macros()
+        if not targets:
+            return
+        if targets[0].arquivada:
+            self._restore_indices(list(self.selected))
+        else:
+            self._archive_indices(list(self.selected))
 
     # ------------------------------------------------------- copiar / colar
     def _copy_macro(self) -> None:
-        m = self._macro()
-        if m is None:
+        targets = self._sel_macros()
+        if not targets:
             return
-        data = macro_to_clipboard(m)
+        data = macros_to_clipboard(targets)
         mime = QMimeData()
         mime.setData(MIME_MACRO, data.encode("utf-8"))
         mime.setText(data)
         QApplication.clipboard().setMimeData(mime)
-        self.show_status(tr("status.copied", title=m.display_title()))
+        self.show_status(tr("status.copied", title=targets[0].display_title())
+                         if len(targets) == 1 else tr("status.copied_n", n=len(targets)))
 
     def _paste_macro(self) -> None:
         if not self.ms:
@@ -863,14 +954,21 @@ class ConfigWindow(QWidget):
             text = bytes(mime.data(MIME_MACRO)).decode("utf-8")
         elif mime is not None and mime.hasText():
             text = mime.text()
-        m = macro_from_clipboard(text) if text else None
-        if m is None:
+        macros = macros_from_clipboard(text) if text else []
+        if not macros:
             self.show_status(tr("status.nothing_to_paste"), error=True)
             return
-        after = self.cur if self._macro() is not None and not self._macro().arquivada else None
-        self._select(ops.insert_copy(self.ms, m, after))
+        actives = [i for i in self.selected if not self.ms.macros[i].arquivada]
+        after = max(actives) if actives else None
+        new = []
+        for m in macros:
+            pos = ops.insert_copy(self.ms, m, after)
+            new.append(self.ms.macros[pos])
+            after = pos
+        self._select_many([ops.index_of(self.ms, m) for m in new])
         self._changed()
-        self.show_status(tr("status.pasted", title=m.display_title()))
+        self.show_status(tr("status.pasted", title=macros[0].display_title())
+                         if len(macros) == 1 else tr("status.pasted_n", n=len(macros)))
 
     def eventFilter(self, obj: QObject, e: QEvent) -> bool:
         """Atalhos da grelha: Delete/Backspace elimina, Ctrl+C copia, Ctrl+V cola.
@@ -881,13 +979,16 @@ class ConfigWindow(QWidget):
         fw = QApplication.focusWidget()
         if fw is None or fw.window() is not self or _is_editable(fw):
             return False
-        if self.tabs.currentIndex() != 0 or self._macro() is None and not e.matches(QKeySequence.Paste):
+        if self.tabs.currentIndex() != 0:
             return False
+        has_sel = bool(self._sel_macros())
         if e.key() in (Qt.Key_Delete, Qt.Key_Backspace) and not (
                 e.modifiers() & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier)):
-            QTimer.singleShot(0, self._delete_macro)
-            return True
-        if e.matches(QKeySequence.Copy):
+            if has_sel:
+                QTimer.singleShot(0, self._delete_macro)
+                return True
+            return False
+        if e.matches(QKeySequence.Copy) and has_sel:
             self._copy_macro()
             return True
         if e.matches(QKeySequence.Paste):
@@ -940,6 +1041,7 @@ class ConfigWindow(QWidget):
         p.mostrar_icone = self.p_show_icon.isChecked()
         p.mostrar_tecla = self.p_show_key.isChecked()
         p.mostrar_estado = self.p_show_status.isChecked()
+        p.mostrar_controlos = self.p_show_controls.isChecked()
         p.sempre_por_cima = self.p_ontop.isChecked()
         p.opacidade = self.p_opacity.value() / 100
         self.p_opacity_lbl.setText(f"{self.p_opacity.value()} %")
@@ -1022,6 +1124,7 @@ class ConfigWindow(QWidget):
         if sid and sid != self.app.engine.active_set_id:
             self.flush()
             self.cur = -1
+            self.selected = []
             self.app.select_set(sid)
 
     def _new_set(self) -> None:
@@ -1031,6 +1134,7 @@ class ConfigWindow(QWidget):
             ms = self.app.store.create_set(name)
             self.app.apply_config()
             self.cur = -1
+            self.selected = []
             self.app.select_set(ms.id)
 
     def _dup_set(self) -> None:
@@ -1064,6 +1168,7 @@ class ConfigWindow(QWidget):
         self.app.store.delete_set(self.ms.id)
         self.app.apply_config()
         self.cur = -1
+        self.selected = []
         self.reload_from_store(tr("status.set_deleted"))
 
     def _import_set(self) -> None:

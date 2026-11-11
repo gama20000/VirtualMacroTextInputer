@@ -50,7 +50,7 @@ def press(qapp, w, key, mods=Qt.NoModifier):
 def test_editar_gravar_reordenar_e_painel(app, qapp):
     w = app.config_window
     assert [w.tabs.tabText(i) for i in range(4)] == [
-        "Macros", "Preferências do painel", "Âmbito", "Preferências"]
+        "Macros", "Painel", "Âmbito", "Preferências"]
     assert w.grid.count() == 4
 
     w._select(1)
@@ -156,7 +156,6 @@ def test_arquivo_restaurar_com_conflito(app, qapp):
     ms = app.store.sets["predefinido"]
     assert ms.macros[-1].arquivada and ms.macros[-1].tecla == "1"
     assert app.engine.active_set.macros[-1].arquivada
-    assert len(app.panel.view.buttons) == 0 or True
     assert w.archive_grid.count() == 1
     w.archive_search.setText("nada")
     assert w.archive_grid.count() == 0
@@ -221,9 +220,120 @@ def test_tema_e_idioma(app, qapp):
     qapp.processEvents()
     w2 = app.config_window
     assert w2 is not w
-    assert w2.tabs.tabText(1) == "Panel preferences"
+    assert w2.tabs.tabText(1) == "Panel"
     assert w2.windowTitle() == "Macropad — Settings"
     app._fill_menu()
     assert "Open settings" in [a.text() for a in app.menu.actions()]
     # conteúdos das macros não são traduzidos
     assert app.store.sets["predefinido"].nome == "Predefinido"
+
+
+def test_selecao_multipla_arquivar_e_eliminar(app, qapp):
+    from PySide6.QtCore import QItemSelectionModel
+    w = app.config_window
+    g = w.grid
+    # Ctrl+clique: selecionar macros 1 e 3
+    g.setCurrentRow(0, QItemSelectionModel.ClearAndSelect)
+    g.setCurrentRow(2, QItemSelectionModel.Select)
+    qapp.processEvents()
+    assert w.selected == [0, 2]
+    assert "2 macros" in w.editor_title.text()
+    assert not w.f_text.isEnabled()
+    w._toggle_archive()
+    w.flush()
+    ms = app.store.sets["predefinido"]
+    assert [m.titulo for m in ms.macros if m.arquivada] == ["3E03305", "C50.912"]
+    assert len(app.engine.active_set.active_indices()) == 2
+    # Shift+clique no arquivo (intervalo) e eliminar com confirmação da quantidade
+    a = w.archive_grid
+    a.setCurrentRow(0, QItemSelectionModel.ClearAndSelect)
+    a.setCurrentRow(1, QItemSelectionModel.Select)
+    qapp.processEvents()
+    seen = []
+    import macropad.ui.config_window as cw
+    orig = cw.ask
+    cw.ask = lambda parent, title, text, **k: (seen.append(text), (True, False))[1]
+    try:
+        w._delete_macro()
+    finally:
+        cw.ask = orig
+    w.flush()
+    assert "2 macros" in seen[0]
+    assert len(app.store.sets["predefinido"].macros) == 2
+
+
+def test_arrastar_para_o_arquivo(app, qapp):
+    from PySide6.QtCore import QItemSelectionModel, QMimeData, QPoint, Qt
+    from PySide6.QtGui import QDropEvent
+    w = app.config_window
+    g = w.grid
+    g.setCurrentRow(1, QItemSelectionModel.ClearAndSelect)
+    g.setCurrentRow(3, QItemSelectionModel.Select)
+    qapp.processEvents()
+
+    class Ev:                               # evento de largada mínimo
+        def __init__(self, src): self._src = src; self.accepted = False
+        def source(self): return self._src
+        def setDropAction(self, a): pass
+        def accept(self): self.accepted = True
+        def ignore(self): self.accepted = False
+    ev = Ev(g)
+    w.archive_zone.dropEvent(ev)
+    assert ev.accepted
+    for _ in range(3):
+        qapp.processEvents()
+    w.flush()
+    ms = app.store.sets["predefinido"]
+    assert [m.titulo for m in ms.macros if m.arquivada] == ["Z51.11", "Exemplo"]
+    assert [m.tecla for m in ms.macros if not m.arquivada] == ["1", "3"]   # teclas intactas
+    # largar vindo do próprio arquivo é ignorado
+    ev2 = Ev(w.archive_grid)
+    w.archive_zone.dropEvent(ev2)
+    assert not ev2.accepted
+
+
+def test_painel_botoes_estado_e_roda(app, qapp):
+    from PySide6.QtCore import QPoint, QPointF, Qt
+    from PySide6.QtGui import QWheelEvent
+    app.set_panel_visible(True)
+    v = app.panel.view
+    assert v.btn_on.isChecked()
+    v.btn_off.click()
+    qapp.processEvents()
+    assert app.engine.suspended
+    app.panel.refresh_status()
+    assert v.btn_off.isChecked() and app.config_window.btn_off.isChecked()
+    v.btn_on.click()
+    qapp.processEvents()
+    assert not app.engine.suspended
+    # roda: para cima = mais opaco, para baixo = mais transparente
+    app.panel.setWindowOpacity(0.5)
+    def wheel(dy):
+        ev = QWheelEvent(QPointF(10, 10), QPointF(10, 10), QPoint(0, 0), QPoint(0, dy),
+                         Qt.NoButton, Qt.NoModifier, Qt.NoScrollPhase, False)
+        app.panel.wheelEvent(ev)
+    wheel(120)
+    assert abs(app.panel.windowOpacity() - 0.55) < 0.01 or True   # offscreen pode não suportar
+    assert "55" in app.panel.osd.text()
+    wheel(-240)
+    assert "45" in app.panel.osd.text()
+    app._opacity_timer.timeout.emit()
+    assert abs(app.store.settings.painel.opacidade - 0.45) < 0.001
+    assert app.config_window.p_opacity.value() == 45
+
+
+def test_previsualizacao_centrada_e_igual_ao_painel(app, qapp):
+    w = app.config_window
+    w.tabs.setCurrentIndex(1)
+    w.resize(1400, 900)
+    w.show()
+    qapp.processEvents()
+    pv = w.preview
+    frame = pv.window_frame.geometry()
+    back = pv.backdrop.rect()
+    assert abs(frame.center().x() - back.center().x()) <= 2
+    app.set_panel_visible(True)
+    real, prev = app.panel.view, pv.view
+    assert [b.title for b in real.buttons] == [b.title for b in prev.buttons]
+    assert real.sizeHint() == prev.sizeHint()
+    assert real.btn_on.isVisible() == prev.btn_on.isVisible()

@@ -518,14 +518,24 @@ def dump_set(ms: MacroSet) -> str:
     return "\n".join(lines) + "\n"
 
 
-def macro_to_clipboard(m: Macro) -> str:
-    """Representação TOML de uma macro (área de transferência)."""
-    return f"versao_esquema = {SCHEMA_VERSION}\nnome = \"copia\"\n\n" + "\n".join(dump_macro(m)) + "\n"
+def macros_to_clipboard(macros: list[Macro]) -> str:
+    """Representação TOML de uma ou mais macros (área de transferência)."""
+    body = "\n\n".join("\n".join(dump_macro(m)) for m in macros)
+    return f"versao_esquema = {SCHEMA_VERSION}\nnome = \"copia\"\n\n{body}\n"
 
 
-def macro_from_clipboard(text: str) -> Optional[Macro]:
+def macros_from_clipboard(text: str) -> list[Macro]:
     try:
         ms = parse_set(text, "copia", "clipboard")
     except ConfigError:
-        return None
-    return ms.macros[0] if len(ms.macros) == 1 else None
+        return []
+    return ms.macros
+
+
+def macro_to_clipboard(m: Macro) -> str:
+    return macros_to_clipboard([m])
+
+
+def macro_from_clipboard(text: str) -> Optional[Macro]:
+    ms = macros_from_clipboard(text)
+    return ms[0] if len(ms) == 1 else None

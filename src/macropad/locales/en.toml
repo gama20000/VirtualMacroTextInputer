@@ -131,11 +131,14 @@ off_tip = "Suspend all macros (suspend hotkey: {hotkey})"
 
 [tab]
 macros = "Macros"
-panel = "Panel preferences"
+panel = "Panel"
 scope = "Scope"
 prefs = "Preferences"
 
 [macros]
+delete_n_tip = "Delete the {n} selected macros (Delete)"
+restore_n = "Restore ({n})"
+archive_n = "Archive ({n})"
 empty = "No active macros yet. Create one with «New macro»."
 new = "New macro"
 new_title = "New macro"
@@ -147,15 +150,17 @@ archive_tip = "Remove from keys and panel without deleting"
 restore = "Restore"
 restore_tip = "Make this macro active again"
 delete_tip = "Delete macro (Delete)"
-commands_hint = "Commands: <b>{{Enter}}</b> · <b>{{Tab}}</b> · <b>{{Delay:500}}</b> (ms). Line breaks count as {{Enter}}. With a macro selected: Delete removes it, Ctrl+C copies, Ctrl+V pastes."
+commands_hint = "Commands: <b>{{Enter}}</b> · <b>{{Tab}}</b> · <b>{{Delay:500}}</b> (ms). Line breaks count as {{Enter}}. Ctrl+click / Shift+click select several macros; Delete removes, Ctrl+C copies, Ctrl+V pastes; drag to «Archive» to archive."
 
 [archive]
+drop_hint = "Drag macros into this area to archive them."
 title = "Archive ({n})"
 search = "Search the archive (title, text, key)"
 empty = "The archive is empty."
 no_results = "No archived macro matches the search."
 
 [editor]
+multi = "<b>{n} macros selected</b> — archive or delete them together (Ctrl+click / Shift+click)."
 header = "<b>System:</b>&nbsp; Text"
 header_archived = "<b>System:</b>&nbsp; Text &nbsp;·&nbsp; <i>archived</i>"
 none = "No macro selected"
@@ -182,6 +187,9 @@ no_key = "(none)"
 has_error = "Has errors (see editor)."
 
 [delete]
+confirm_n = "Delete {n}"
+many_text = "Delete {n} selected macros? This cannot be undone."
+many_title = "Delete macros"
 title = "Delete macro"
 text = "Delete the macro «{title}»? This cannot be undone."
 confirm = "Delete"
@@ -193,6 +201,9 @@ conflict = "Key {key} is already assigned to the active macro «{other}».\n\nRe
 replace = "Replace"
 
 [panel]
+opacity_osd = "Opacity {pct} %"
+wheel_tip = "Tip: with the pointer over the panel, the mouse wheel adjusts transparency (up = more opaque)."
+show_controls = "Show Active/Suspended buttons"
 preview = "Preview"
 style = "Style:"
 reset = "Restore default"
@@ -279,6 +290,11 @@ export_title = "Export set"
 toml_filter = "Macropad sets (*.toml)"
 
 [status]
+pasted_n = "{n} macros pasted."
+copied_n = "{n} macros copied."
+restored_n = "{n} macros restored."
+archived_n = "{n} macros moved to the archive."
+deleted_n = "{n} macros deleted."
 fix_errors = "Unsaved changes: fix the errors shown."
 saving = "Saving…"
 saved = "Saved."

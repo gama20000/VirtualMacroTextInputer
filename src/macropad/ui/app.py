@@ -137,6 +137,7 @@ class MacropadApp(QObject):
         if getattr(self, "config_window", None) is not None:
             self.config_window.grid.pal = pal
             self.config_window.archive_grid.pal = pal
+            self.config_window.archive_zone.pal = pal
             self.config_window.reload_from_store()
 
     def _poll_system_theme(self) -> None:
@@ -252,6 +253,29 @@ class MacropadApp(QObject):
 
     def toggle_panel(self) -> None:
         self.set_panel_visible(not self.panel.isVisible())
+
+    def set_panel_opacity(self, value: float) -> None:
+        """Transparência alterada com a roda do rato: grava (agrupando
+        alterações rápidas) e atualiza a configuração, se estiver aberta."""
+        self._pending_opacity = value
+        if not hasattr(self, "_opacity_timer"):
+            self._opacity_timer = QTimer(self, singleShot=True, interval=600,
+                                         timeout=self._save_panel_opacity)
+        self._opacity_timer.start()
+        w = self.config_window
+        if w is not None:
+            w.settings.painel.opacidade = value
+            w._loading = True
+            w.p_opacity.setValue(round(value * 100))
+            w.p_opacity_lbl.setText(f"{round(value * 100)} %")
+            w._loading = False
+            w._update_preview()
+
+    def _save_panel_opacity(self) -> None:
+        s = self.store.settings.clone()
+        s.painel.opacidade = self._pending_opacity
+        if not self.store.save_settings(s):
+            self.engine.set_config(self.store.config())
 
     def preview_panel_settings(self, p: PanelSettings) -> None:
         """Mostra as alterações no painel real (se visível) antes de gravar."""

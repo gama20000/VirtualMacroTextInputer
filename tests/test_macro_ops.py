@@ -85,3 +85,18 @@ def test_predefinicoes_do_painel():
     assert matching_preset(neon) == "neon"
     back = apply_preset(neon, "predefinido")
     assert back == PanelSettings(colunas=6, opacidade=0.5)
+
+
+def test_arquivar_e_eliminar_varias():
+    ms = mk(Macro("A"), Macro("B"), Macro("C"), Macro("D"), Macro("Z", arquivada=True))
+    new = ops.archive_many(ms, [2, 0])
+    assert titles(ms) == [("B", False), ("D", False), ("A", True), ("C", True), ("Z", True)]
+    assert new == [2, 3]
+    ops.delete_many(ms, [0, 3])
+    assert [m.titulo for m in ms.macros] == ["D", "A", "Z"]
+
+
+def test_copiar_varias():
+    from macropad.core.configio import macros_from_clipboard, macros_to_clipboard
+    ms = [Macro("A", "1", "a"), Macro("B", "", "b{Enter}", 2, 100)]
+    assert macros_from_clipboard(macros_to_clipboard(ms)) == ms

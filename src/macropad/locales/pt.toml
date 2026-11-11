@@ -132,11 +132,14 @@ off_tip = "Suspender todas as macros (tecla de suspensão: {hotkey})"
 
 [tab]
 macros = "Macros"
-panel = "Preferências do painel"
+panel = "Painel"
 scope = "Âmbito"
 prefs = "Preferências"
 
 [macros]
+delete_n_tip = "Eliminar as {n} macros selecionadas (Delete)"
+restore_n = "Restaurar ({n})"
+archive_n = "Arquivar ({n})"
 empty = "Ainda não há macros ativas. Crie uma com «Nova macro»."
 new = "Nova macro"
 new_title = "Nova macro"
@@ -148,15 +151,17 @@ archive_tip = "Retirar das teclas e do painel sem apagar"
 restore = "Restaurar"
 restore_tip = "Voltar a ativar esta macro"
 delete_tip = "Eliminar macro (Delete)"
-commands_hint = "Comandos: <b>{{Enter}}</b> · <b>{{Tab}}</b> · <b>{{Delay:500}}</b> (ms). Quebras de linha equivalem a {{Enter}}. Com uma macro selecionada: Delete elimina, Ctrl+C copia, Ctrl+V cola."
+commands_hint = "Comandos: <b>{{Enter}}</b> · <b>{{Tab}}</b> · <b>{{Delay:500}}</b> (ms). Quebras de linha equivalem a {{Enter}}. Ctrl+clique / Shift+clique selecionam várias macros; Delete elimina, Ctrl+C copia, Ctrl+V cola; arraste para «Arquivo» para arquivar."
 
 [archive]
+drop_hint = "Arraste macros para esta área para as arquivar."
 title = "Arquivo ({n})"
 search = "Pesquisar no arquivo (título, texto, tecla)"
 empty = "O arquivo está vazio."
 no_results = "Nenhuma macro arquivada corresponde à pesquisa."
 
 [editor]
+multi = "<b>{n} macros selecionadas</b> — arquivar ou eliminar em conjunto (Ctrl+clique / Shift+clique)."
 header = "<b>Sistema:</b>&nbsp; Texto"
 header_archived = "<b>Sistema:</b>&nbsp; Texto &nbsp;·&nbsp; <i>arquivada</i>"
 none = "Nenhuma macro selecionada"
@@ -183,6 +188,9 @@ no_key = "(nenhuma)"
 has_error = "Tem erros (ver editor)."
 
 [delete]
+confirm_n = "Eliminar {n}"
+many_text = "Eliminar {n} macros selecionadas? Esta ação não pode ser anulada."
+many_title = "Eliminar macros"
 title = "Eliminar macro"
 text = "Eliminar a macro «{title}»? Esta ação não pode ser anulada."
 confirm = "Eliminar"
@@ -194,6 +202,9 @@ conflict = "A tecla {key} já está atribuída à macro ativa «{other}».\n\nRe
 replace = "Substituir"
 
 [panel]
+opacity_osd = "Opacidade {pct} %"
+wheel_tip = "Dica: com o ponteiro sobre o painel, a roda do rato ajusta a transparência (para cima = mais opaco)."
+show_controls = "Mostrar botões Ativo/Suspenso"
 preview = "Pré-visualização"
 style = "Estilo:"
 reset = "Repor predefinição"
@@ -280,6 +291,11 @@ export_title = "Exportar conjunto"
 toml_filter = "Conjuntos Macropad (*.toml)"
 
 [status]
+pasted_n = "{n} macros coladas."
+copied_n = "{n} macros copiadas."
+restored_n = "{n} macros restauradas."
+archived_n = "{n} macros foram para o arquivo."
+deleted_n = "{n} macros eliminadas."
 fix_errors = "Alterações por gravar: corrija os erros indicados."
 saving = "A gravar…"
 saved = "Guardado."

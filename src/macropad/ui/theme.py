@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QDir, Qt
 from PySide6.QtGui import QColor, QIcon, QPalette, QPixmap
 
 
@@ -70,11 +70,14 @@ def palette_for(theme: str, system_dark: bool | None) -> Palette:
 
 
 def stylesheet(p: Palette) -> str:
-    a = assets_dir()
-    check = (a / "check_white.png").as_posix()
+    # As imagens são referidas por um prefixo de pesquisa ("mpad:"), porque o
+    # caminho real pode ter espaços, parênteses e acentos, que o url() das
+    # folhas de estilo do Qt não aceita.
+    QDir.setSearchPaths("mpad", [str(assets_dir())])
+    check = "mpad:check_white.png"
     tone = "light" if p.dark else "dark"
-    up = (a / f"arrow_up_{tone}.png").as_posix()
-    down = (a / f"arrow_down_{tone}.png").as_posix()
+    up = f"mpad:arrow_up_{tone}.png"
+    down = f"mpad:arrow_down_{tone}.png"
     return f"""
 QWidget {{ background: {p.bg}; color: {p.text}; font-family: "Segoe UI", "Noto Sans", sans-serif; font-size: 10pt; }}
 QWidget#well, QListWidget#grid {{ background: {p.well}; }}
@@ -92,6 +95,8 @@ QLineEdit, QPlainTextEdit, QSpinBox, QComboBox, QListWidget#apps {{
     padding: 4px 6px; selection-background-color: {p.accent}; selection-color: {p.accent_text}; }}
 QLineEdit:focus, QPlainTextEdit:focus, QSpinBox:focus, QComboBox:focus, QListWidget#apps:focus {{
     border: 1px solid {p.accent}; }}
+QLineEdit:disabled, QPlainTextEdit:disabled, QSpinBox:disabled {{ background: {p.well}; color: {p.muted};
+    border-color: {p.border}; }}
 QLineEdit#keycapture[capturing="true"] {{ border: 2px solid {p.warn}; }}
 QComboBox QAbstractItemView {{ background: {p.input}; color: {p.text};
     selection-background-color: {p.accent}; selection-color: {p.accent_text}; }}
@@ -197,3 +202,19 @@ def tray_icon(suspended: bool) -> QIcon:
 
 def logo_pixmap(size: int) -> QPixmap:
     return _pixmap("logo.png").scaled(size, size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+
+
+def state_button_css(p: Palette, fg: str, border: str, small: bool = False) -> str:
+    """Estilo dos botões Ativo/Suspenso (usado no painel, com fundo próprio)."""
+    pad = "2px 9px" if small else "5px 16px"
+    size = "font-size: 8.5pt;" if small else ""
+    return f"""
+QPushButton#stateOn, QPushButton#stateOff {{ border-radius: 10px; padding: {pad}; {size}
+    font-weight: 600; background: transparent; color: {fg}; border: 1px solid {border}; }}
+QPushButton#stateOn:hover, QPushButton#stateOff:hover {{ border-color: {fg}; }}
+QPushButton#stateOn:checked {{ background: {p.ok}; color: #ffffff; border: 1px solid {p.ok}; }}
+QPushButton#stateOff:checked {{ background: {p.error}; color: #ffffff; border: 1px solid {p.error}; }}
+"""
+
+
+PAUSE = "\u23F8\uFE0E"      # ⏸ como símbolo de texto (não emoji)

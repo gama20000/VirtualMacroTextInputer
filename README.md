@@ -50,27 +50,32 @@ Os testes cobrem a interpretação de comandos, as teclas e os modificadores, as
   - **Nova macro** acrescenta uma única macro, sem tecla e com o texto vazio, e põe o cursor no campo **Texto**.
   - **Vermelho** (selo «!») indica um erro, incluindo um *conflito de tecla*, quando duas macros ativas têm a mesma tecla. Os erros não são gravados.
   - **Amarelo** (selo «=») indica *conteúdo duplicado*: macros com a mesma sequência de texto e comandos, mesmo que tenham títulos ou teclas diferentes (`{enter}`, `{Enter}` e uma quebra de linha contam como iguais). Passe o rato por cima do botão, ou veja a linha amarela no editor, para saber com que macros coincide. Os duplicados são apenas um aviso e são gravados.
-- *Preferências do painel*: estilo, colunas, tamanho dos botões, espaçamento, arredondamento, borda, tamanho do texto, cores (botão, texto, borda, fundo), elementos visíveis (ícone, tecla, barra de estado), «sempre por cima» e opacidade. A **pré-visualização** usa o mesmo desenho da janela real e atualiza-se a cada alteração, sem abrir o painel. Há estilos predefinidos (Predefinido, Compacto, Grande, Claro, Néon, Redondo, Minimalista). **Repor predefinição** volta ao aspeto original sem mexer nas colunas, na opacidade nem em «sempre por cima».
+- *Painel*: estilo, colunas, tamanho dos botões, espaçamento, arredondamento, borda, tamanho do texto, cores (botão, texto, borda, fundo), elementos visíveis (ícone, tecla, barra de estado, botões Ativo/Suspenso), «sempre por cima» e opacidade. A **pré-visualização**, centrada, usa o mesmo desenho do painel real (incluindo os botões Ativo/Suspenso) e atualiza-se a cada alteração, sem abrir o painel. Há estilos predefinidos (Predefinido, Compacto, Grande, Claro, Néon, Redondo, Minimalista). **Repor predefinição** volta ao aspeto original sem mexer nas colunas, na opacidade nem em «sempre por cima».
 - *Âmbito*: o conjunto funciona em todas as aplicações ou só nas aplicações indicadas, identificadas pelo executável, por exemplo `notepad.exe`. Fora delas, as teclas funcionam normalmente e o painel não envia texto.
 - *Preferências*: tema, idioma, arranque com o Windows, confirmação antes de eliminar, tecla de suspensão, modificadores e modo de texto.
 - Menu **⋯**: novo, duplicar, mudar o nome, eliminar, importar e exportar conjuntos, e abrir a pasta de configuração.
 
-**Atalhos na grelha.** Com uma macro selecionada e o foco fora de um campo de edição:
+**Seleção de várias macros.** Ctrl+clique acrescenta ou retira macros da seleção, e Shift+clique seleciona um intervalo. Com várias selecionadas, os botões **Arquivar (n)**/**Restaurar (n)** e 🗑 atuam em todas. Antes de eliminar várias, o programa pede sempre confirmação e indica a quantidade.
+
+**Atalhos na grelha.** Com uma ou mais macros selecionadas e o foco fora de um campo de edição:
 
 | Tecla | Ação |
 |---|---|
-| Delete ou Backspace | elimina a macro (pede confirmação) |
-| Ctrl+C | copia a macro |
-| Ctrl+V | cola uma cópia a seguir à selecionada. Se a tecla já estiver em uso, a cópia fica sem tecla |
+| Delete ou Backspace | elimina a(s) macro(s) (pede confirmação) |
+| Ctrl+C | copia a(s) macro(s) |
+| Ctrl+V | cola cópias a seguir à seleção. Se a tecla já estiver em uso, a cópia fica sem tecla |
 
 Com o foco num campo de texto, estes atalhos copiam, colam e apagam texto como habitualmente. A caixa de confirmação de eliminação tem a opção **Não voltar a perguntar**. Para voltar a ativar as confirmações, use Preferências ▸ «Pedir confirmação antes de eliminar macros».
 
 **Arquivo.** Por baixo das macros ativas, a divisória **Arquivo** mostra as macros arquivadas, com uma caixa de pesquisa por título, texto ou tecla.
-- **Arquivar** retira a macro das teclas e do painel sem a apagar. Fica no ficheiro do conjunto com `arquivada = true`.
+- **Arquivar** retira a macro das teclas e do painel sem a apagar. Fica no ficheiro do conjunto com `arquivada = true`. Também pode arrastar uma macro ativa, ou a seleção inteira, para a área abaixo da linha **Arquivo**: ao largar, fica arquivada imediatamente. Arrastar dentro da grelha só reordena e não altera as teclas.
 - **Restaurar** volta a ativá-la. Se a tecla dela já estiver atribuída a uma macro ativa, o programa pede confirmação. Ao confirmar, a macro restaurada fica no lugar da ativa e essa passa para o arquivo. Ao cancelar, nada muda.
 - Arquivar e restaurar não alteram ficheiros exportados anteriormente.
 
-**Painel.** O painel mostra as macros ativas em grelha, com título e tecla, e um indicador de estado (ativo / suspenso / fora do âmbito / a executar). Clicar num botão não tira o foco à aplicação onde está a escrever, e o texto vai para lá. Fica sempre por cima por omissão. A aparência configura-se em *Preferências do painel*.
+**Painel.** O painel mostra as macros ativas em grelha, com título e tecla, e um indicador de estado (ativo / suspenso / fora do âmbito / a executar). Clicar num botão não tira o foco à aplicação onde está a escrever, e o texto vai para lá. Fica sempre por cima por omissão. A aparência configura-se no separador *Painel*.
+- Os botões **Ativo**/**Suspenso** do painel têm o mesmo estado e efeito dos da configuração e não tiram o foco à aplicação de destino.
+- Com o ponteiro sobre o painel, a **roda do rato** ajusta a transparência em passos de 5 % (para cima fica mais opaco, para baixo mais transparente, entre 20 % e 100 %). O nível aparece brevemente no centro do painel e fica gravado. Só o painel é afetado.
+- Se a roda não reagir enquanto o painel não está em foco, ative a definição do Windows «Deslocar janelas inativas ao pairar sobre elas».
 
 **Tema.** Há três opções:
 - **Diurno** (por omissão): interface clara com a barra de título preta.
@@ -147,6 +152,7 @@ cor_borda = "#5a5a5a"
 mostrar_icone = true
 mostrar_tecla = true
 mostrar_estado = true
+mostrar_controlos = true     # botões Ativo/Suspenso no painel
 ```
 
 ```toml

@@ -63,6 +63,28 @@ def archive(ms: MacroSet, i: int) -> int:
     return pos
 
 
+def archive_many(ms: MacroSet, idxs: list[int]) -> list[int]:
+    """Arquiva várias macros (mantendo a ordem relativa); ficam no início do
+    arquivo. Devolve os novos índices."""
+    chosen = [ms.macros[i] for i in sorted(set(idxs)) if not ms.macros[i].arquivada]
+    ids = {id(m) for m in chosen}
+    for m in chosen:
+        m.arquivada = True
+    actives = [m for m in ms.macros if not m.arquivada]
+    arch = [m for m in ms.macros if m.arquivada and id(m) not in ids]
+    ms.macros = actives + chosen + arch
+    return list(range(len(actives), len(actives) + len(chosen)))
+
+
+def delete_many(ms: MacroSet, idxs: list[int]) -> None:
+    for i in sorted(set(idxs), reverse=True):
+        del ms.macros[i]
+
+
+def index_of(ms: MacroSet, m: Macro) -> int:
+    return next(i for i, x in enumerate(ms.macros) if x is m)
+
+
 def key_conflict(ms: MacroSet, i: int) -> Optional[int]:
     """Índice da macro ativa que já usa a tecla da macro ``i`` (ou None)."""
     b = _binding(ms.macros[i].tecla)

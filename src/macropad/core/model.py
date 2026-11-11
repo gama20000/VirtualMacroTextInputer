@@ -73,6 +73,7 @@ class PanelSettings:
     mostrar_icone: bool = True
     mostrar_tecla: bool = True
     mostrar_estado: bool = True
+    mostrar_controlos: bool = True   # botões Ativo/Suspenso no painel
 
     def clone(self) -> "PanelSettings":
         return copy.deepcopy(self)

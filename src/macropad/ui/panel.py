@@ -10,8 +10,8 @@ from typing import TYPE_CHECKING, Optional
 
 from PySide6.QtCore import QRectF, QSize, QTimer, Qt, Signal
 from PySide6.QtGui import QColor, QPainter, QPainterPath
-from PySide6.QtWidgets import (QGraphicsOpacityEffect, QGridLayout, QHBoxLayout, QLabel,
-                               QSizePolicy, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QButtonGroup, QGraphicsOpacityEffect, QGridLayout, QHBoxLayout,
+                               QLabel, QPushButton, QSizePolicy, QVBoxLayout, QWidget)
 
 from ..core.model import MacroSet, PanelSettings
 from ..i18n import tr
@@ -32,6 +32,7 @@ class PanelView(QWidget):
     """Barra de estado + grelha de botões, com o estilo configurado."""
 
     clicked = Signal(int)                 # índice real da macro
+    suspend_requested = Signal(bool)      # True = suspender, False = ativar
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -40,16 +41,32 @@ class PanelView(QWidget):
         v = QVBoxLayout(self)
         v.setContentsMargins(10, 8, 10, 10)
         v.setSpacing(6)
-        self.header = QWidget()
+        self.header = QWidget(objectName="panelhead")
         head = QHBoxLayout(self.header)
         head.setContentsMargins(0, 0, 0, 0)
+        head.setSpacing(6)
         self.dot = QLabel("●")
         self.label = QLabel()
         self.label.setObjectName("status")
         head.addWidget(self.dot)
         head.addWidget(self.label, 1)
+        # Ativo / Suspenso — mesmo estado e comportamento da configuração.
+        # NoFocus: clicar não tira o foco à aplicação de destino.
+        self.btn_on = QPushButton("● " + tr("state.active"), objectName="stateOn")
+        self.btn_off = QPushButton(theme.PAUSE + " " + tr("state.suspended"), objectName="stateOff")
+        grp = QButtonGroup(self)
+        grp.setExclusive(True)
+        for b in (self.btn_on, self.btn_off):
+            b.setCheckable(True)
+            b.setFocusPolicy(Qt.NoFocus)
+            b.setCursor(Qt.PointingHandCursor)
+            grp.addButton(b)
+            head.addWidget(b)
+        self.btn_on.setChecked(True)
+        self.btn_on.clicked.connect(lambda: self.suspend_requested.emit(False))
+        self.btn_off.clicked.connect(lambda: self.suspend_requested.emit(True))
         v.addWidget(self.header)
-        self.grid_host = QWidget()
+        self.grid_host = QWidget(objectName="panelgrid")
         self.grid = QGridLayout(self.grid_host)
         self.grid.setContentsMargins(0, 0, 0, 0)
         v.addWidget(self.grid_host)
@@ -67,10 +84,19 @@ class PanelView(QWidget):
         self.buttons, self.indices = [], []
         bg = style.cor_fundo or pal.panel_bg
         fg = _contrast_text(bg)
+        muted = "#6b6b73" if fg.startswith("#1") else "#8a8a8a"
+        # Fundo só nos contentores (a folha de estilo do próprio widget tem
+        # prioridade sobre a da aplicação, por isso não se usa "QWidget").
         self.setStyleSheet(
-            f"#panelview, #panelview QWidget {{ background: {bg}; }}"
-            f"#panelview QLabel#status {{ color: {fg}; font-size: 9pt; }}")
-        self.header.setVisible(style.mostrar_estado)
+            f"#panelview, #panelhead, #panelgrid {{ background: {bg}; }}"
+            f"#panelview QLabel {{ background: transparent; }}"
+            f"#panelview QLabel#status {{ color: {fg}; font-size: 9pt; }}"
+            + theme.state_button_css(pal, fg, muted, small=True))
+        self.dot.setVisible(style.mostrar_estado)
+        self.label.setVisible(style.mostrar_estado)
+        self.btn_on.setVisible(style.mostrar_controlos)
+        self.btn_off.setVisible(style.mostrar_controlos)
+        self.header.setVisible(style.mostrar_estado or style.mostrar_controlos)
         self.grid.setSpacing(style.espacamento)
         cols = style.colunas
         if ms is not None:
@@ -85,7 +111,12 @@ class PanelView(QWidget):
         self.grid_host.adjustSize()
         self.adjustSize()
 
-    def set_status(self, code: str, text: str, running_index: Optional[int] = None) -> None:
+    def set_status(self, code: str, text: str, running_index: Optional[int] = None,
+                   suspended: Optional[bool] = None) -> None:
+        if suspended is None:
+            suspended = code == "suspenso"
+        self.btn_on.setChecked(not suspended)
+        self.btn_off.setChecked(suspended)
         colors = {"ativo": self.pal.ok, "suspenso": self.pal.error, "fora": self.pal.warn,
                   "executar": self.pal.accent}
         self.dot.setStyleSheet(f"color:{colors.get(code, '#888')}; background: transparent;")
@@ -111,7 +142,17 @@ class PanelWindow(QWidget):
         lay.setContentsMargins(0, 0, 0, 0)
         self.view = PanelView()
         self.view.clicked.connect(self._clicked)
+        self.view.suspend_requested.connect(self.app.engine.set_suspended)
         lay.addWidget(self.view)
+        # Indicação breve da transparência (roda do rato)
+        self.osd = QLabel(self)
+        self.osd.setAlignment(Qt.AlignCenter)
+        self.osd.setStyleSheet("background: rgba(0,0,0,190); color: white; border-radius: 8px;"
+                               "padding: 6px 12px; font-weight: 600;")
+        self.osd.hide()
+        self._osd_timer = QTimer(self, singleShot=True, interval=900, timeout=self.osd.hide)
+        self._wheel_acc = 0
+        self.setToolTip(tr("panel.wheel_tip"))
         self._apply_flags(True)
         self._timer = QTimer(self, interval=350, timeout=self.refresh_status)
         self._timer.start()
@@ -145,6 +186,34 @@ class PanelWindow(QWidget):
         self._apply_flags(s.sempre_por_cima)
         self.setWindowOpacity(s.opacidade)
 
+    # Roda do rato sobre o painel: rodar para cima = mais opaco; para baixo =
+    # mais transparente. Passos de 5 %, entre 20 % e 100 %. Só afeta o painel.
+    STEP = 0.05
+
+    def wheelEvent(self, e):
+        self._wheel_acc += e.angleDelta().y()
+        steps = int(self._wheel_acc / 120)
+        if steps == 0:
+            e.accept()
+            return
+        self._wheel_acc -= steps * 120
+        cur = round(self.windowOpacity(), 2)
+        new = min(1.0, max(0.2, round(cur + steps * self.STEP, 2)))
+        if new != cur:
+            self.setWindowOpacity(new)
+            self.app.set_panel_opacity(new)
+        self._show_osd(tr("panel.opacity_osd", pct=round(new * 100)))
+        e.accept()
+
+    def _show_osd(self, text: str) -> None:
+        self.osd.setText(text)
+        self.osd.adjustSize()
+        self.osd.move((self.width() - self.osd.width()) // 2,
+                      (self.height() - self.osd.height()) // 2)
+        self.osd.raise_()
+        self.osd.show()
+        self._osd_timer.start()
+
     def rebuild(self, style: Optional[PanelSettings] = None) -> None:
         style = style or self.app.engine.settings.painel
         ms = self.app.engine.active_set
@@ -167,7 +236,8 @@ class PanelWindow(QWidget):
         if ms is not None and code in ("ativo", "fora"):
             text = f"{text} · {ms.nome}"
         run = self.app.engine.running
-        self.view.set_status(code, text, run.index if run is not None else None)
+        self.view.set_status(code, text, run.index if run is not None else None,
+                             self.app.engine.suspended)
 
     def closeEvent(self, e):
         e.ignore()
@@ -236,8 +306,7 @@ class PanelPreview(QWidget):
         self.view.setAttribute(Qt.WA_TransparentForMouseEvents, True)
         wl.addWidget(self.titlebar)
         wl.addWidget(self.view)
-        bl.addWidget(self.window_frame, 0, Qt.AlignLeft | Qt.AlignTop)
-        bl.addStretch(1)
+        bl.addWidget(self.window_frame, 0, Qt.AlignCenter)
         self.effect = QGraphicsOpacityEffect(self.window_frame)
         self.window_frame.setGraphicsEffect(self.effect)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)

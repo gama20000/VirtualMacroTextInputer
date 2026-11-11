@@ -7,7 +7,7 @@ from typing import Callable, Optional
 from PySide6.QtCore import QEvent, QPointF, QRect, QRectF, QSize, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QFont, QFontMetrics, QKeyEvent, QPainter, QPainterPath, QPen
 from PySide6.QtWidgets import (QAbstractButton, QAbstractItemView, QLineEdit, QListWidget,
-                               QListWidgetItem, QStyle, QStyledItemDelegate)
+                               QListWidgetItem, QStyle, QStyledItemDelegate, QWidget)
 
 from ..core.keys import MODIFIERS, Binding
 from ..core.model import PanelSettings
@@ -210,7 +210,8 @@ class MacroGrid(QListWidget):
         self.setResizeMode(QListWidget.Adjust)
         self.setUniformItemSizes(True)
         self.setGridSize(QSize(self.TILE + 12, self.TILE + 12))
-        self.setSelectionMode(QAbstractItemView.SingleSelection)
+        # Ctrl+clique acrescenta, Shift+clique seleciona um intervalo
+        self.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.setDragDropMode(QAbstractItemView.InternalMove)
         self.setDefaultDropAction(Qt.MoveAction)
         self.setDragEnabled(True)
@@ -221,8 +222,12 @@ class MacroGrid(QListWidget):
         self.setFrameShape(QListWidget.NoFrame)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
-    def set_tiles(self, tiles: list[dict], selected_real: int) -> None:
-        """tiles: dicts com index, title, key, error, dup, tip."""
+    def set_tiles(self, tiles: list[dict], selected, current: int = -1) -> None:
+        """tiles: dicts com index, title, key, error, dup, tip.
+        ``selected``: índice real ou conjunto de índices reais selecionados."""
+        if isinstance(selected, int):
+            selected = {selected}
+        selected = set(selected)
         self.blockSignals(True)
         self.clear()
         sel_row = -1
@@ -236,15 +241,24 @@ class MacroGrid(QListWidget):
             it.setToolTip(t["tip"])
             it.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled)
             self.addItem(it)
-            if t["index"] == selected_real:
-                sel_row = self.count() - 1
+            if t["index"] in selected:
+                it.setSelected(True)
+                if sel_row < 0 or t["index"] == current:
+                    sel_row = self.count() - 1
         if sel_row >= 0:
-            self.setCurrentRow(sel_row)
+            from PySide6.QtCore import QItemSelectionModel
+            self.selectionModel().setCurrentIndex(self.indexFromItem(self.item(sel_row)),
+                                                  QItemSelectionModel.NoUpdate)
         else:
             self.clearSelection()
             self.setCurrentRow(-1)
         self.blockSignals(False)
         self.fit_height()
+
+    def selected_real(self) -> list[int]:
+        """Índices reais selecionados, pela ordem visual."""
+        return [self.item(r).data(INDEX_ROLE) for r in range(self.count())
+                if self.item(r).isSelected()]
 
     def real_index(self, row: int) -> int:
         it = self.item(row)
@@ -268,6 +282,68 @@ class MacroGrid(QListWidget):
         order = [self.item(i).data(INDEX_ROLE) for i in range(self.count())]
         if order != sorted(order):
             self.reordered.emit(order)
+
+
+class ArchiveDropZone(QWidget):
+    """Área do Arquivo: aceita macros ativas arrastadas da grelha principal e
+    pede que sejam arquivadas. Os eventos de arrasto que a grelha do arquivo
+    não aceita (vindos de outra grelha) chegam aqui por propagação."""
+
+    archive_requested = Signal(list)          # índices reais
+
+    def __init__(self, pal: theme.Palette, parent=None):
+        super().__init__(parent)
+        self.pal = pal
+        self.setObjectName("archivezone")
+        self.setAcceptDrops(True)
+        self._hover = False
+
+    def _accepts(self, e) -> bool:
+        src = e.source()
+        return isinstance(src, MacroGrid) and not src.archived and bool(src.selected_real())
+
+    def dragEnterEvent(self, e):
+        if self._accepts(e):
+            e.setDropAction(Qt.CopyAction)      # cópia: a grelha de origem não remove itens
+            e.accept()
+            self._set_hover(True)
+        else:
+            e.ignore()
+
+    def dragMoveEvent(self, e):
+        if self._accepts(e):
+            e.setDropAction(Qt.CopyAction)
+            e.accept()
+        else:
+            e.ignore()
+
+    def dragLeaveEvent(self, e):
+        self._set_hover(False)
+
+    def dropEvent(self, e):
+        self._set_hover(False)
+        if not self._accepts(e):
+            e.ignore()
+            return
+        idxs = e.source().selected_real()
+        e.setDropAction(Qt.CopyAction)
+        e.accept()
+        # depois de o arrasto terminar (a grelha de origem ainda está no QDrag.exec)
+        QTimer.singleShot(0, lambda: self.archive_requested.emit(idxs))
+
+    def _set_hover(self, on: bool) -> None:
+        self._hover = on
+        self.update()
+
+    def paintEvent(self, e):
+        super().paintEvent(e)
+        if self._hover:
+            p = QPainter(self)
+            p.setRenderHint(QPainter.Antialiasing)
+            p.setPen(QPen(QColor(self.pal.accent), 2, Qt.DashLine))
+            p.setBrush(Qt.NoBrush)
+            p.drawRoundedRect(QRectF(self.rect()).adjusted(2, 2, -2, -2), 10, 10)
+            p.end()
 
 
 # ------------------------------------------------------------ captura de tecla
