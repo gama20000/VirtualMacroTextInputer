@@ -1,0 +1,1126 @@
+"""Janela de configuração.
+
+Separadores: Macros · Preferências do painel · Âmbito · Preferências.
+As alterações válidas são gravadas automaticamente (de forma atómica) e
+aplicadas a execuções futuras."""
+from __future__ import annotations
+
+import os
+from pathlib import Path
+from typing import TYPE_CHECKING, Optional
+
+from PySide6.QtCore import QEvent, QMimeData, QObject, QTimer, Qt, QUrl
+from PySide6.QtGui import QColor, QDesktopServices, QKeySequence
+from PySide6.QtWidgets import (QAbstractSpinBox, QApplication, QButtonGroup, QCheckBox,
+                               QColorDialog, QComboBox, QFileDialog, QFormLayout, QFrame,
+                               QGridLayout, QHBoxLayout, QLabel, QLineEdit, QListWidget, QMenu,
+                               QPlainTextEdit, QPushButton, QRadioButton, QScrollArea, QSlider,
+                               QSpinBox, QTabWidget, QTextEdit, QToolButton, QVBoxLayout, QWidget)
+
+from ..core import macro_ops as ops
+from ..core.commands import CommandError, describe_steps, parse_action
+from ..core.configio import (ConfigError, Issue, macro_from_clipboard, macro_label,
+                             macro_to_clipboard, validate_macros)
+from ..core.keys import KeyBindingError, parse_binding
+from ..core.model import (MAX_INTERVAL_MS, MAX_REPEAT, PANEL_PRESETS, PANEL_RANGES, MacroSet,
+                          PanelSettings, Settings, apply_preset, matching_preset)
+from ..i18n import available as available_languages
+from ..i18n import tr
+from . import theme
+from .dialogs import ask, get_text, info
+from .panel import PanelPreview
+from .widgets import KeyCaptureEdit, MacroGrid
+
+if TYPE_CHECKING:
+    from .app import MacropadApp
+
+MIME_MACRO = "application/x-macropad-macro"
+
+
+def _is_editable(w: Optional[QWidget]) -> bool:
+    if w is None:
+        return False
+    if isinstance(w, (QLineEdit, QPlainTextEdit, QTextEdit, QAbstractSpinBox)):
+        return True
+    if isinstance(w, QComboBox) and w.isEditable():
+        return True
+    return False
+
+
+class _ColorButton(QPushButton):
+    def __init__(self, on_change, parent=None):
+        super().__init__(parent)
+        self._color = "#000000"
+        self._on_change = on_change
+        self.setFixedWidth(90)
+        self.setCursor(Qt.PointingHandCursor)
+        self.clicked.connect(self._pick)
+
+    def color(self) -> str:
+        return self._color
+
+    def set_color(self, c: str) -> None:
+        self._color = c
+        q = QColor(c)
+        lum = 0.299 * q.red() + 0.587 * q.green() + 0.114 * q.blue()
+        self.setText(c.upper())
+        self.setStyleSheet(f"background:{c}; color:{'#000' if lum > 140 else '#fff'};")
+
+    def _pick(self):
+        c = QColorDialog.getColor(QColor(self._color), self, tr("panel.pick_color"))
+        if c.isValid():
+            self.set_color(c.name())
+            self._on_change()
+
+
+class ConfigWindow(QWidget):
+    def __init__(self, app: "MacropadApp"):
+        super().__init__()
+        self.app = app
+        self.setWindowTitle(tr("win.config_title"))
+        self.setWindowIcon(theme.app_icon())
+        self.resize(700, 860)
+        self.ms: Optional[MacroSet] = None       # cópia de trabalho do conjunto ativo
+        self.settings: Settings = app.store.settings.clone()
+        self.cur = -1                            # índice real da macro selecionada
+        self._loading = False
+        self._last_add = 0.0
+        self._save_set_timer = QTimer(self, singleShot=True, interval=450,
+                                      timeout=self._save_set_now)
+        self._save_settings_timer = QTimer(self, singleShot=True, interval=450,
+                                           timeout=self._save_settings_now)
+        self._build()
+        QApplication.instance().installEventFilter(self)
+        self.reload_from_store()
+
+    @property
+    def pal(self) -> theme.Palette:
+        return self.app.pal
+
+    # ================================================================ layout
+    def _build(self) -> None:
+        root = QVBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+
+        top = QWidget(objectName="top")
+        row = QHBoxLayout(top)
+        row.setContentsMargins(16, 12, 16, 12)
+        logo = QLabel()
+        logo.setPixmap(theme.logo_pixmap(30))
+        row.addWidget(logo)
+        row.addWidget(QLabel("Macropad", objectName="h1"))
+        row.addSpacing(10)
+        self.set_combo = QComboBox()
+        self.set_combo.setMinimumWidth(180)
+        self.set_combo.setToolTip(tr("cfg.set_combo_tip"))
+        self.set_combo.activated.connect(self._on_set_chosen)
+        row.addWidget(self.set_combo)
+        self.set_menu_btn = QToolButton(text="⋯")
+        self.set_menu_btn.setToolTip(tr("cfg.manage_sets"))
+        self.set_menu_btn.setPopupMode(QToolButton.InstantPopup)
+        m = QMenu(self)
+        m.addAction(tr("sets.new"), self._new_set)
+        m.addAction(tr("sets.duplicate"), self._dup_set)
+        m.addAction(tr("sets.rename"), self._rename_set)
+        m.addAction(tr("sets.delete"), self._delete_set)
+        m.addSeparator()
+        m.addAction(tr("sets.import"), self._import_set)
+        m.addAction(tr("sets.export"), self._export_set)
+        m.addSeparator()
+        m.addAction(tr("sets.open_folder"), self._open_folder)
+        self.set_menu_btn.setMenu(m)
+        row.addWidget(self.set_menu_btn)
+        row.addStretch(1)
+
+        # Estado: dois botões exclusivos, claramente clicáveis
+        row.addWidget(QLabel(tr("state.label")))
+        self.btn_on = QPushButton("●  " + tr("state.active"), objectName="stateOn")
+        self.btn_off = QPushButton("⏸  " + tr("state.suspended"), objectName="stateOff")
+        grp = QButtonGroup(self)
+        grp.setExclusive(True)
+        for b in (self.btn_on, self.btn_off):
+            b.setCheckable(True)
+            b.setCursor(Qt.PointingHandCursor)
+            b.setFocusPolicy(Qt.StrongFocus)
+            grp.addButton(b)
+            row.addWidget(b)
+        hk = self.app.store.settings.tecla_suspensao
+        self.btn_on.setToolTip(tr("state.on_tip", hotkey=hk))
+        self.btn_off.setToolTip(tr("state.off_tip", hotkey=hk))
+        self.btn_on.clicked.connect(lambda: self.app.engine.set_suspended(False))
+        self.btn_off.clicked.connect(lambda: self.app.engine.set_suspended(True))
+        root.addWidget(top)
+
+        self.tabs = QTabWidget()
+        self.tabs.setDocumentMode(True)
+        self.tabs.addTab(self._build_macros_tab(), tr("tab.macros"))
+        self.tabs.addTab(self._build_panel_tab(), tr("tab.panel"))
+        self.tabs.addTab(self._build_scope_tab(), tr("tab.scope"))
+        self.tabs.addTab(self._build_prefs_tab(), tr("tab.prefs"))
+        root.addWidget(self.tabs, 1)
+
+        self.status = QLabel(objectName="hint")
+        self.status.setWordWrap(True)
+        self.status.setContentsMargins(16, 6, 16, 8)
+        self.status.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        root.addWidget(self.status)
+        self._refresh_state_buttons()
+
+    # ------------------------------------------------------------- Macros
+    def _build_macros_tab(self) -> QWidget:
+        w = QWidget()
+        v = QVBoxLayout(w)
+        v.setContentsMargins(0, 0, 0, 0)
+        v.setSpacing(0)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        well = QWidget(objectName="well")
+        gl = QVBoxLayout(well)
+        gl.setContentsMargins(14, 10, 14, 10)
+        gl.setSpacing(8)
+
+        self.grid = MacroGrid(self.pal)
+        self.grid.currentRowChanged.connect(lambda r: self._on_select(self.grid, r))
+        self.grid.reordered.connect(lambda o: self._on_reordered(False, o))
+        gl.addWidget(self.grid)
+        self.empty_label = QLabel(tr("macros.empty"), objectName="hint")
+        gl.addWidget(self.empty_label)
+
+        brow = QHBoxLayout()
+        self.add_btn = QPushButton("＋  " + tr("macros.new"))
+        self.add_btn.clicked.connect(self._add_macro)
+        brow.addWidget(self.add_btn)
+        brow.addStretch(1)
+        brow.addWidget(QLabel(tr("macros.drag_hint"), objectName="hint"))
+        gl.addLayout(brow)
+
+        # divisória «Arquivo»
+        arow = QHBoxLayout()
+        self.archive_title = QLabel(objectName="section")
+        arow.addWidget(self.archive_title)
+        line = QFrame(objectName="divider")
+        line.setFrameShape(QFrame.HLine)
+        arow.addWidget(line, 1)
+        self.archive_search = QLineEdit()
+        self.archive_search.setPlaceholderText(tr("archive.search"))
+        self.archive_search.setClearButtonEnabled(True)
+        self.archive_search.setMinimumWidth(280)
+        self.archive_search.textChanged.connect(lambda _t: self._refresh_grid())
+        arow.addWidget(self.archive_search)
+        gl.addSpacing(6)
+        gl.addLayout(arow)
+        self.archive_grid = MacroGrid(self.pal, archived=True)
+        self.archive_grid.currentRowChanged.connect(lambda r: self._on_select(self.archive_grid, r))
+        self.archive_grid.reordered.connect(lambda o: self._on_reordered(True, o))
+        gl.addWidget(self.archive_grid)
+        self.archive_empty = QLabel(objectName="hint")
+        gl.addWidget(self.archive_empty)
+        gl.addStretch(1)
+        scroll.setWidget(well)
+        v.addWidget(scroll, 5)
+
+        ed = QWidget(objectName="editor")
+        el = QVBoxLayout(ed)
+        el.setContentsMargins(18, 12, 18, 8)
+        hdr = QHBoxLayout()
+        self.editor_title = QLabel()
+        hdr.addWidget(self.editor_title)
+        hdr.addStretch(1)
+        self.left_btn = QToolButton(text="◀")
+        self.left_btn.setToolTip(tr("macros.move_left"))
+        self.left_btn.clicked.connect(lambda: self._move(-1))
+        self.right_btn = QToolButton(text="▶")
+        self.right_btn.setToolTip(tr("macros.move_right"))
+        self.right_btn.clicked.connect(lambda: self._move(1))
+        self.archive_btn = QPushButton()
+        self.archive_btn.clicked.connect(self._toggle_archive)
+        self.del_btn = QToolButton(text="🗑")
+        self.del_btn.setToolTip(tr("macros.delete_tip"))
+        self.del_btn.clicked.connect(self._delete_macro)
+        for b in (self.left_btn, self.right_btn, self.archive_btn, self.del_btn):
+            hdr.addWidget(b)
+        el.addLayout(hdr)
+
+        form = QFormLayout()
+        form.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        form.setHorizontalSpacing(14)
+        form.setVerticalSpacing(8)
+        self.f_title = QLineEdit()
+        self.f_title.setMaxLength(40)
+        self.f_title.textEdited.connect(self._on_edit)
+        form.addRow(tr("field.title"), self.f_title)
+
+        krow = QHBoxLayout()
+        self.f_key = KeyCaptureEdit(self._set_capture_mode)
+        self.f_key.captured.connect(self._on_key_captured)
+        krow.addWidget(self.f_key, 1)
+        clear = QPushButton(tr("field.no_key"))
+        clear.setToolTip(tr("field.no_key_tip"))
+        clear.clicked.connect(lambda: self._on_key_captured(""))
+        krow.addWidget(clear)
+        form.addRow(tr("field.key"), krow)
+
+        self.f_text = QPlainTextEdit()
+        self.f_text.setTabChangesFocus(True)
+        self.f_text.setPlaceholderText(tr("field.text_placeholder"))
+        self.f_text.setFixedHeight(80)
+        self.f_text.textChanged.connect(self._on_edit)
+        form.addRow(tr("field.text"), self.f_text)
+        self.f_preview = QLabel(objectName="hint")
+        self.f_preview.setWordWrap(True)
+        form.addRow("", self.f_preview)
+
+        rrow = QHBoxLayout()
+        self.f_repeat = QSpinBox()
+        self.f_repeat.setRange(1, MAX_REPEAT)
+        self.f_repeat.valueChanged.connect(self._on_edit)
+        rrow.addWidget(self.f_repeat)
+        rrow.addSpacing(18)
+        rrow.addWidget(QLabel(tr("field.interval")))
+        self.f_interval = QSpinBox()
+        self.f_interval.setRange(0, MAX_INTERVAL_MS)
+        self.f_interval.setSingleStep(100)
+        self.f_interval.setSuffix(" ms")
+        self.f_interval.valueChanged.connect(self._on_edit)
+        rrow.addWidget(self.f_interval)
+        rrow.addStretch(1)
+        form.addRow(tr("field.repeats"), rrow)
+        el.addLayout(form)
+
+        el.addWidget(QLabel(tr("macros.commands_hint"), objectName="hint", wordWrap=True))
+        self.f_dup = QLabel(objectName="dupinfo")
+        self.f_dup.setWordWrap(True)
+        el.addWidget(self.f_dup)
+        self.f_error = QLabel(objectName="error")
+        self.f_error.setWordWrap(True)
+        el.addWidget(self.f_error)
+        el.addStretch(1)
+        v.addWidget(ed, 4)
+        self.editor = ed
+        return w
+
+    # ----------------------------------------------- Preferências do painel
+    def _build_panel_tab(self) -> QWidget:
+        w = QWidget()
+        outer = QVBoxLayout(w)
+        outer.setContentsMargins(0, 0, 0, 0)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        body = QWidget()
+        v = QVBoxLayout(body)
+        v.setContentsMargins(18, 14, 18, 14)
+        v.setSpacing(10)
+
+        v.addWidget(QLabel(tr("panel.preview"), objectName="section"))
+        self.preview = PanelPreview()
+        pscroll = QScrollArea()
+        pscroll.setWidgetResizable(True)
+        pscroll.setFrameShape(QFrame.NoFrame)
+        pscroll.setMaximumHeight(340)
+        pscroll.setWidget(self.preview)
+        self.preview_scroll = pscroll
+        v.addWidget(pscroll)
+
+        srow = QHBoxLayout()
+        srow.addWidget(QLabel(tr("panel.style")))
+        self.p_preset = QComboBox()
+        for key in PANEL_PRESETS:
+            self.p_preset.addItem(tr(f"preset.{key}"), key)
+        self.p_preset.addItem(tr("preset.custom"), "")
+        self.p_preset.activated.connect(self._on_preset)
+        srow.addWidget(self.p_preset, 1)
+        reset = QPushButton(tr("panel.reset"))
+        reset.setToolTip(tr("panel.reset_tip"))
+        reset.clicked.connect(lambda: self._apply_preset("predefinido"))
+        srow.addWidget(reset)
+        v.addLayout(srow)
+
+        grid = QGridLayout()
+        grid.setHorizontalSpacing(14)
+        grid.setVerticalSpacing(8)
+        self.p_spins: dict[str, QSpinBox] = {}
+        spec = [("colunas", "panel.columns", ""), ("tamanho_botao", "panel.size", " px"),
+                ("espacamento", "panel.spacing", " px"), ("arredondamento", "panel.radius", " %"),
+                ("borda", "panel.border", " px"), ("escala_texto", "panel.text_scale", " %")]
+        for n, (name, label, suffix) in enumerate(spec):
+            sb = QSpinBox()
+            lo, hi = PANEL_RANGES[name]
+            sb.setRange(int(lo), int(hi))
+            sb.setSuffix(suffix)
+            sb.valueChanged.connect(self._on_panel_edit)
+            self.p_spins[name] = sb
+            grid.addWidget(QLabel(tr(label)), n // 2, (n % 2) * 2, Qt.AlignRight)
+            grid.addWidget(sb, n // 2, (n % 2) * 2 + 1)
+        v.addLayout(grid)
+
+        crow = QGridLayout()
+        crow.setHorizontalSpacing(14)
+        self.p_colors: dict[str, _ColorButton] = {}
+        for n, (name, label) in enumerate([("cor_botao", "panel.color_button"),
+                                           ("cor_texto", "panel.color_text"),
+                                           ("cor_borda", "panel.color_border"),
+                                           ("cor_fundo", "panel.color_bg")]):
+            cb = _ColorButton(self._on_panel_edit)
+            self.p_colors[name] = cb
+            crow.addWidget(QLabel(tr(label)), n // 2, (n % 2) * 2, Qt.AlignRight)
+            crow.addWidget(cb, n // 2, (n % 2) * 2 + 1)
+        self.p_bg_theme = QCheckBox(tr("panel.bg_follows_theme"))
+        self.p_bg_theme.toggled.connect(self._on_panel_edit)
+        crow.addWidget(self.p_bg_theme, 2, 2, 1, 2)
+        v.addLayout(crow)
+
+        show = QHBoxLayout()
+        self.p_show_icon = QCheckBox(tr("panel.show_icon"))
+        self.p_show_key = QCheckBox(tr("panel.show_key"))
+        self.p_show_status = QCheckBox(tr("panel.show_status"))
+        for cb in (self.p_show_icon, self.p_show_key, self.p_show_status):
+            cb.toggled.connect(self._on_panel_edit)
+            show.addWidget(cb)
+        show.addStretch(1)
+        v.addLayout(show)
+
+        win = QFormLayout()
+        win.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        self.p_ontop = QCheckBox(tr("panel.on_top"))
+        self.p_ontop.toggled.connect(self._on_panel_edit)
+        win.addRow("", self.p_ontop)
+        orow = QHBoxLayout()
+        self.p_opacity = QSlider(Qt.Horizontal)
+        self.p_opacity.setRange(20, 100)
+        self.p_opacity.valueChanged.connect(self._on_panel_edit)
+        self.p_opacity_lbl = QLabel()
+        self.p_opacity_lbl.setMinimumWidth(44)
+        orow.addWidget(self.p_opacity, 1)
+        orow.addWidget(self.p_opacity_lbl)
+        win.addRow(tr("panel.opacity"), orow)
+        showp = QPushButton(tr("panel.toggle"))
+        showp.clicked.connect(self.app.toggle_panel)
+        win.addRow("", showp)
+        v.addLayout(win)
+        self.p_error = QLabel(objectName="error")
+        v.addWidget(self.p_error)
+        v.addStretch(1)
+        scroll.setWidget(body)
+        outer.addWidget(scroll)
+        return w
+
+    # ------------------------------------------------------------- Âmbito
+    def _build_scope_tab(self) -> QWidget:
+        w = QWidget()
+        v = QVBoxLayout(w)
+        v.setContentsMargins(18, 16, 18, 12)
+        v.addWidget(QLabel(tr("scope.intro")))
+        self.r_global = QRadioButton(tr("scope.global"))
+        self.r_apps = QRadioButton(tr("scope.apps"))
+        grp = QButtonGroup(self)
+        grp.addButton(self.r_global)
+        grp.addButton(self.r_apps)
+        self.r_global.toggled.connect(self._on_scope_edit)
+        v.addWidget(self.r_global)
+        v.addWidget(self.r_apps)
+        self.apps = QListWidget(objectName="apps")
+        v.addWidget(self.apps, 1)
+        row = QHBoxLayout()
+        b1 = QPushButton(tr("scope.pick_exe"))
+        b1.clicked.connect(self._add_app_file)
+        b2 = QPushButton(tr("scope.type_name"))
+        b2.clicked.connect(self._add_app_name)
+        b3 = QPushButton(tr("scope.remove"))
+        b3.clicked.connect(self._remove_app)
+        for b in (b1, b2, b3):
+            row.addWidget(b)
+        row.addStretch(1)
+        v.addLayout(row)
+        v.addWidget(QLabel(tr("scope.hint"), objectName="hint", wordWrap=True))
+        self.scope_error = QLabel(objectName="error")
+        self.scope_error.setWordWrap(True)
+        v.addWidget(self.scope_error)
+        return w
+
+    # ------------------------------------------------------- Preferências
+    def _build_prefs_tab(self) -> QWidget:
+        w = QWidget()
+        form = QFormLayout(w)
+        form.setContentsMargins(18, 16, 18, 12)
+        form.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        form.setVerticalSpacing(10)
+
+        self.p_theme = QComboBox()
+        for key in ("diurno", "noturno", "automatico"):
+            self.p_theme.addItem(tr(f"theme.{key}"), key)
+        self.p_theme.currentIndexChanged.connect(self._on_prefs_edit)
+        form.addRow(tr("prefs.theme"), self.p_theme)
+
+        self.p_lang = QComboBox()
+        for code, name in available_languages():
+            self.p_lang.addItem(name, code)
+        self.p_lang.currentIndexChanged.connect(self._on_prefs_edit)
+        form.addRow(tr("prefs.language"), self.p_lang)
+
+        self.p_autostart = QCheckBox(tr("prefs.autostart"))
+        self.p_autostart.toggled.connect(self._on_prefs_edit)
+        form.addRow("", self.p_autostart)
+
+        self.p_confirm = QCheckBox(tr("prefs.confirm_delete"))
+        self.p_confirm.toggled.connect(self._on_prefs_edit)
+        form.addRow("", self.p_confirm)
+
+        self.p_hotkey = KeyCaptureEdit(self._set_capture_mode)
+        self.p_hotkey.captured.connect(lambda _b: self._on_prefs_edit())
+        form.addRow(tr("prefs.hotkey"), self.p_hotkey)
+
+        self.p_mods = QComboBox()
+        self.p_mods.addItem(tr("prefs.mods_exact"), "exatos")
+        self.p_mods.addItem(tr("prefs.mods_ignore"), "ignorar")
+        self.p_mods.currentIndexChanged.connect(self._on_prefs_edit)
+        form.addRow(tr("prefs.modifiers"), self.p_mods)
+
+        self.p_textmode = QComboBox()
+        self.p_textmode.addItem(tr("prefs.mode_type"), "escrever")
+        self.p_textmode.addItem(tr("prefs.mode_paste"), "colar")
+        self.p_textmode.currentIndexChanged.connect(self._on_prefs_edit)
+        form.addRow(tr("prefs.text_mode"), self.p_textmode)
+
+        self.g_error = QLabel(objectName="error")
+        self.g_error.setWordWrap(True)
+        form.addRow("", self.g_error)
+        info_lbl = QLabel(objectName="hint")
+        info_lbl.setWordWrap(True)
+        info_lbl.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        info_lbl.setText(tr("prefs.info", folder=self.app.store.root))
+        form.addRow("", info_lbl)
+        return w
+
+    # ============================================================== dados
+    def reload_from_store(self, notice: str = "") -> None:
+        """(Re)carrega a vista a partir da configuração gravada."""
+        self._save_set_timer.stop()
+        self._save_settings_timer.stop()
+        st = self.app.store
+        self.settings = st.settings.clone()
+        sid = self.app.engine.active_set_id
+        self.ms = st.sets[sid].clone() if sid in st.sets else None
+        if self.ms is not None:
+            ops.normalize_order(self.ms)
+            if not (0 <= self.cur < len(self.ms.macros)):
+                act = self.ms.active_indices()
+                self.cur = act[0] if act else (0 if self.ms.macros else -1)
+        else:
+            self.cur = -1
+        self._loading = True
+        self.set_combo.clear()
+        for s in sorted(st.sets.values(), key=lambda s: (s.nome.lower(), s.id)):
+            self.set_combo.addItem(s.nome, s.id)
+        self.set_combo.setCurrentIndex(self.set_combo.findData(sid))
+        self._load_prefs()
+        self._load_panel_prefs()
+        self._load_scope()
+        self._loading = False
+        self._refresh_grid()
+        self._load_editor()
+        self._refresh_state_buttons()
+        if notice:
+            self.show_status(notice)
+
+    def _load_prefs(self) -> None:
+        s = self.settings
+        self.p_theme.setCurrentIndex(max(0, self.p_theme.findData(s.tema)))
+        self.p_lang.setCurrentIndex(max(0, self.p_lang.findData(s.idioma)))
+        self.p_autostart.setChecked(s.arrancar_com_windows)
+        self.p_confirm.setChecked(s.confirmar_eliminacao)
+        self.p_hotkey.set_binding(s.tecla_suspensao)
+        self.p_mods.setCurrentIndex(max(0, self.p_mods.findData(s.modificadores)))
+        self.p_textmode.setCurrentIndex(max(0, self.p_textmode.findData(s.modo_texto)))
+        self.g_error.clear()
+
+    def _load_panel_prefs(self) -> None:
+        p = self.settings.painel
+        for name, sb in self.p_spins.items():
+            sb.setValue(getattr(p, name))
+        for name, cb in self.p_colors.items():
+            cb.set_color(getattr(p, name) or self.pal.panel_bg)
+        self.p_bg_theme.setChecked(p.cor_fundo == "")
+        self.p_colors["cor_fundo"].setEnabled(p.cor_fundo != "")
+        self.p_show_icon.setChecked(p.mostrar_icone)
+        self.p_show_key.setChecked(p.mostrar_tecla)
+        self.p_show_status.setChecked(p.mostrar_estado)
+        self.p_ontop.setChecked(p.sempre_por_cima)
+        self.p_opacity.setValue(round(p.opacidade * 100))
+        self.p_opacity_lbl.setText(f"{round(p.opacidade * 100)} %")
+        self.p_preset.setCurrentIndex(self.p_preset.findData(matching_preset(p)))
+        self.p_error.clear()
+        self._update_preview()
+
+    def _load_scope(self) -> None:
+        self.apps.clear()
+        if not self.ms:
+            return
+        (self.r_apps if self.ms.ambito.modo == "aplicacoes" else self.r_global).setChecked(True)
+        self.apps.addItems(self.ms.ambito.aplicacoes)
+        self.scope_error.clear()
+
+    def _issues(self) -> list[Issue]:
+        if not self.ms:
+            return []
+        issues = validate_macros(self.ms.clone(), self.app.store.settings)
+        if self.ms.ambito.modo == "aplicacoes" and not self.ms.ambito.aplicacoes:
+            issues.append(Issue("", tr("store.scope_need_app")))
+        return issues
+
+    def _dup_text(self, i: int, dups: dict[int, list[int]]) -> str:
+        if i not in dups:
+            return ""
+        parts = []
+        for j in dups[i]:
+            lab = macro_label(j, self.ms.macros[j])
+            if self.ms.macros[j].arquivada:
+                lab += " " + tr("dup.archived_suffix")
+            parts.append(lab)
+        return tr("dup.info", others=", ".join(parts))
+
+    def _tile(self, i: int, bad: set, dups: dict) -> dict:
+        m = self.ms.macros[i]
+        tip = tr("tile.tooltip", title=m.display_title(), key=m.tecla or tr("tile.no_key"))
+        if i in dups:
+            tip += "\n" + self._dup_text(i, dups)
+        if i in bad:
+            tip += "\n" + tr("tile.has_error")
+        return {"index": i, "title": m.display_title(), "key": m.tecla,
+                "error": i in bad, "dup": i in dups, "tip": tip}
+
+    def _refresh_grid(self) -> None:
+        if not self.ms:
+            self.grid.set_tiles([], -1)
+            self.archive_grid.set_tiles([], -1)
+            self.editor.setEnabled(False)
+            self.archive_title.setText(tr("archive.title", n=0))
+            return
+        bad = {i.macro_index for i in self._issues() if i.macro_index is not None}
+        dups = ops.duplicate_groups(self.ms.macros)
+        act = self.ms.active_indices()
+        arch = self.ms.archived_indices()
+        q = self.archive_search.text()
+        shown = [i for i in arch if ops.matches_query(self.ms.macros[i], q)]
+        self.grid.set_tiles([self._tile(i, bad, dups) for i in act], self.cur)
+        self.archive_grid.set_tiles([self._tile(i, bad, dups) for i in shown], self.cur)
+        self.empty_label.setVisible(not act)
+        self.grid.setVisible(bool(act))
+        self.archive_title.setText(tr("archive.title", n=len(arch)))
+        self.archive_grid.setVisible(bool(shown))
+        self.archive_empty.setVisible(not shown)
+        self.archive_empty.setText(tr("archive.no_results") if arch and q.strip()
+                                   else tr("archive.empty"))
+        self.editor.setEnabled(0 <= self.cur < len(self.ms.macros))
+
+    def _load_editor(self) -> None:
+        self._loading = True
+        m = self._macro()
+        if m is None:
+            self.f_title.setText("")
+            self.f_key.set_binding("")
+            self.f_text.setPlainText("")
+            self.f_preview.clear()
+            self.f_error.clear()
+            self.f_dup.clear()
+            self.editor_title.setText(tr("editor.none"))
+            self.editor.setEnabled(False)
+        else:
+            self.editor.setEnabled(True)
+            self.f_title.setText(m.titulo)
+            self.f_key.set_binding(m.tecla)
+            self.f_text.setPlainText(m.texto)
+            self.f_repeat.setValue(m.repeticoes)
+            self.f_interval.setValue(m.intervalo_ms)
+            self._update_preview_and_errors()
+        self._update_editor_header()
+        self._loading = False
+
+    def _update_editor_header(self) -> None:
+        m = self._macro()
+        archived = bool(m and m.arquivada)
+        self.editor_title.setText(tr("editor.header_archived" if archived else "editor.header"))
+        self.archive_btn.setText(tr("macros.restore") if archived else tr("macros.archive"))
+        self.archive_btn.setToolTip(tr("macros.restore_tip") if archived
+                                    else tr("macros.archive_tip"))
+
+    def _macro(self):
+        if self.ms and 0 <= self.cur < len(self.ms.macros):
+            return self.ms.macros[self.cur]
+        return None
+
+    def _update_preview_and_errors(self) -> list[Issue]:
+        m = self._macro()
+        issues = self._issues()
+        if m is not None:
+            if not m.texto:
+                self.f_preview.setText(tr("editor.empty_text"))
+            else:
+                try:
+                    d = describe_steps(parse_action(m.texto))
+                    if m.repeticoes > 1:
+                        d += f" — {m.repeticoes}×"
+                    self.f_preview.setText(d if len(d) < 220 else d[:217] + "…")
+                except CommandError:
+                    self.f_preview.clear()
+            self.f_dup.setText(self._dup_text(self.cur, ops.duplicate_groups(self.ms.macros)))
+        mine = [i.message for i in issues if i.macro_index == self.cur]
+        others = [i for i in issues if i.macro_index not in (self.cur, None)]
+        txt = "\n".join(mine)
+        if others:
+            txt += ("\n" if txt else "") + tr("editor.other_errors", n=len(others))
+        self.f_error.setText(txt)
+        self.scope_error.setText("\n".join(i.message for i in issues if i.macro_index is None))
+        return issues
+
+    # ============================================================ edição
+    def _on_select(self, grid: MacroGrid, row: int) -> None:
+        if row < 0 or self._loading:
+            return
+        other = self.archive_grid if grid is self.grid else self.grid
+        other.blockSignals(True)
+        other.clearSelection()
+        other.setCurrentRow(-1)
+        other.blockSignals(False)
+        self.cur = grid.real_index(row)
+        self._load_editor()
+
+    def _on_edit(self, *_):
+        if self._loading:
+            return
+        m = self._macro()
+        if m is None:
+            return
+        m.titulo = self.f_title.text()
+        m.texto = self.f_text.toPlainText()
+        m.repeticoes = self.f_repeat.value()
+        m.intervalo_ms = self.f_interval.value()
+        self._changed(refresh=False)
+
+    def _on_key_captured(self, b: str) -> None:
+        m = self._macro()
+        if m is None:
+            return
+        m.tecla = b
+        self.f_key.set_binding(b)
+        self._changed()
+
+    def _changed(self, refresh: bool = True) -> None:
+        issues = self._update_preview_and_errors()
+        if refresh:
+            self._refresh_grid()
+        else:
+            # atualização leve dos tiles (sem reconstruir a grelha)
+            bad = {i.macro_index for i in issues if i.macro_index is not None}
+            dups = ops.duplicate_groups(self.ms.macros)
+            from .widgets import DUP_ROLE, ERROR_ROLE, INDEX_ROLE, KEY_ROLE, TITLE_ROLE
+            for g in (self.grid, self.archive_grid):
+                for r in range(g.count()):
+                    it = g.item(r)
+                    i = it.data(INDEX_ROLE)
+                    t = self._tile(i, bad, dups)
+                    it.setData(TITLE_ROLE, t["title"])
+                    it.setData(KEY_ROLE, t["key"])
+                    it.setData(ERROR_ROLE, t["error"])
+                    it.setData(DUP_ROLE, t["dup"])
+                    it.setToolTip(t["tip"])
+                g.viewport().update()
+        if issues:
+            self._save_set_timer.stop()
+            self.show_status(tr("status.fix_errors"), error=True)
+        else:
+            self._save_set_timer.start()
+            self.show_status(tr("status.saving"))
+
+    def _save_set_now(self) -> None:
+        if not self.ms:
+            return
+        issues = self.app.store.save_set(self.ms)
+        if issues:
+            self.show_status(str(issues[0]), error=True)
+            return
+        self.app.apply_config()
+        self.show_status(tr("status.saved"))
+        self._update_preview()
+
+    def flush(self) -> None:
+        if self._save_set_timer.isActive():
+            self._save_set_timer.stop()
+            self._save_set_now()
+        if self._save_settings_timer.isActive():
+            self._save_settings_timer.stop()
+            self._save_settings_now()
+
+    def _select(self, real_index: int) -> None:
+        self.cur = real_index
+        self._refresh_grid()
+        self._load_editor()
+
+    def _add_macro(self) -> None:
+        if not self.ms:
+            return
+        # Uma pressão = uma macro (ignora cliques repetidos muito rápidos).
+        import time
+        now = time.monotonic()
+        if now - self._last_add < 0.35:
+            return
+        self._last_add = now
+        i = ops.new_macro(self.ms, tr("macros.new_title"))
+        self._select(i)
+        self._changed()
+        self.f_text.setFocus()
+
+    def _delete_macro(self) -> None:
+        m = self._macro()
+        if m is None:
+            return
+        if self.app.store.settings.confirmar_eliminacao:
+            ok, dont_ask = ask(self, tr("delete.title"),
+                               tr("delete.text", title=m.display_title()),
+                               yes=tr("delete.confirm"), checkbox=tr("delete.dont_ask"),
+                               danger=True)
+            if not ok:
+                return
+            if dont_ask:
+                s = self.app.store.settings.clone()
+                s.confirmar_eliminacao = False
+                self.settings.confirmar_eliminacao = False
+                self.app.store.save_settings(s)
+                self.app.apply_config()
+                self._loading = True
+                self.p_confirm.setChecked(False)
+                self._loading = False
+        was_archived = m.arquivada
+        del self.ms.macros[self.cur]
+        group = self.ms.archived_indices() if was_archived else self.ms.active_indices()
+        self.cur = (max([i for i in group if i < self.cur], default=group[0] if group else -1))
+        self._select(self.cur)
+        self._changed()
+        self.show_status(tr("status.deleted"))
+
+    def _move(self, delta: int) -> None:
+        if self._macro() is None:
+            return
+        self.cur = ops.move(self.ms, self.cur, delta)
+        self._refresh_grid()
+        self._changed()
+
+    def _on_reordered(self, archived: bool, order: list) -> None:
+        if not self.ms:
+            return
+        cur_macro = self._macro()
+        ops.reorder_group(self.ms, archived, order)
+        if cur_macro is not None:
+            self.cur = next(i for i, m in enumerate(self.ms.macros) if m is cur_macro)
+        self._refresh_grid()
+        self._changed()
+
+    def _toggle_archive(self) -> None:
+        m = self._macro()
+        if m is None:
+            return
+        if not m.arquivada:
+            self._select(ops.archive(self.ms, self.cur))
+            self._changed()
+            self.show_status(tr("status.archived", title=m.display_title()))
+            return
+        j = ops.key_conflict(self.ms, self.cur)
+        if j is None:
+            self._select(ops.restore(self.ms, self.cur))
+        else:
+            other = self.ms.macros[j]
+            ok, _ = ask(self, tr("restore.title"),
+                        tr("restore.conflict", key=m.tecla, title=m.display_title(),
+                           other=other.display_title()),
+                        yes=tr("restore.replace"))
+            if not ok:
+                return
+            self._select(ops.restore_replacing(self.ms, self.cur, j))
+        self._changed()
+        self.show_status(tr("status.restored", title=m.display_title()))
+
+    # ------------------------------------------------------- copiar / colar
+    def _copy_macro(self) -> None:
+        m = self._macro()
+        if m is None:
+            return
+        data = macro_to_clipboard(m)
+        mime = QMimeData()
+        mime.setData(MIME_MACRO, data.encode("utf-8"))
+        mime.setText(data)
+        QApplication.clipboard().setMimeData(mime)
+        self.show_status(tr("status.copied", title=m.display_title()))
+
+    def _paste_macro(self) -> None:
+        if not self.ms:
+            return
+        mime = QApplication.clipboard().mimeData()
+        text = ""
+        if mime is not None and mime.hasFormat(MIME_MACRO):
+            text = bytes(mime.data(MIME_MACRO)).decode("utf-8")
+        elif mime is not None and mime.hasText():
+            text = mime.text()
+        m = macro_from_clipboard(text) if text else None
+        if m is None:
+            self.show_status(tr("status.nothing_to_paste"), error=True)
+            return
+        after = self.cur if self._macro() is not None and not self._macro().arquivada else None
+        self._select(ops.insert_copy(self.ms, m, after))
+        self._changed()
+        self.show_status(tr("status.pasted", title=m.display_title()))
+
+    def eventFilter(self, obj: QObject, e: QEvent) -> bool:
+        """Atalhos da grelha: Delete/Backspace elimina, Ctrl+C copia, Ctrl+V cola.
+        Só atuam quando o foco não está num campo de edição (aí mantêm o
+        comportamento normal de texto)."""
+        if e.type() != QEvent.KeyPress or not self.isVisible() or not self.isActiveWindow():
+            return False
+        fw = QApplication.focusWidget()
+        if fw is None or fw.window() is not self or _is_editable(fw):
+            return False
+        if self.tabs.currentIndex() != 0 or self._macro() is None and not e.matches(QKeySequence.Paste):
+            return False
+        if e.key() in (Qt.Key_Delete, Qt.Key_Backspace) and not (
+                e.modifiers() & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier)):
+            QTimer.singleShot(0, self._delete_macro)
+            return True
+        if e.matches(QKeySequence.Copy):
+            self._copy_macro()
+            return True
+        if e.matches(QKeySequence.Paste):
+            self._paste_macro()
+            return True
+        return False
+
+    # ============================================================ âmbito
+    def _on_scope_edit(self, *_):
+        if self._loading or not self.ms:
+            return
+        self.ms.ambito.modo = "aplicacoes" if self.r_apps.isChecked() else "global"
+        self.ms.ambito.aplicacoes = [self.apps.item(i).text() for i in range(self.apps.count())]
+        self._changed()
+
+    def _add_app_file(self) -> None:
+        start = os.environ.get("ProgramFiles", str(Path.home()))
+        path, _ = QFileDialog.getOpenFileName(self, tr("scope.pick_title"), start,
+                                              tr("scope.exe_filter"))
+        if path:
+            self._add_app(Path(path).name)
+
+    def _add_app_name(self) -> None:
+        name, ok = get_text(self, tr("scope.add_title"), tr("scope.add_label"))
+        if ok and name.strip():
+            self._add_app(name.strip())
+
+    def _add_app(self, name: str) -> None:
+        existing = {self.apps.item(i).text().lower() for i in range(self.apps.count())}
+        if name.lower() not in existing:
+            self.apps.addItem(name)
+        self.r_apps.setChecked(True)
+        self._on_scope_edit()
+
+    def _remove_app(self) -> None:
+        for it in self.apps.selectedItems():
+            self.apps.takeItem(self.apps.row(it))
+        self._on_scope_edit()
+
+    # ===================================================== painel (prefs)
+    def _read_panel(self) -> PanelSettings:
+        p = self.settings.painel
+        for name, sb in self.p_spins.items():
+            setattr(p, name, sb.value())
+        for name, cb in self.p_colors.items():
+            setattr(p, name, cb.color())
+        if self.p_bg_theme.isChecked():
+            p.cor_fundo = ""
+        self.p_colors["cor_fundo"].setEnabled(not self.p_bg_theme.isChecked())
+        p.mostrar_icone = self.p_show_icon.isChecked()
+        p.mostrar_tecla = self.p_show_key.isChecked()
+        p.mostrar_estado = self.p_show_status.isChecked()
+        p.sempre_por_cima = self.p_ontop.isChecked()
+        p.opacidade = self.p_opacity.value() / 100
+        self.p_opacity_lbl.setText(f"{self.p_opacity.value()} %")
+        return p
+
+    def _on_panel_edit(self, *_):
+        if self._loading:
+            return
+        p = self._read_panel()
+        self._loading = True
+        self.p_preset.setCurrentIndex(self.p_preset.findData(matching_preset(p)))
+        self._loading = False
+        self._update_preview()
+        self.app.preview_panel_settings(p)
+        self._save_settings_timer.start()
+
+    def _on_preset(self, idx: int) -> None:
+        key = self.p_preset.itemData(idx)
+        if key:
+            self._apply_preset(key)
+
+    def _apply_preset(self, key: str) -> None:
+        self.settings.painel = apply_preset(self._read_panel(), key)
+        self._loading = True
+        self._load_panel_prefs()
+        self._loading = False
+        self.app.preview_panel_settings(self.settings.painel)
+        self._save_settings_timer.start()
+
+    def _update_preview(self) -> None:
+        if not hasattr(self, "preview"):
+            return
+        ms = self.ms
+        status = self.app.engine.status()
+        txt = status[1] + (f" · {ms.nome}" if ms and status[0] in ("ativo", "fora") else "")
+        self.preview.update_preview(self.settings.painel, self.pal, ms, (status[0], txt))
+        self.preview_scroll.setMinimumHeight(min(self.preview.sizeHint().height() + 4, 340))
+
+    # ======================================================= preferências
+    def _on_prefs_edit(self, *_):
+        if self._loading:
+            return
+        s = self.settings
+        s.tema = self.p_theme.currentData()
+        s.idioma = self.p_lang.currentData()
+        s.arrancar_com_windows = self.p_autostart.isChecked()
+        s.confirmar_eliminacao = self.p_confirm.isChecked()
+        s.tecla_suspensao = self.p_hotkey.binding()
+        s.modificadores = self.p_mods.currentData()
+        s.modo_texto = self.p_textmode.currentData()
+        try:
+            parse_binding(s.tecla_suspensao)
+        except KeyBindingError as e:
+            self.g_error.setText(tr("prefs.hotkey_error", err=e))
+            return
+        self.g_error.clear()
+        self._save_settings_timer.start()
+
+    def _save_settings_now(self) -> None:
+        self._read_panel()
+        issues = self.app.store.save_settings(self.settings)
+        if issues:
+            msg = tr("status.prefs_not_saved") + "\n" + "\n".join(i.message for i in issues[:4])
+            self.g_error.setText(msg)
+            self.p_error.setText(msg)
+            self.show_status(tr("status.prefs_conflict"), error=True)
+            return
+        self.g_error.clear()
+        self.p_error.clear()
+        self.app.apply_config()
+        self._refresh_grid()
+        self.show_status(tr("status.prefs_saved"))
+
+    def _set_capture_mode(self, on: bool) -> None:
+        self.app.engine.capture_mode = on
+
+    # =========================================================== conjuntos
+    def _on_set_chosen(self, idx: int) -> None:
+        sid = self.set_combo.itemData(idx)
+        if sid and sid != self.app.engine.active_set_id:
+            self.flush()
+            self.cur = -1
+            self.app.select_set(sid)
+
+    def _new_set(self) -> None:
+        name, ok = get_text(self, tr("sets.new_title"), tr("sets.name_label"))
+        if ok and name.strip():
+            self.flush()
+            ms = self.app.store.create_set(name)
+            self.app.apply_config()
+            self.cur = -1
+            self.app.select_set(ms.id)
+
+    def _dup_set(self) -> None:
+        if not self.ms:
+            return
+        self.flush()
+        ms = self.app.store.duplicate_set(self.ms.id)
+        self.app.apply_config()
+        self.app.select_set(ms.id)
+
+    def _rename_set(self) -> None:
+        if not self.ms:
+            return
+        name, ok = get_text(self, tr("sets.rename_title"), tr("sets.name_label"), self.ms.nome)
+        if ok and name.strip():
+            self.ms.nome = name.strip()
+            self._save_set_now()
+            self.reload_from_store()
+
+    def _delete_set(self) -> None:
+        if not self.ms:
+            return
+        if len(self.app.store.sets) <= 1:
+            info(self, tr("sets.delete_title"), tr("sets.need_one"))
+            return
+        ok, _ = ask(self, tr("sets.delete_title"), tr("sets.delete_text", name=self.ms.nome),
+                    yes=tr("delete.confirm"), danger=True)
+        if not ok:
+            return
+        self._save_set_timer.stop()
+        self.app.store.delete_set(self.ms.id)
+        self.app.apply_config()
+        self.cur = -1
+        self.reload_from_store(tr("status.set_deleted"))
+
+    def _import_set(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(self, tr("sets.import_title"), str(Path.home()),
+                                              tr("sets.toml_filter"))
+        if not path:
+            return
+        try:
+            ms = self.app.store.import_set(Path(path))
+        except ConfigError as e:
+            info(self, tr("sets.import_title"),
+                 tr("sets.import_invalid") + "\n\n" + "\n".join(str(i) for i in e.issues[:8]),
+                 warning=True)
+            return
+        except (OSError, UnicodeDecodeError) as e:
+            info(self, tr("sets.import_title"), str(e), warning=True)
+            return
+        self.app.apply_config()
+        self.reload_from_store(tr("status.imported", name=ms.nome))
+
+    def _export_set(self) -> None:
+        if not self.ms:
+            return
+        self.flush()
+        path, _ = QFileDialog.getSaveFileName(self, tr("sets.export_title"),
+                                              str(Path.home() / f"{self.ms.id}.toml"),
+                                              tr("sets.toml_filter"))
+        if path:
+            try:
+                self.app.store.export_set(self.ms.id, Path(path))
+                self.show_status(tr("status.exported", path=path))
+            except OSError as e:
+                info(self, tr("sets.export_title"), str(e), warning=True)
+
+    def _open_folder(self) -> None:
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(self.app.store.root)))
+
+    # =============================================================== estado
+    def _refresh_state_buttons(self) -> None:
+        susp = self.app.engine.suspended
+        self.btn_on.setChecked(not susp)
+        self.btn_off.setChecked(susp)
+
+    def on_engine_state(self) -> None:
+        self._refresh_state_buttons()
+        self._update_preview()
+
+    def show_status(self, text: str, error: bool = False) -> None:
+        self.status.setStyleSheet(f"color:{self.pal.error}" if error else "")
+        self.status.setText(text)
+
+    def closeEvent(self, e):
+        self.flush()
+        e.ignore()
+        self.hide()        # fechar a janela não termina a aplicação
+
+    def dispose(self) -> None:
+        QApplication.instance().removeEventFilter(self)
+        self._save_set_timer.stop()
+        self._save_settings_timer.stop()

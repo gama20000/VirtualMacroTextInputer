@@ -1,0 +1,317 @@
+# Português (idioma base). Para criar uma tradução, copie este ficheiro para
+# <código>.toml (ex.: es.toml), altere "nome" e traduza os valores.
+# {nome} é substituído pelo programa; chavetas literais escrevem-se {{ e }}.
+nome = "Português"
+
+[btn]
+yes = "Sim"
+ok = "OK"
+cancel = "Cancelar"
+
+[word]
+or = " ou "
+
+[loc]
+line = ", linha {n}"
+column = ", coluna {n}"
+
+[type]
+text = "texto"
+bool = "true/false"
+int = "número inteiro"
+list = "lista"
+number = "número"
+
+[toml]
+invalid = "TOML inválido: {msg}"
+end_of_document = " (no fim do ficheiro)"
+
+[cmd]
+at_position = "{msg} (posição {pos})"
+unknown = "comando desconhecido {cmd}; use {valid}"
+no_params = "{cmd} não aceita parâmetros"
+not_closed = "comando {cmd} não fechado: falta «{close}»"
+delay_needs_value = "{cmd} precisa de um valor, ex.: {example}"
+malformed = "comando {cmd} mal formado"
+delay_invalid = "valor de Delay inválido «{value}»: indique milissegundos inteiros, ex.: {example}"
+delay_too_big = "Delay de {ms} ms excede o máximo de {max} ms"
+
+[step]
+type = "escrever «{text}»"
+press = "pressionar {key}"
+wait = "esperar {ms} ms"
+
+[key]
+modifier_as_key = "«{key}» é um modificador e não pode ser a tecla principal"
+unknown = "tecla desconhecida «{key}»"
+empty = "associação de tecla vazia"
+malformed = "associação mal formada «{text}»"
+unknown_mod = "modificador desconhecido «{mod}» em «{text}»"
+repeated_mod = "modificador repetido «{mod}» em «{text}»"
+placeholder = "clique e prima uma tecla"
+tooltip = "Clique e prima a tecla (ou combinação) a associar."
+press_now = "prima uma tecla…"
+unsupported = "tecla não suportada — tente outra"
+
+[cfg]
+unknown_field = "campo desconhecido «{key}»{where}; permitidos: {allowed}"
+where_macro = " (macro {n})"
+wrong_type = "«{key}»{where} deve ser {type}"
+bad_option = "{field} «{value}» inválido; use {options}"
+schema_missing = "falta «versao_esquema» (use versao_esquema = 1)"
+schema_type = "«versao_esquema» deve ser um número inteiro"
+schema_newer = "versao_esquema {v} é mais recente do que a suportada ({max}); atualize o Macropad"
+schema_invalid = "«versao_esquema» inválida"
+not_table = "[{name}] deve ser uma tabela"
+hotkey_error = "tecla_suspensao: {err}"
+range = "{field} deve estar entre {min} e {max}"
+color = "{field} deve ser uma cor no formato #RRGGBB"
+set_combo_tip = "Conjunto ativo (só um de cada vez)"
+manage_sets = "Gerir conjuntos"
+
+[set]
+name_empty = "«nome» não pode estar vazio"
+app_entry = "cada entrada de «aplicacoes» deve ser um nome de executável, ex.: \"notepad.exe\""
+apps_empty = "o âmbito 'aplicacoes' precisa de pelo menos uma aplicação"
+macros_not_list = "«macros» deve ser uma lista de tabelas [[macros]]"
+macro_invalid = "macro {n} inválida"
+
+[mac]
+label = "macro {n}"
+label_title = "macro {n} «{title}»"
+title_long = "{label}: título demasiado longo (máx. 40 caracteres)"
+repeat_range = "{label}: repetições deve estar entre 1 e {max}"
+interval_range = "{label}: intervalo_ms deve estar entre 0 e {max}"
+key_dup = "{label}: conflito de tecla — {key} já está atribuída à macro {other}"
+key_is_hotkey = "{label}: a tecla {key} é a tecla de suspensão"
+key_hotkey_ignore = "{label}: com modificadores='ignorar', a tecla {key} colide com a tecla de suspensão {hotkey}"
+
+[store]
+not_utf8 = "o ficheiro não está em UTF-8"
+config_removed = "ficheiro removido; mantém-se a configuração atual (volte a gravar para o recriar)"
+rejected_conflict = "alteração rejeitada: entra em conflito com macros existentes"
+reloaded = "{file} recarregado"
+set_removed = "conjunto {file} removido"
+set_name_empty = "o nome do conjunto está vazio"
+scope_need_app = "indique pelo menos uma aplicação ou escolha o âmbito global"
+default_set_name = "Predefinido"
+example_title = "Exemplo"
+new_set_name = "Novo conjunto"
+copy_name = "{name} (cópia)"
+
+[eng]
+no_window = "sem janela em primeiro plano"
+own_window = "o Macropad está em primeiro plano"
+no_set = "nenhum conjunto ativo"
+out_of_scope = "fora do âmbito ({app})"
+status_suspended = "Macros suspensas"
+status_running = "A executar: {title}"
+status_active = "Ativo"
+suspended = "macros suspensas"
+archived = "a macro está arquivada"
+empty = "a macro não tem texto"
+busy = "já existe uma macro em execução"
+not_run = "não executada"
+
+[win]
+config_title = "Macropad — Configuração"
+sendinput_failed = "SendInput enviou {sent}/{total} eventos (erro {err}). A janela de destino pode estar a correr como administrador."
+clipboard_open = "não foi possível abrir a área de transferência"
+clipboard_set = "não foi possível escrever na área de transferência"
+hook_failed = "não foi possível instalar o hook de teclado (erro {err})"
+
+[dummy]
+no_hook = "plataforma sem suporte: as teclas não são intercetadas (modo de desenvolvimento)"
+
+[state]
+label = "Macros:"
+active = "Ativo"
+suspended = "Suspenso"
+on_tip = "Ativar as macros (tecla de suspensão: {hotkey})"
+off_tip = "Suspender todas as macros (tecla de suspensão: {hotkey})"
+
+[tab]
+macros = "Macros"
+panel = "Preferências do painel"
+scope = "Âmbito"
+prefs = "Preferências"
+
+[macros]
+empty = "Ainda não há macros ativas. Crie uma com «Nova macro»."
+new = "Nova macro"
+new_title = "Nova macro"
+drag_hint = "Arraste para reordenar — a tecla não muda."
+move_left = "Mover para a esquerda"
+move_right = "Mover para a direita"
+archive = "Arquivar"
+archive_tip = "Retirar das teclas e do painel sem apagar"
+restore = "Restaurar"
+restore_tip = "Voltar a ativar esta macro"
+delete_tip = "Eliminar macro (Delete)"
+commands_hint = "Comandos: <b>{{Enter}}</b> · <b>{{Tab}}</b> · <b>{{Delay:500}}</b> (ms). Quebras de linha equivalem a {{Enter}}. Com uma macro selecionada: Delete elimina, Ctrl+C copia, Ctrl+V cola."
+
+[archive]
+title = "Arquivo ({n})"
+search = "Pesquisar no arquivo (título, texto, tecla)"
+empty = "O arquivo está vazio."
+no_results = "Nenhuma macro arquivada corresponde à pesquisa."
+
+[editor]
+header = "<b>Sistema:</b>&nbsp; Texto"
+header_archived = "<b>Sistema:</b>&nbsp; Texto &nbsp;·&nbsp; <i>arquivada</i>"
+none = "Nenhuma macro selecionada"
+empty_text = "Texto vazio: a macro não faz nada até escrever um texto."
+other_errors = "Há {n} erro(s) noutras macros (marcadas a vermelho)."
+
+[field]
+title = "Título:"
+key = "Tecla:"
+no_key = "Sem tecla"
+no_key_tip = "Remover a tecla (a macro fica disponível só no painel)"
+text = "Texto:"
+text_placeholder = "Ex.: ABC{{Tab}}DEF{{Delay:500}}{{Enter}}"
+repeats = "Repetições:"
+interval = "Intervalo entre repetições:"
+
+[dup]
+info = "Conteúdo duplicado (realce amarelo): o mesmo texto e comandos que {others}."
+archived_suffix = "(arquivada)"
+
+[tile]
+tooltip = "{title}\nTecla: {key}"
+no_key = "(nenhuma)"
+has_error = "Tem erros (ver editor)."
+
+[delete]
+title = "Eliminar macro"
+text = "Eliminar a macro «{title}»? Esta ação não pode ser anulada."
+confirm = "Eliminar"
+dont_ask = "Não voltar a perguntar"
+
+[restore]
+title = "Restaurar macro"
+conflict = "A tecla {key} já está atribuída à macro ativa «{other}».\n\nRestaurar «{title}» no lugar dela? A macro «{other}» passa para o arquivo."
+replace = "Substituir"
+
+[panel]
+preview = "Pré-visualização"
+style = "Estilo:"
+reset = "Repor predefinição"
+reset_tip = "Voltar ao aspeto original do painel"
+columns = "Colunas:"
+size = "Tamanho dos botões:"
+spacing = "Espaçamento:"
+radius = "Arredondamento:"
+border = "Borda:"
+text_scale = "Tamanho do texto:"
+color_button = "Botão:"
+color_text = "Texto:"
+color_border = "Borda:"
+color_bg = "Fundo:"
+bg_follows_theme = "Fundo segue o tema"
+pick_color = "Escolher cor"
+show_icon = "Mostrar ícone"
+show_key = "Mostrar tecla"
+show_status = "Mostrar barra de estado"
+on_top = "Sempre por cima das outras janelas"
+opacity = "Opacidade:"
+toggle = "Mostrar/ocultar painel"
+
+[preset]
+predefinido = "Predefinido"
+compacto = "Compacto"
+grande = "Grande"
+claro = "Claro"
+neon = "Néon"
+redondo = "Redondo"
+minimalista = "Minimalista"
+custom = "Personalizado"
+
+[scope]
+intro = "Onde funcionam as teclas e o painel <b>deste conjunto</b>:"
+global = "Em todas as aplicações (global)"
+apps = "Apenas nas aplicações seguintes:"
+pick_exe = "Escolher executável…"
+type_name = "Escrever nome…"
+remove = "Remover"
+hint = "As aplicações são identificadas pelo nome do executável (ex.: notepad.exe). Fora delas, as teclas funcionam normalmente."
+pick_title = "Escolher aplicação"
+exe_filter = "Executáveis (*.exe);;Todos os ficheiros (*)"
+add_title = "Adicionar aplicação"
+add_label = "Nome do executável (ex.: notepad.exe):"
+
+[prefs]
+theme = "Tema:"
+language = "Idioma:"
+autostart = "Arrancar automaticamente com o Windows"
+confirm_delete = "Pedir confirmação antes de eliminar macros"
+hotkey = "Tecla de suspensão:"
+modifiers = "Modificadores:"
+mods_exact = "Só a tecla isolada (Ctrl+1, Alt+1… mantêm o normal)"
+mods_ignore = "Disparar também com Ctrl/Alt/Shift/Win premidos"
+text_mode = "Modo de texto:"
+mode_type = "Simular escrita (Unicode)"
+mode_paste = "Colar via área de transferência (Ctrl+V)"
+hotkey_error = "Tecla de suspensão: {err}"
+info = "Pasta de configuração: {folder}<br>Os ficheiros TOML podem ser editados à mão; são recarregados automaticamente ao guardar.<br><br>Limitação: o Windows impede que o Macropad intercete teclas ou envie texto para aplicações executadas como administrador, a menos que o próprio Macropad também seja executado como administrador."
+
+[theme]
+diurno = "Diurno"
+noturno = "Noturno"
+automatico = "Automático (segue o Windows)"
+
+[sets]
+new = "Novo conjunto…"
+duplicate = "Duplicar"
+rename = "Mudar o nome…"
+delete = "Eliminar…"
+import = "Importar conjunto…"
+export = "Exportar conjunto…"
+open_folder = "Abrir pasta de configuração"
+new_title = "Novo conjunto"
+rename_title = "Mudar o nome"
+name_label = "Nome do conjunto:"
+delete_title = "Eliminar conjunto"
+delete_text = "Eliminar o conjunto «{name}» e o seu ficheiro?"
+need_one = "Tem de existir pelo menos um conjunto."
+import_title = "Importar conjunto"
+import_invalid = "O ficheiro não é válido:"
+export_title = "Exportar conjunto"
+toml_filter = "Conjuntos Macropad (*.toml)"
+
+[status]
+fix_errors = "Alterações por gravar: corrija os erros indicados."
+saving = "A gravar…"
+saved = "Guardado."
+deleted = "Macro eliminada."
+archived = "«{title}» foi para o arquivo."
+restored = "«{title}» foi restaurada."
+copied = "Macro «{title}» copiada."
+pasted = "Cópia de «{title}» colada."
+nothing_to_paste = "A área de transferência não contém uma macro."
+prefs_saved = "Preferências guardadas."
+prefs_not_saved = "Não gravado:"
+prefs_conflict = "Preferências não gravadas (conflito de teclas)."
+set_deleted = "Conjunto eliminado."
+imported = "Conjunto «{name}» importado. Selecione-o na lista para o ativar."
+exported = "Exportado para {path}"
+reloaded_from_files = "Configuração recarregada a partir dos ficheiros."
+
+[tray]
+header = "Macropad — macros: {state}"
+open_config = "Abrir configuração"
+show_panel = "Mostrar painel"
+hide_panel = "Ocultar painel"
+active_set = "Conjunto ativo"
+suspend = "Suspender macros"
+resume = "Reativar macros"
+quit = "Sair"
+tooltip = "Macropad — {state}\nConjunto: {set}"
+no_set = "(nenhum)"
+
+[msg]
+startup_errors = "Erros na configuração ao arrancar"
+invalid_config = "Configuração inválida"
+kept_last_valid = "Mantida a última configuração válida."
+and_more = "… e mais {n}"
+send_error = "Macropad — erro ao enviar"

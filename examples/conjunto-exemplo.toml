@@ -1,0 +1,82 @@
+# ==========================================================================
+#  Macropad — exemplo comentado de um conjunto de macros
+# ==========================================================================
+#
+# Onde fica: %APPDATA%\Macropad\conjuntos\<nome>.toml
+#   (um ficheiro por conjunto; o nome do ficheiro identifica o conjunto)
+# Para usar este exemplo: Configuração ▸ ⋯ ▸ Importar conjunto…,
+#   ou copie o ficheiro para a pasta "conjuntos".
+#
+# O Macropad recarrega o ficheiro automaticamente sempre que é guardado.
+# Se tiver um erro, a última versão válida continua ativa e é mostrada uma
+# mensagem com o ficheiro, a linha e a coluna do problema.
+
+# Versão do formato. Obrigatória; permite evoluções futuras.
+versao_esquema = 1
+
+# Nome mostrado na interface e no menu do ícone junto ao relógio.
+nome = "Exemplo — Codificação"
+
+# --------------------------------------------------------------------------
+# Âmbito: onde as teclas deste conjunto funcionam (vale para o conjunto todo)
+# --------------------------------------------------------------------------
+[ambito]
+# "global"     -> em todas as aplicações
+# "aplicacoes" -> apenas nas aplicações da lista abaixo; nas restantes as
+#                 teclas funcionam normalmente (e o painel não envia nada).
+modo = "global"
+# Nome do executável (sem distinção de maiúsculas). Também aceita o caminho
+# completo, ex.: "C:\\Program Files\\App\\app.exe" (barras invertidas duplicadas).
+aplicacoes = ["notepad.exe", "WINWORD.EXE"]
+
+# --------------------------------------------------------------------------
+# Macros. A ordem das secções [[macros]] é a ordem dos botões na grelha;
+# mudar a ordem não altera a tecla de cada macro.
+# --------------------------------------------------------------------------
+
+[[macros]]
+titulo = "3E03305"          # texto mostrado no botão (máx. 40 caracteres)
+tecla = "1"                  # tecla 1 da fila superior (Numpad1 é outra tecla)
+texto = "3E03305"            # o que é escrito
+repeticoes = 1               # quantas vezes executar por cada pressão (1–1000)
+intervalo_ms = 0             # pausa entre repetições, em milissegundos
+# arquivada = true           # (opcional) envia a macro para o Arquivo: fica fora
+#                            # das teclas e do painel até ser restaurada
+
+[[macros]]
+titulo = "Z51.11 ⏎"
+tecla = "2"
+# Comandos intercalados no texto:
+#   {Enter}  pressiona Enter
+#   {Tab}    pressiona Tab
+#   {Delay:500}  espera 500 ms (0 a 600000)
+texto = "Z51.11{Enter}"
+
+[[macros]]
+titulo = "Formulário"
+tecla = "3"
+# Escreve ABC, Tab, DEF, espera meio segundo e pressiona Enter.
+texto = "ABC{Tab}DEF{Delay:500}{Enter}"
+
+[[macros]]
+titulo = "Acentos"
+tecla = "4"
+texto = "Ação, coração, pão — €"   # Unicode é suportado
+
+[[macros]]
+titulo = "3× linha"
+tecla = "Ctrl+F1"            # com modificadores: dispara só com exatamente Ctrl+F1
+texto = "linha{Enter}"
+repeticoes = 3
+intervalo_ms = 250
+
+[[macros]]
+titulo = "Só painel"
+tecla = ""                   # sem tecla: só pode ser executada no painel
+texto = "aratumuma"
+
+[[macros]]
+titulo = "Versão antiga"
+tecla = "1"                  # uma macro arquivada pode partilhar a tecla de uma ativa
+texto = "3E0330"
+arquivada = true
