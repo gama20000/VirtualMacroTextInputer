@@ -7,6 +7,20 @@ Legenda da coluna OK: ✅ verificado · ◐ parcial · ❌ falhou · ☐ por ver
 (controlo do ecrã) com `tools\macropad-teste.cmd`, que usa uma configuração
 separada em `%TEMP%\MacropadTeste`.
 
+Como começar (versão 0.4):
+
+1. Feche a instância de teste que ficou aberta (ícone junto ao relógio ▸ Sair):
+   ainda é a versão 0.3.
+2. Faça duplo clique em `tools\macropad-teste.cmd`. Abre o Macropad com a
+   configuração de teste, sem mexer nas suas macros reais.
+3. Os passos marcados ✅ foram verificados na versão 0.3; pode repeti-los na
+   0.4, se quiser. Os passos 36 e 58 (barra de título do painel) devem ser
+   repetidos, porque o painel tem agora uma barra própria.
+4. Na configuração de teste, a macro «Exemplo» (tecla 4) tem o texto
+   `a{Delay:5000}b` com 3 repetições, do passo 14. Para o passo 5, reponha
+   `ABC{Tab}DEF{Delay:500}{Enter}` com 1 repetição.
+5. Anote em cada linha ✅, ◐ ou ❌ (com uma nota curta do que viu).
+
 Preparação: abra o Bloco de Notas e use o conjunto **Predefinido**, em que 1 → `3E03305`, 2 → `Z51.11{Enter}`, 3 → `C50.912` e 4 → `ABC{Tab}DEF{Delay:500}{Enter}`.
 
 ## Supressão de teclas
@@ -33,10 +47,10 @@ Preparação: abra o Bloco de Notas e use o conjunto **Predefinido**, em que 1 �
 
 | # | Ação | Esperado | OK |
 |---|---|---|---|
-| 11 | `Ctrl+Alt+P` | ícone cinzento com pausa; painel "Macros suspensas" | ✅ |
+| 11 | Tecla de suspensão (`Shift+Esc`; na 0.3 era `Ctrl+Alt+P`) | ícone cinzento com pausa; painel "Macros suspensas" | ✅ |
 | 12 | Prima `1` | escreve `1` | ✅ |
-| 13 | `Ctrl+Alt+P` | volta a ativo | ✅ |
-| 14 | Crie uma macro `a{Delay:5000}b` com 3 repetições, dispare-a e prima `Ctrl+Alt+P` durante a pausa | só aparece `a`; nada mais é escrito | ✅ |
+| 13 | `Shift+Esc` | volta a ativo | ✅ |
+| 14 | Crie uma macro `a{Delay:5000}b` com 3 repetições, dispare-a e prima `Shift+Esc` durante a pausa | só aparece `a`; nada mais é escrito | ✅ |
 | 15 | Saia e volte a abrir o programa com as macros suspensas | arranca suspenso e com o mesmo conjunto | ☐ |
 
 ## Âmbito
