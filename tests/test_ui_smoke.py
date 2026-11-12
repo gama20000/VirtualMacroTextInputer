@@ -337,3 +337,19 @@ def test_previsualizacao_centrada_e_igual_ao_painel(app, qapp):
     assert [b.title for b in real.buttons] == [b.title for b in prev.buttons]
     assert real.sizeHint() == prev.sizeHint()
     assert real.btn_on.isVisible() == prev.btn_on.isVisible()
+
+
+def test_reordenar_arquivo_com_pesquisa_nao_perde_macros(app, qapp):
+    # Revisão Codex P1, pelo caminho da interface.
+    w = app.config_window
+    w._select_many([0, 1, 2])
+    w._toggle_archive()                     # arquiva 3E03305, Z51.11, C50.912
+    w.flush()
+    w.archive_search.setText("e")           # mostra só 3E03305 e Z51.11 ({Enter})
+    vis = [w.archive_grid.real_index(r) for r in range(w.archive_grid.count())]
+    assert len(vis) == 2
+    w._on_reordered(True, list(reversed(vis)))
+    w.flush()
+    ms = app.store.sets["predefinido"]
+    assert sorted(m.titulo for m in ms.macros if m.arquivada) == ["3E03305", "C50.912", "Z51.11"]
+    assert len(ms.macros) == 4

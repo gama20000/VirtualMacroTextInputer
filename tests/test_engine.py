@@ -261,3 +261,12 @@ def test_macro_sem_texto_nao_suprime_tecla(fake):
     e.set_config(make_config([Macro("Nova", "1", "")]))
     assert e.handle_key(down("1")) is False
     assert e.trigger(0)[0] is False
+
+
+def test_trigger_com_indice_fora_do_intervalo_nao_executa(engine, fake):
+    # Revisão Codex P2: índices negativos não podem apontar para o fim da lista.
+    for idx in (-1, -2, 2, 99):
+        ok, _ = engine.trigger(idx)
+        assert ok is False
+    time.sleep(0.05)
+    assert fake.log == []

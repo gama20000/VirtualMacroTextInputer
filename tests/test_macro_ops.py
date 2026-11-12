@@ -100,3 +100,19 @@ def test_copiar_varias():
     from macropad.core.configio import macros_from_clipboard, macros_to_clipboard
     ms = [Macro("A", "1", "a"), Macro("B", "", "b{Enter}", 2, 100)]
     assert macros_from_clipboard(macros_to_clipboard(ms)) == ms
+
+
+def test_reordenar_arquivo_filtrado_preserva_macros_ocultas():
+    # Revisão Codex P1: com a pesquisa ativa, a grelha do arquivo só mostra
+    # parte das macros; reordenar não pode descartar as ocultas.
+    ms = mk(Macro("A"), Macro("x1", arquivada=True), Macro("oculta", arquivada=True),
+            Macro("x2", arquivada=True), Macro("oculta2", arquivada=True))
+    ops.reorder_group(ms, True, [3, 1])        # só x1 e x2 visíveis; trocados
+    assert len(ms.macros) == 5
+    assert [m.titulo for m in ms.macros] == ["A", "x2", "oculta", "x1", "oculta2"]
+
+
+def test_reordenar_grupo_ignora_indices_do_outro_grupo():
+    ms = mk(Macro("A"), Macro("B"), Macro("Z", arquivada=True))
+    ops.reorder_group(ms, False, [1, 0])
+    assert [m.titulo for m in ms.macros] == ["B", "A", "Z"]

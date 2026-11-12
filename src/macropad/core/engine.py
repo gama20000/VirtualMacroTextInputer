@@ -328,7 +328,7 @@ class Engine:
             if self._running is not None:
                 return False         # ignora disparos durante uma execução
             act = self._active
-            if act is None or index >= len(act.plans) or act.plans[index] is None:
+            if act is None or not (0 <= index < len(act.plans)) or act.plans[index] is None:
                 return False
             plan = act.plans[index]
             exe = Execution(plan, target, self.platform, self._finished)
@@ -350,11 +350,12 @@ class Engine:
         if self._suspended:
             return False, tr("eng.suspended")
         act = self._active
-        if act is not None and 0 <= index < len(act.ms.macros):
-            if act.ms.macros[index].arquivada:
-                return False, tr("eng.archived")
-            if act.plans[index] is None:
-                return False, tr("eng.empty")
+        if act is None or not (0 <= index < len(act.ms.macros)):
+            return False, tr("eng.not_run")       # índice inválido (inclui negativos)
+        if act.ms.macros[index].arquivada:
+            return False, tr("eng.archived")
+        if act.plans[index] is None:
+            return False, tr("eng.empty")
         fg = self.platform.foreground()
         ok, why = self._target_ok(fg)
         if not ok:

@@ -151,11 +151,22 @@ def new_macro(ms: MacroSet, title: str) -> int:
 
 # ---------------------------------------------------------------- reordenar
 def reorder_group(ms: MacroSet, archived: bool, order: list[int]) -> None:
-    """Aplica uma nova ordem (lista de índices atuais) a um dos grupos."""
-    group = [ms.macros[i] for i in order]
-    actives = [m for m in ms.macros if not m.arquivada]
-    arch = [m for m in ms.macros if m.arquivada]
-    ms.macros = (actives + group) if archived else (group + arch)
+    """Aplica uma nova ordem a parte de um grupo.
+
+    ``order`` são os índices atuais das macros *visíveis* na grelha, pela nova
+    ordem. Com a pesquisa do Arquivo ativa, só uma parte das arquivadas está
+    visível: as visíveis trocam de posição entre si, ocupando as mesmas
+    posições que já tinham, e as ocultas ficam onde estão. Nenhuma macro é
+    descartada."""
+    n = len(ms.macros)
+    if (len(set(order)) != len(order)
+            or any(not (0 <= i < n) or ms.macros[i].arquivada != archived for i in order)):
+        return                                # ordem inválida: não altera nada
+    new = list(ms.macros)
+    for slot, src in zip(sorted(order), order):
+        new[slot] = ms.macros[src]
+    ms.macros = new
+    normalize_order(ms)
 
 
 def move(ms: MacroSet, i: int, delta: int) -> int:
