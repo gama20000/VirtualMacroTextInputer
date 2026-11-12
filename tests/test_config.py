@@ -29,13 +29,13 @@ def test_roundtrip_set_e_settings():
     assert back == ms
     from macropad.core.model import PanelSettings
     s = Settings(arrancar_com_windows=False, modo_texto="colar", modificadores="ignorar",
-                 tecla_suspensao="Ctrl+Shift+F12", tema="automatico", idioma="en",
-                 confirmar_eliminacao=False,
+                 tecla_suspensao="Ctrl+Shift+F12", tecla_painel="", tema="automatico", idioma="en",
+                 confirmar_eliminacao=False, avisar_conflito_tecla=False,
                  painel=PanelSettings(sempre_por_cima=False, opacidade=0.5, colunas=3,
                                       tamanho_botao=100, espacamento=12, arredondamento=50,
                                       borda=0, escala_texto=120, cor_fundo="#101010",
                                       cor_botao="#ffffff", cor_texto="#000000",
-                                      cor_borda="#00e5ff", mostrar_icone=False,
+                                      cor_borda="#00e5ff", posicao_titulo="cima", posicao_tecla="centro",
                                       mostrar_tecla=False, mostrar_estado=False))
     assert parse_settings(dump_settings(s)) == s
     ms.macros[1].arquivada = True
@@ -84,10 +84,10 @@ def test_campo_desconhecido_e_versao():
 
 
 def test_conflito_com_tecla_de_suspensao():
-    ms = MacroSet("x", "x", Scope(), [Macro("a", "ctrl+alt+p", "t")])
+    ms = MacroSet("x", "x", Scope(), [Macro("a", "shift+escape", "t")])
     issues = validate_macros(ms, Settings())
     assert issues and "suspensão" in issues[0].message
-    ms2 = MacroSet("x", "x", Scope(), [Macro("a", "P", "t")])
+    ms2 = MacroSet("x", "x", Scope(), [Macro("a", "Escape", "t")])
     assert not validate_macros(ms2, Settings())
     assert validate_macros(ms2, Settings(modificadores="ignorar"))
 
@@ -132,10 +132,10 @@ def test_reload_invalido_mantem_ultima_configuracao_valida(store):
 
 def test_reload_settings_com_conflito_rejeitado(store):
     store.config_path.write_text(
-        store.config_path.read_text("utf-8").replace('"Ctrl+Alt+P"', '"1"'), "utf-8")
+        store.config_path.read_text("utf-8").replace('"Shift+Escape"', '"1"'), "utf-8")
     r = store.reload([store.config_path])
     assert not r.changed and r.issues
-    assert store.settings.tecla_suspensao == "Ctrl+Alt+P"
+    assert store.settings.tecla_suspensao == "Shift+Escape"
 
 
 def test_gravacao_propria_nao_recarrega(store):
@@ -316,3 +316,87 @@ def test_arquivadas_podem_partilhar_tecla():
 def test_texto_vazio_permitido():
     ms = MacroSet("x", "x", Scope(), [Macro("Nova macro", "", "")])
     assert validate_macros(ms, Settings()) == []
+
+
+# ------------------------------------------------------------ versão 0.4
+def test_tipos_espaco_e_contador_roundtrip():
+    ms = MacroSet("x", "x", Scope(), [
+        Macro("A", "1", "a"), Macro(tipo="espaco"),
+        Macro("Conta", "F9", tipo="contador", id="abc", incremento=5, reposicao=10,
+              pressao_longa_ms=1200)])
+    back = parse_set(dump_set(ms), "x")
+    assert back.macros[1].is_space and back.macros[1].tecla == ""
+    c = back.macros[2]
+    assert (c.tipo, c.id, c.incremento, c.reposicao, c.pressao_longa_ms) == (
+        "contador", "abc", 5, 10, 1200)
+    assert c.texto == ""
+
+
+def test_validacao_espacos_e_contadores():
+    bad = """versao_esquema = 1
+nome = "x"
+[[macros]]
+tipo = "espaco"
+arquivada = true
+[[macros]]
+tipo = "contador"
+id = "c1"
+incremento = 0
+[[macros]]
+tipo = "contador"
+id = "c1"
+pressao_longa_ms = 50
+[[macros]]
+tipo = "outro"
+"""
+    with pytest.raises(ConfigError) as e:
+        parse_set(bad, "x")
+    txt = str(e.value)
+    assert "espaço" in txt and "incremento" in txt and "id" in txt and "tipo" in txt
+
+
+def test_contador_sem_id_recebe_id_estavel():
+    ms = parse_set('versao_esquema = 1\nnome="x"\n[[macros]]\ntipo="contador"\n', "x")
+    assert ms.macros[0].id == "contador-1"
+
+
+def test_mostrar_icone_antigo_aceite_e_ignorado():
+    s = parse_settings('versao_esquema = 1\n[painel]\nmostrar_icone = false\n')
+    assert s.painel.posicao_titulo == "centro"
+    assert "mostrar_icone" not in dump_settings(s)
+
+
+def test_teclas_globais_predefinidas_e_conflitos():
+    s = Settings()
+    assert (s.tecla_suspensao, s.tecla_painel) == ("Shift+Escape", "Shift+F12")
+    ms = MacroSet("x", "x", Scope(), [Macro("a", "shift+f12", "t")])
+    issues = validate_macros(ms, s)
+    assert issues and "painel" in issues[0].message
+    with pytest.raises(ConfigError):
+        parse_settings('versao_esquema = 1\n[geral]\ntecla_suspensao = "F8"\ntecla_painel = "F8"\n')
+    assert parse_settings('versao_esquema = 1\n[geral]\ntecla_painel = ""\n').tecla_painel == ""
+
+
+def test_migracao_ctrl_alt_p_para_shift_escape(tmp_path):
+    from macropad.core.model import State
+    st = ConfigStore(tmp_path)
+    st.ensure_defaults()
+    st.config_path.write_text(st.config_path.read_text("utf-8").replace(
+        '"Shift+Escape"', '"Ctrl+Alt+P"'), "utf-8")
+    st.load_all()
+    assert st.settings.tecla_suspensao == "Ctrl+Alt+P"
+    state = State()
+    msgs = st.migrate(state)
+    assert msgs and st.settings.tecla_suspensao == "Shift+Escape"
+    assert "Shift+Escape" in st.config_path.read_text("utf-8")
+    # só uma vez: se o utilizador voltar a escolher Ctrl+Alt+P, mantém-se
+    s = st.settings.clone(); s.tecla_suspensao = "Ctrl+Alt+P"; st.save_settings(s)
+    assert st.migrate(state) == [] and st.settings.tecla_suspensao == "Ctrl+Alt+P"
+
+
+def test_estado_com_contadores_posicao_e_migracoes(tmp_path):
+    from macropad.core.model import State
+    st = ConfigStore(tmp_path)
+    s = State(True, "x", True, 120, -30, {"abc": 7, "d e": -2}, ["m1"])
+    st.save_state(s)
+    assert st.load_state() == s

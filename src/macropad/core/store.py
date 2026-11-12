@@ -23,7 +23,7 @@ from typing import Optional
 from .configio import (ConfigError, Issue, dump_settings, dump_set, parse_set,
                        parse_settings, toml_str, validate_macros)
 from ..i18n import tr
-from .model import Config, Macro, MacroSet, Scope, Settings, State
+from .model import LEGACY_HOTKEY, Config, Macro, MacroSet, Scope, Settings, State
 
 log = logging.getLogger(__name__)
 
@@ -345,19 +345,50 @@ class ConfigStore:
             st.suspenso = bool(data.get("suspenso", False))
             st.conjunto = str(data.get("conjunto", ""))
             st.painel_visivel = bool(data.get("painel_visivel", False))
-        except (OSError, tomllib.TOMLDecodeError, UnicodeDecodeError):
+            px, py = data.get("painel_x"), data.get("painel_y")
+            if isinstance(px, int) and isinstance(py, int):
+                st.painel_x, st.painel_y = px, py
+            cont = data.get("contadores", {})
+            if isinstance(cont, dict):
+                st.contadores = {str(k): int(v) for k, v in cont.items()
+                                 if isinstance(v, int) and not isinstance(v, bool)}
+            mig = data.get("migracoes", [])
+            if isinstance(mig, list):
+                st.migracoes = [str(x) for x in mig]
+        except (OSError, tomllib.TOMLDecodeError, UnicodeDecodeError, ValueError):
             pass
         return st
 
     def save_state(self, st: State) -> None:
-        text = ("# Estado da última sessão (gerido pelo Macropad; não é observado).\n"
-                f"suspenso = {'true' if st.suspenso else 'false'}\n"
-                f"conjunto = {toml_str(st.conjunto)}\n"
-                f"painel_visivel = {'true' if st.painel_visivel else 'false'}\n")
+        lines = ["# Estado da última sessão (gerido pelo Macropad; não é observado).",
+                 f"suspenso = {'true' if st.suspenso else 'false'}",
+                 f"conjunto = {toml_str(st.conjunto)}",
+                 f"painel_visivel = {'true' if st.painel_visivel else 'false'}"]
+        if st.painel_x is not None and st.painel_y is not None:
+            lines += [f"painel_x = {int(st.painel_x)}", f"painel_y = {int(st.painel_y)}"]
+        lines.append("migracoes = [" + ", ".join(toml_str(m) for m in st.migracoes) + "]")
+        lines += ["", "[contadores]"]
+        lines += [f"{toml_str(k)} = {int(v)}" for k, v in sorted(st.contadores.items())]
         try:
-            atomic_write(self.state_path, text)
+            atomic_write(self.state_path, "\n".join(lines) + "\n")
         except OSError:
             log.exception("não foi possível gravar o estado")
+
+    # ------------------------------------------------------------ migrações
+    MIGRATION_HOTKEY = "tecla_suspensao_v04"
+
+    def migrate(self, st: State) -> list[str]:
+        """Migrações únicas da configuração. Devolve mensagens a mostrar."""
+        msgs: list[str] = []
+        if self.MIGRATION_HOTKEY not in st.migracoes:
+            if self.settings.tecla_suspensao == LEGACY_HOTKEY:
+                new = self.settings.clone()
+                new.tecla_suspensao = Settings().tecla_suspensao
+                if not self.save_settings(new):
+                    msgs.append(tr("store.migrated_hotkey", old=LEGACY_HOTKEY,
+                                   new=new.tecla_suspensao))
+            st.migracoes.append(self.MIGRATION_HOTKEY)
+        return msgs
 
 
 def locate_hotkey(data: bytes) -> tuple[Optional[int], Optional[int]]:

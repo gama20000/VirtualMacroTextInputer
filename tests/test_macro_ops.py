@@ -116,3 +116,66 @@ def test_reordenar_grupo_ignora_indices_do_outro_grupo():
     ms = mk(Macro("A"), Macro("B"), Macro("Z", arquivada=True))
     ops.reorder_group(ms, False, [1, 0])
     assert [m.titulo for m in ms.macros] == ["B", "A", "Z"]
+
+
+# ------------------------------------------------------------ versão 0.4
+def test_mover_com_posicao_entre_areas():
+    ms = mk(Macro("A"), Macro("B"), Macro("C"), Macro("X", arquivada=True),
+            Macro("Y", arquivada=True))
+    A, B, C, X, Y = ms.macros
+    # Ativo -> Arquivo, antes de Y (não no fim)
+    ops.move_items(ms, [B], True, anchor=Y, after=False)
+    assert titles(ms) == [("A", False), ("C", False), ("X", True), ("B", True), ("Y", True)]
+    # Arquivo -> Ativo, depois de A
+    ops.move_items(ms, [Y], False, anchor=A, after=True)
+    assert [m.titulo for m in ms.macros] == ["A", "Y", "C", "X", "B"]
+    assert not Y.arquivada
+    # reorganizar dentro da área, com inserção antes da âncora
+    ops.move_items(ms, [C], False, anchor=A, after=False)
+    assert [m.titulo for m in ms.macros] == ["C", "A", "Y", "X", "B"]
+    # sem âncora: fim da área
+    ops.move_items(ms, [C], True)
+    assert [m.titulo for m in ms.macros] == ["A", "Y", "X", "B", "C"]
+
+
+def test_espacos_nao_vao_para_o_arquivo():
+    ms = mk(Macro("A"), Macro(tipo="espaco"), Macro("X", arquivada=True))
+    sp = ms.macros[1]
+    assert ops.move_items(ms, [sp], True) == []
+    assert not sp.arquivada
+    ops.archive_many(ms, [0, 1])
+    assert [(m.titulo, m.tipo, m.arquivada) for m in ms.macros] == [
+        ("", "espaco", False), ("A", "texto", True), ("X", "texto", True)]
+
+
+def test_trocar_botao_com_espaco():
+    ms = mk(Macro("A"), Macro(tipo="espaco"), Macro("B"))
+    ops.swap(ms, 0, 1)
+    assert [m.tipo for m in ms.macros] == ["espaco", "texto", "texto"]
+
+
+def test_novos_espaco_e_contador():
+    ms = mk(Macro("A"), Macro("Z", arquivada=True))
+    i = ops.new_space(ms)
+    j = ops.new_counter(ms, "Conta")
+    assert (i, j) == (1, 2)
+    c = ms.macros[2]
+    assert c.is_counter and c.id and c.incremento == 1 and c.reposicao == 0
+    assert ops.duplicate_groups(ms.macros + [Macro("B", tipo="contador", id="x")]) == {}
+
+
+def test_colar_copia_de_arquivada_fica_no_arquivo_logo_a_seguir():
+    ms = mk(Macro("A", "1", "a"), Macro("X", "2", "x", arquivada=True),
+            Macro("Y", "", "y", arquivada=True))
+    src = ms.macros[1]
+    pos = ops.insert_copy(ms, src, 1)
+    assert pos == 2
+    assert [(m.titulo, m.arquivada) for m in ms.macros] == [
+        ("A", False), ("X", True), ("X", True), ("Y", True)]
+    assert ms.macros[1] is src and ms.macros[2].tecla == "2"   # no arquivo mantém a tecla
+
+
+def test_copiar_contador_recebe_id_novo():
+    ms = mk(Macro("C", tipo="contador", id="orig"))
+    ops.insert_copy(ms, ms.macros[0], 0)
+    assert ms.macros[1].id != "orig" and ms.macros[1].is_counter

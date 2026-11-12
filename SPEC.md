@@ -56,7 +56,8 @@ no ecrã, sem hardware adicional.
 
 ### Suspensão global
 
-- Tecla configurável (por omissão Ctrl+Alt+P) que alterna ativo/suspenso, também
+- Tecla configurável (por omissão Shift+Escape; as configurações com o antigo
+  Ctrl+Alt+P são migradas) que alterna ativo/suspenso, também
   durante uma macro e durante `{Delay}`; cancela logo passos e repetições
   pendentes. Suspenso: todas as teclas com comportamento normal.
 - Estado visível no ícone, no painel e na configuração; botões **Ativo** e
@@ -84,17 +85,46 @@ no ecrã, sem hardware adicional.
 
 - Separadores, por esta ordem: **Macros**, **Painel**, **Âmbito**,
   **Preferências**.
-- Macros: grelha reordenável por arrasto (a tecla não muda); editor de título,
-  tecla, texto, repetições e intervalo; gravação automática quando válido;
-  erros a vermelho (incluindo conflito de tecla); conteúdo duplicado (mesma
-  sequência de texto e comandos) a amarelo, com explicação.
+- Macros: duas áreas com títulos do mesmo estilo, **Ativo** e **Arquivo**. A
+  área Ativo usa o mesmo aspeto do painel (dimensões, cores, posições do título
+  e da tecla, espaçamento, número de colunas, espaços vazios) e fica centrada;
+  se não couber, pode ser percorrida sem cortar macros.
+- Arrastar reorganiza dentro de cada área e move entre Ativo e Arquivo nos dois
+  sentidos. Ao largar, o item fica na posição indicada, antes ou depois do item
+  sob o ponteiro, e não no fim. Largar sobre um espaço vazio troca o botão com
+  o espaço. A interface atualiza-se e grava logo. A tecla nunca muda com a
+  posição; restaurar por arrasto com a tecla ocupada pede a mesma confirmação.
+- Editor de título, tecla, texto, repetições e intervalo; gravação automática
+  quando válido; erros a vermelho (incluindo conflito de tecla); conteúdo
+  duplicado (mesma sequência de texto e comandos) a amarelo, com explicação.
 - «Nova macro» cria exatamente uma macro, sem tecla e com texto vazio.
+- Espaços vazios: podem ser inseridos entre botões para compor a grelha. Não são
+  macros, não executam, não vão para o Arquivo e só são visíveis (contorno
+  tracejado) na configuração; no painel real ocupam a célula, invisíveis. A
+  organização é gravada.
+- Contadores: botão que mostra uma contagem. Um clique curto (ou um toque na
+  tecla associada) soma o incremento (predefinição 1); manter premido durante o
+  tempo de pressão longa repõe o valor configurado (predefinição 0) sem somar.
+  Não escreve texto. A configuração e a contagem persistem entre sessões.
+- Atribuir tecla por cima do botão: com o ponteiro sobre um botão da área de
+  edição e o foco fora de campos de edição, premir uma tecla atribui-a (o botão
+  mostra que está à espera). Delete, Backspace, Tab, Ctrl+C e Ctrl+V mantêm as
+  suas funções. Se a tecla já estiver numa macro ativa, ou coincidir com uma
+  tecla global (suspensão, painel), nada muda e aparece uma mensagem que
+  identifica o conflito, com «Não voltar a mostrar» (reativável nas
+  Preferências).
 - Seleção múltipla (Ctrl+clique, Shift+clique) para arquivar, restaurar,
   eliminar e copiar/colar.
 - Fora de campos de edição: Delete/Backspace elimina (com confirmação e opção
-  «Não voltar a perguntar», reativável nas preferências; várias macros pedem
-  sempre confirmação com a quantidade), Ctrl+C copia, Ctrl+V cola. Dentro de
-  campos de texto, comportamento normal.
+  «Não voltar a perguntar»; várias macros pedem sempre confirmação com a
+  quantidade), Ctrl+C copia, Ctrl+V cola. Colar com uma macro arquivada
+  selecionada cria a cópia no Arquivo, logo depois dela. Dentro de campos de
+  texto, comportamento normal.
+- Preferência «Não pedir confirmação antes de eliminar macros»: marcada elimina
+  sem perguntar; aplica-se e grava-se logo ao mudar.
+- Preferência «Arrancar automaticamente com o Windows»: ativa ou desativa de
+  facto o arranque (incluindo a aprovação de arranque do Windows) e mostra uma
+  indicação clara se não for possível aplicar a alteração.
 - Arquivo: divisória «Arquivo» com as macros arquivadas e pesquisa (título,
   texto, tecla); arquivar por botão ou arrastando para essa área; arquivadas
   ficam fora das teclas e do painel; restaurar com tecla ocupada pede
@@ -106,15 +136,20 @@ no ecrã, sem hardware adicional.
 
 ### Painel
 
+- Tecla configurável para mostrar/ocultar o painel (por omissão Shift+F12),
+  indicada no próprio painel.
 - Grelha com título e tecla das macros ativas; executar com o rato sem roubar o
   foco à aplicação de destino; sempre por cima por omissão; transparência
   ajustável (também com a roda do rato sobre o painel, passos de 5 %, com
   indicação breve); respeita suspensão, âmbito e regras de execução.
 - Aparência personalizável mantendo a grelha: colunas, tamanho, espaçamento,
-  arredondamento, borda, tamanho do texto, cores, elementos visíveis, estilos
-  predefinidos e «Repor predefinição» (aspeto original).
-- Pré-visualização centrada nas preferências, idêntica ao painel real e
-  atualizada a cada alteração.
+  arredondamento, borda, tamanho do texto, cores, elementos visíveis, posição do
+  título e da tecla (em cima, ao centro ou em baixo, de forma independente e sem
+  sobreposição ilegível), estilos predefinidos e «Repor predefinição». Os
+  botões não têm ícone.
+- Pré-visualização centrada nas preferências, idêntica ao painel real
+  (incluindo a barra de título com as cores do tema) e atualizada a cada
+  alteração.
 
 ### Ficheiros TOML e recarregamento
 
@@ -165,6 +200,8 @@ no ecrã, sem hardware adicional.
 - Sintaxe para escrever `{Enter}`/`{Tab}` literalmente.
 - Preservar o conteúdo anterior da área de transferência.
 - Instalador (o pacote é uma pasta com `Macropad.exe`).
+- Ícones personalizados nos botões (removidos por agora).
+- Reescrita noutra linguagem (ex.: Rust); ver ROADMAP.
 
 ## Critérios de aceitação
 

@@ -21,9 +21,9 @@ from ..i18n import available as available_languages
 from ..i18n import tr
 from .commands import CommandError, parse_action
 from .keys import KeyBindingError, parse_binding
-from .model import (MAX_INTERVAL_MS, MAX_REPEAT, MODIFIER_MODES, PANEL_COLORS, PANEL_RANGES,
-                    SCHEMA_VERSION, SCOPE_MODES, TEXT_MODES, THEMES, Macro, MacroSet,
-                    PanelSettings, Scope, Settings)
+from .model import (ITEM_TYPES, MAX_INTERVAL_MS, MAX_REPEAT, MODIFIER_MODES, PANEL_COLORS,
+                    PANEL_ENUMS, PANEL_OBSOLETE, PANEL_RANGES, SCHEMA_VERSION, SCOPE_MODES,
+                    TEXT_MODES, THEMES, Macro, MacroSet, PanelSettings, Scope, Settings)
 
 _COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 
@@ -183,7 +183,8 @@ def _check_schema(ctx: _Ctx, data: dict) -> None:
 # config.toml
 # --------------------------------------------------------------------------
 _GERAL_FIELDS = {"arrancar_com_windows", "modo_texto", "modificadores", "tecla_suspensao",
-                 "tema", "idioma", "confirmar_eliminacao"}
+                 "tecla_painel", "tema", "idioma", "confirmar_eliminacao",
+                 "avisar_conflito_tecla"}
 
 
 def parse_settings(text: str, file: str = "config.toml") -> Settings:
@@ -204,6 +205,8 @@ def parse_settings(text: str, file: str = "config.toml") -> Settings:
                                   s.arrancar_com_windows, "geral")
     s.confirmar_eliminacao = _get(ctx, geral, "confirmar_eliminacao", bool,
                                   s.confirmar_eliminacao, "geral")
+    s.avisar_conflito_tecla = _get(ctx, geral, "avisar_conflito_tecla", bool,
+                                   s.avisar_conflito_tecla, "geral")
     s.modo_texto = _get(ctx, geral, "modo_texto", str, s.modo_texto, "geral")
     _enum(ctx, s.modo_texto, TEXT_MODES, "modo_texto", "geral")
     s.modificadores = _get(ctx, geral, "modificadores", str, s.modificadores, "geral")
@@ -217,6 +220,16 @@ def parse_settings(text: str, file: str = "config.toml") -> Settings:
         s.tecla_suspensao = str(parse_binding(hk))
     except KeyBindingError as e:
         ctx.add(tr("cfg.hotkey_error", err=e), "geral", "tecla_suspensao")
+    pk = _get(ctx, geral, "tecla_painel", str, s.tecla_painel, "geral")
+    if pk.strip():
+        try:
+            s.tecla_painel = str(parse_binding(pk))
+        except KeyBindingError as e:
+            ctx.add(tr("cfg.panel_key_error", err=e), "geral", "tecla_painel")
+    else:
+        s.tecla_painel = ""
+    if s.tecla_painel and s.tecla_painel == s.tecla_suspensao:
+        ctx.add(tr("cfg.hotkeys_equal", key=s.tecla_painel), "geral", "tecla_painel")
 
     s.painel = _parse_panel(ctx, painel)
     if ctx.issues:
@@ -226,11 +239,15 @@ def parse_settings(text: str, file: str = "config.toml") -> Settings:
 
 def _parse_panel(ctx: _Ctx, painel: dict) -> PanelSettings:
     p = PanelSettings()
-    allowed = {f.name for f in fields(PanelSettings)}
+    allowed = {f.name for f in fields(PanelSettings)} | set(PANEL_OBSOLETE)
     _check_unknown(ctx, painel, allowed, "painel")
     for f in fields(PanelSettings):
         cur = getattr(p, f.name)
-        if isinstance(cur, bool):
+        if f.name in PANEL_ENUMS:
+            v = _get(ctx, painel, f.name, str, cur, "painel")
+            if _enum(ctx, v, PANEL_ENUMS[f.name], f.name, "painel"):
+                setattr(p, f.name, v)
+        elif isinstance(cur, bool):
             setattr(p, f.name, _get(ctx, painel, f.name, bool, cur, "painel"))
         elif isinstance(cur, float):
             v = _get(ctx, painel, f.name, (int, float), cur, "painel")
@@ -260,7 +277,8 @@ def _parse_panel(ctx: _Ctx, painel: dict) -> PanelSettings:
 # --------------------------------------------------------------------------
 # conjuntos/<id>.toml
 # --------------------------------------------------------------------------
-_MACRO_FIELDS = {"titulo", "tecla", "texto", "repeticoes", "intervalo_ms", "arquivada"}
+_MACRO_FIELDS = {"titulo", "tecla", "texto", "repeticoes", "intervalo_ms", "arquivada",
+                 "tipo", "id", "incremento", "reposicao", "pressao_longa_ms"}
 
 
 def parse_set(text: str, set_id: str, file: Optional[str] = None) -> MacroSet:
@@ -309,6 +327,19 @@ def parse_set(text: str, set_id: str, file: Optional[str] = None) -> MacroSet:
         mac.repeticoes = _get(ctx, m, "repeticoes", int, 1, "macros", i, where)
         mac.intervalo_ms = _get(ctx, m, "intervalo_ms", int, 0, "macros", i, where)
         mac.arquivada = _get(ctx, m, "arquivada", bool, False, "macros", i, where)
+        mac.tipo = _get(ctx, m, "tipo", str, "texto", "macros", i, where)
+        if mac.tipo not in ITEM_TYPES:
+            ctx.add(tr("cfg.bad_option", field="tipo", value=mac.tipo,
+                       options=tr("word.or").join(repr(t) for t in ITEM_TYPES)),
+                    "macros", "tipo", i)
+            mac.tipo = "texto"
+        mac.id = _get(ctx, m, "id", str, "", "macros", i, where)
+        mac.incremento = _get(ctx, m, "incremento", int, 1, "macros", i, where)
+        mac.reposicao = _get(ctx, m, "reposicao", int, 0, "macros", i, where)
+        mac.pressao_longa_ms = _get(ctx, m, "pressao_longa_ms", int, 800, "macros", i, where)
+        if mac.is_counter and not mac.id.strip():
+            # contador escrito à mão sem id: id estável a partir da posição
+            mac.id = f"contador-{i + 1}"
         macros.append(mac)
 
     ms = MacroSet(set_id, nome, scope, macros)
@@ -335,19 +366,38 @@ def validate_macros(ms: MacroSet, settings: Optional[Settings] = None,
     file = file or f"conjuntos/{ms.id}.toml"
     ctx = _Ctx(file, text)
     seen: dict[str, int] = {}
-    hotkey = None
+    hotkey = panel_key = None
     if settings is not None:
         try:
             hotkey = parse_binding(settings.tecla_suspensao)
         except KeyBindingError:
             hotkey = None
+        try:
+            panel_key = parse_binding(settings.tecla_painel) if settings.tecla_painel else None
+        except KeyBindingError:
+            panel_key = None
+    ids: dict[str, int] = {}
     ignore_mods = settings is not None and settings.modificadores == "ignorar"
 
     for i, m in enumerate(ms.macros):
         label = macro_label(i, m)
+        if m.is_space:
+            m.tecla = ""
+            if m.arquivada:
+                ctx.add(tr("mac.space_archived", label=label), "macros", "arquivada", i)
+            continue
+        if m.is_counter:
+            if m.id in ids:
+                ctx.add(tr("mac.counter_id_dup", label=label, other=ids[m.id] + 1),
+                        "macros", "id", i)
+            ids.setdefault(m.id, i)
+            if m.incremento == 0 or not (-1_000_000 <= m.incremento <= 1_000_000):
+                ctx.add(tr("mac.counter_step", label=label), "macros", "incremento", i)
+            if not (200 <= m.pressao_longa_ms <= 10_000):
+                ctx.add(tr("mac.counter_long", label=label), "macros", "pressao_longa_ms", i)
         if len(m.titulo) > 40:
             ctx.add(tr("mac.title_long", label=label), "macros", "titulo", i)
-        if m.texto:
+        if m.texto and not m.is_counter:
             try:
                 parse_action(m.texto)
             except CommandError as e:
@@ -382,6 +432,12 @@ def validate_macros(ms: MacroSet, settings: Optional[Settings] = None,
                 ctx.add(tr("mac.key_is_hotkey", label=label, key=key), "macros", "tecla", i)
             elif ignore_mods and not b.mods and b.key == hotkey.key:
                 ctx.add(tr("mac.key_hotkey_ignore", label=label, key=key, hotkey=hotkey),
+                        "macros", "tecla", i)
+        if panel_key is not None:
+            if b == panel_key:
+                ctx.add(tr("mac.key_is_panel_key", label=label, key=key), "macros", "tecla", i)
+            elif ignore_mods and not b.mods and b.key == panel_key.key:
+                ctx.add(tr("mac.key_hotkey_ignore", label=label, key=key, hotkey=panel_key),
                         "macros", "tecla", i)
     return ctx.issues
 
@@ -440,6 +496,7 @@ _PANEL_COMMENTS = {
     "arredondamento": "# arredondamento: 0 (quadrado) a 50 (redondo), em % do lado; borda: 0–8 px",
     "escala_texto": "# escala_texto: 60–180 %",
     "cor_fundo": "# Cores #RRGGBB. cor_fundo = \"\" segue o tema (Diurno/Noturno).",
+    "posicao_titulo": "# Posição do título e da tecla no botão: \"cima\", \"centro\" ou \"baixo\".",
 }
 
 
@@ -459,12 +516,16 @@ def dump_settings(s: Settings) -> str:
         f"modificadores = {toml_str(s.modificadores)}",
         "# Alterna entre macros ativas e suspensas (funciona mesmo durante um {Delay}).",
         f"tecla_suspensao = {toml_str(s.tecla_suspensao)}",
+        "# Mostra/oculta o painel (\"\" = sem tecla).",
+        f"tecla_painel = {toml_str(s.tecla_painel)}",
         "# Tema: \"diurno\", \"noturno\" ou \"automatico\" (segue o Windows).",
         f"tema = {toml_str(s.tema)}",
         "# Idioma da interface (código de um ficheiro em locales/, ex.: \"pt\", \"en\").",
         f"idioma = {toml_str(s.idioma)}",
         "# Pedir confirmação antes de eliminar macros.",
         f"confirmar_eliminacao = {_bool(s.confirmar_eliminacao)}",
+        "# Avisar quando se tenta atribuir uma tecla que já está em uso.",
+        f"avisar_conflito_tecla = {_bool(s.avisar_conflito_tecla)}",
         "",
         "[painel]",
     ]
@@ -488,18 +549,31 @@ SET_HEADER = """\
 # As teclas 1–4 da fila superior são distintas de Numpad1–Numpad4.
 # A ordem das secções [[macros]] é a ordem dos botões; não depende da tecla.
 # arquivada = true: a macro fica no arquivo (fora das teclas e do painel).
+# tipo = "espaco": célula vazia na grelha. tipo = "contador": botão que conta
+#   (id, incremento, reposicao, pressao_longa_ms); a contagem fica em estado.toml.
 #
 # Este ficheiro é recarregado automaticamente quando é guardado.
 """
 
 
 def dump_macro(m: Macro) -> list[str]:
-    lines = ["[[macros]]",
-             f"titulo = {toml_str(m.titulo)}",
-             f"tecla = {toml_str(m.tecla)}",
-             f"texto = {toml_str(m.texto)}",
-             f"repeticoes = {m.repeticoes}",
-             f"intervalo_ms = {m.intervalo_ms}"]
+    if m.is_space:
+        return ["[[macros]]", 'tipo = "espaco"']
+    lines = ["[[macros]]"]
+    if m.is_counter:
+        lines += ['tipo = "contador"',
+                  f"id = {toml_str(m.id)}",
+                  f"titulo = {toml_str(m.titulo)}",
+                  f"tecla = {toml_str(m.tecla)}",
+                  f"incremento = {m.incremento}",
+                  f"reposicao = {m.reposicao}",
+                  f"pressao_longa_ms = {m.pressao_longa_ms}"]
+    else:
+        lines += [f"titulo = {toml_str(m.titulo)}",
+                  f"tecla = {toml_str(m.tecla)}",
+                  f"texto = {toml_str(m.texto)}",
+                  f"repeticoes = {m.repeticoes}",
+                  f"intervalo_ms = {m.intervalo_ms}"]
     if m.arquivada:
         lines.append("arquivada = true")
     return lines

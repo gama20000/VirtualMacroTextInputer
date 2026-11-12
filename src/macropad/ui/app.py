@@ -13,7 +13,7 @@ from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon, QWidget
 
 from .. import i18n
 from ..core.engine import Engine
-from ..core.model import PanelSettings, State
+from ..core.model import MacroSet, PanelSettings
 from ..core.store import ConfigStore
 from ..core.watcher import FileWatcher
 from ..i18n import tr
@@ -55,6 +55,7 @@ class MacropadApp(QObject):
         if startup_issues:                    # mensagens no idioma escolhido
             startup_issues = self.store.load_all()
         self.state = self.store.load_state()
+        migration_msgs = self.store.migrate(self.state)
 
         self.pal = theme.DAY
         self._theme_key = None
@@ -85,7 +86,9 @@ class MacropadApp(QObject):
         self.panel = PanelWindow(self)
 
         self._build_tray()
-        self._sync_autostart()
+        self._counts_timer = QTimer(self, singleShot=True, interval=500,
+                                    timeout=self._persist_state)
+        autostart_err = self._sync_autostart()
 
         hook_error = platform.start_hook(self.engine.handle_key)
         if hook_error:
@@ -101,6 +104,11 @@ class MacropadApp(QObject):
 
         if startup_issues:
             self._report_issues(startup_issues, tr("msg.startup_errors"))
+        for msg in migration_msgs:
+            log.info(msg)
+            self.notify("Macropad", msg)
+        if autostart_err:
+            self.notify("Macropad", autostart_err, error=True)
         if self.state.painel_visivel:
             self.set_panel_visible(True)
         self._persist_state()
@@ -138,6 +146,7 @@ class MacropadApp(QObject):
             self.config_window.grid.pal = pal
             self.config_window.archive_grid.pal = pal
             self.config_window.archive_zone.pal = pal
+            self.config_window.active_zone.pal = pal
             self.config_window.reload_from_store()
 
     def _poll_system_theme(self) -> None:
@@ -170,8 +179,9 @@ class MacropadApp(QObject):
         hdr.setEnabled(False)
         m.addSeparator()
         m.addAction(tr("tray.open_config"), self.show_config)
-        m.addAction(tr("tray.hide_panel") if self.panel.isVisible() else tr("tray.show_panel"),
-                    self.toggle_panel)
+        pk = self.engine.settings.tecla_painel
+        m.addAction((tr("tray.hide_panel") if self.panel.isVisible() else tr("tray.show_panel"))
+                    + (f"\t{pk}" if pk else ""), self.toggle_panel)
         sets_menu = m.addMenu(tr("tray.active_set"))
         grp = QActionGroup(sets_menu)
         for ms in self.store.config().ordered_sets():
@@ -254,6 +264,40 @@ class MacropadApp(QObject):
     def toggle_panel(self) -> None:
         self.set_panel_visible(not self.panel.isVisible())
 
+    def save_panel_position(self, x: int, y: int) -> None:
+        self.state.painel_x, self.state.painel_y = x, y
+        self._persist_state()
+
+    # ------------------------------------------------------------ contadores
+    def counts_for(self, ms: Optional[MacroSet]) -> dict[str, int]:
+        """Contagem de cada contador do conjunto (id -> valor)."""
+        from .panel import counter_key
+        if ms is None:
+            return {}
+        out = {}
+        for m in ms.macros:
+            if m.is_counter:
+                out[m.id] = self.state.contadores.get(counter_key(ms.id, m.id), m.reposicao)
+        return out
+
+    def set_count(self, set_id: str, counter_id: str, value: int) -> None:
+        from .panel import counter_key
+        self.state.contadores[counter_key(set_id, counter_id)] = int(value)
+        self._counts_timer.start()            # agrupa gravações rápidas
+        if set_id == self.engine.active_set_id:
+            self.panel.set_count(counter_id, int(value))
+        w = self.config_window
+        if w is not None and w.ms is not None and w.ms.id == set_id:
+            w.on_counts_changed()
+
+    def _on_counter(self, p: dict) -> None:
+        ms = self.engine.active_set
+        if ms is None:
+            return
+        cur = self.counts_for(ms).get(p["id"], p["value"])
+        new = p["value"] if p["action"] == "reset" else cur + p["step"]
+        self.set_count(ms.id, p["id"], new)
+
     def set_panel_opacity(self, value: float) -> None:
         """Transparência alterada com a roda do rato: grava (agrupando
         alterações rápidas) e atualiza a configuração, se estiver aberta."""
@@ -283,29 +327,50 @@ class MacropadApp(QObject):
             self.panel.rebuild(p)
 
     # ----------------------------------------------------- configuração
-    def apply_config(self) -> None:
+    def apply_config(self) -> Optional[str]:
+        """Aplica a configuração gravada. Devolve uma mensagem de erro se o
+        arranque com o Windows não pôde ser atualizado."""
         old_lang = i18n.language()
         self.engine.set_config(self.store.config())
-        self._sync_autostart()
+        err = self._sync_autostart()
         self.apply_theme()
         if self.store.settings.idioma != old_lang:
             i18n.set_language(self.store.settings.idioma)
             self._update_tray()
             self.panel.rebuild()
             QTimer.singleShot(0, self._recreate_config_window)
+        return err
 
     def select_set(self, set_id: str) -> None:
         if self.config_window is not None:
             self.config_window.flush()
         self.engine.set_active_set(set_id)
 
-    def _sync_autostart(self) -> None:
+    def autostart_args(self) -> str:
+        """Argumentos do arranque automático (a pasta, se não for a habitual)."""
+        from ..__main__ import default_root
+        try:
+            if Path(self.store.root).resolve() != default_root().resolve():
+                return f'--config-dir "{self.store.root}"'
+        except OSError:
+            pass
+        return ""
+
+    def _sync_autostart(self) -> Optional[str]:
+        """Põe o arranque com o Windows de acordo com a preferência e confirma
+        que ficou aplicado. Devolve None ou a mensagem de erro."""
         want = self.store.settings.arrancar_com_windows
         try:
+            if want or self.platform.get_autostart():
+                # reescreve sempre ao ativar (o comando pode ter mudado)
+                self.platform.set_autostart(want, self.autostart_args())
             if self.platform.get_autostart() != want:
-                self.platform.set_autostart(want)
-        except OSError:
+                raise OSError(tr("msg.autostart_blocked"))
+        except OSError as e:
             log.exception("não foi possível atualizar o arranque automático")
+            return tr("msg.autostart_on_failed" if want else "msg.autostart_off_failed",
+                      err=e.strerror or str(e))
+        return None
 
     def _on_files_changed(self, paths) -> None:
         res = self.store.reload(list(paths))
@@ -338,10 +403,15 @@ class MacropadApp(QObject):
             self.panel.refresh_status()
         elif ev == "started":
             self.panel.refresh_status()
+        elif ev == "counter":
+            self._on_counter(payload)
+        elif ev == "toggle_panel":
+            self.toggle_panel()
 
     def _persist_state(self) -> None:
-        self.store.save_state(State(self.engine.suspended, self.engine.active_set_id,
-                                    self.state.painel_visivel))
+        self.state.suspenso = self.engine.suspended
+        self.state.conjunto = self.engine.active_set_id
+        self.store.save_state(self.state)
 
     # ---------------------------------------------------------- instância
     def _on_instance_message(self, server: QLocalServer) -> None:
@@ -360,6 +430,7 @@ class MacropadApp(QObject):
         self.engine.shutdown()
         self.platform.stop_hook()
         self.watcher.stop()
+        self._counts_timer.stop()
         self._persist_state()
         self._theme_poll.stop()
         self.qapp.removeEventFilter(self._styler)

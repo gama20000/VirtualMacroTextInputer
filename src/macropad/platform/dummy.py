@@ -55,11 +55,16 @@ class DummyPlatform:
     def system_prefers_dark(self):
         return getattr(self, "prefers_dark", None)
 
+    fail_autostart = False
+
     def get_autostart(self) -> bool:
         return self._autostart
 
-    def set_autostart(self, enabled: bool) -> None:
+    def set_autostart(self, enabled: bool, extra_args: str = "") -> None:
+        if self.fail_autostart:
+            raise OSError("acesso negado (simulado)")
         self._autostart = enabled
+        self.autostart_args = extra_args
 
     def acquire_single_instance(self, name: str) -> bool:
         return True

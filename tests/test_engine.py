@@ -7,7 +7,8 @@ from macropad.core.engine import CANCEL_SUSPEND, CANCEL_WINDOW, Engine, KeyEvent
 from macropad.core.model import Macro, Scope, Settings
 
 CTRL = frozenset({"Ctrl"})
-HK = frozenset({"Ctrl", "Alt"})
+HK = frozenset({"Shift"})          # tecla de suspensão: Shift+Escape
+HKEY = "Escape"
 
 
 def down(k, mods=frozenset(), ours=False):
@@ -146,8 +147,8 @@ def test_suspensao_interrompe_durante_delay(fake):
     time.sleep(0.05)
     run = e.running
     t0 = time.monotonic()
-    assert e.handle_key(down("P", HK)) is True    # hotkey Ctrl+Alt+P durante o Delay
-    e.handle_key(up("P", HK))
+    assert e.handle_key(down(HKEY, HK)) is True    # hotkey Shift+Escape durante o Delay
+    e.handle_key(up(HKEY, HK))
     wait_idle(e, 1.0)
     assert time.monotonic() - t0 < 0.5
     assert run.cancel_reason == CANCEL_SUSPEND
@@ -168,9 +169,9 @@ def test_suspensao_interrompe_intervalo_entre_repeticoes(fake):
 
 
 def test_hotkey_reativa_e_nao_reativa_por_si(engine):
-    engine.handle_key(down("P", HK)); engine.handle_key(up("P", HK))
+    engine.handle_key(down(HKEY, HK)); engine.handle_key(up(HKEY, HK))
     assert engine.suspended
-    engine.handle_key(down("P", HK)); engine.handle_key(up("P", HK))
+    engine.handle_key(down(HKEY, HK)); engine.handle_key(up(HKEY, HK))
     assert not engine.suspended
 
 
@@ -242,7 +243,7 @@ def test_painel_dispara_na_janela_em_primeiro_plano(engine, fake):
 
 def test_hotkey_durante_captura_nao_e_intercetada(engine):
     engine.capture_mode = True
-    assert engine.handle_key(down("P", HK)) is False
+    assert engine.handle_key(down(HKEY, HK)) is False
     assert not engine.suspended
 
 
@@ -270,3 +271,60 @@ def test_trigger_com_indice_fora_do_intervalo_nao_executa(engine, fake):
         assert ok is False
     time.sleep(0.05)
     assert fake.log == []
+
+
+# ------------------------------------------------------------ versão 0.4
+def _events(e):
+    got = []
+    e.add_listener(lambda ev, p: got.append((ev, p)))
+    return got
+
+
+def test_tecla_do_painel_alterna_mesmo_suspenso(engine):
+    got = _events(engine)
+    F12 = frozenset({"Shift"})
+    assert engine.handle_key(down("F12", F12)) is True
+    assert engine.handle_key(up("F12", F12)) is True
+    engine.set_suspended(True)
+    assert engine.handle_key(down("F12", F12)) is True
+    assert [ev for ev, _ in got].count("toggle_panel") == 2
+
+
+def test_contador_por_tecla_toque_soma_e_manter_repoe(fake):
+    from macropad.core.model import Macro
+    e = Engine(fake)
+    e.set_config(make_config([Macro("C", "5", tipo="contador", id="c1", incremento=2,
+                                    reposicao=10, pressao_longa_ms=200)]))
+    got = _events(e)
+    assert e.handle_key(down("5")) is True
+    assert e.handle_key(down("5")) is True          # auto-repetição: suprimida, sem efeito
+    assert e.handle_key(up("5")) is True
+    time_ = __import__("time")
+    e.handle_key(down("5")); time_.sleep(0.25); e.handle_key(up("5"))
+    counters = [p for ev, p in got if ev == "counter"]
+    assert [c["action"] for c in counters] == ["inc", "reset"]
+    assert counters[0]["step"] == 2 and counters[1]["value"] == 10
+    assert fake.log == []                            # não escreve nada
+
+
+def test_contador_respeita_suspensao_e_ambito(fake):
+    from macropad.core.model import Macro, Scope
+    e = Engine(fake)
+    e.set_config(make_config([Macro("C", "5", tipo="contador", id="c1")],
+                             scope=Scope("aplicacoes", ["outro.exe"])))
+    assert e.handle_key(down("5")) is False          # fora do âmbito: tecla normal
+    e.handle_key(up("5"))
+    e.set_config(make_config([Macro("C", "5", tipo="contador", id="c1")]))
+    e.set_suspended(True)
+    assert e.handle_key(down("5")) is False
+    assert e.counter_press(0, False)[0] is False
+    e.set_suspended(False)
+    e.handle_key(up("5"))
+    assert e.counter_press(0, True)[0] is True
+
+
+def test_espacos_e_contadores_nao_executam(fake):
+    from macropad.core.model import Macro
+    e = Engine(fake)
+    e.set_config(make_config([Macro(tipo="espaco"), Macro("C", tipo="contador", id="c")]))
+    assert e.trigger(0)[0] is False and e.trigger(1)[0] is False

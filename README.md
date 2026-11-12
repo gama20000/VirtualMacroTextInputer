@@ -41,18 +41,24 @@ Os testes cobrem a interpretação de comandos, as teclas e os modificadores, as
 
 **Ícone junto ao relógio.** Clique para abrir a configuração. O botão direito dá acesso a: abrir a configuração, mostrar/ocultar o painel, escolher o conjunto ativo, suspender/reativar macros e sair. O ícone tem contorno ciano quando as macros estão **ativas** e fica cinzento com um ponto vermelho quando estão **suspensas**.
 
-**Suspensão global.** A tecla de suspensão (por omissão `Ctrl+Alt+P`) alterna entre ativo e suspenso. Funciona mesmo a meio de uma macro, incluindo durante um `{Delay}`, e cancela logo os passos e as repetições pendentes. Com as macros suspensas, todas as teclas têm o comportamento normal. O estado e o conjunto selecionado são recuperados no arranque seguinte.
+**Suspensão global.** A tecla de suspensão (por omissão `Shift+Escape`; quem tinha `Ctrl+Alt+P`, a predefinição anterior, passa automaticamente para `Shift+Escape` uma única vez, com um aviso) alterna entre ativo e suspenso. Funciona mesmo a meio de uma macro, incluindo durante um `{Delay}`, e cancela logo os passos e as repetições pendentes. Com as macros suspensas, todas as teclas têm o comportamento normal. O estado e o conjunto selecionado são recuperados no arranque seguinte.
+
+**Mostrar/ocultar o painel.** A tecla do painel (por omissão `Shift+F12`) mostra ou oculta o painel em qualquer aplicação, também com as macros suspensas. A tecla aparece na barra de título do painel e no menu do ícone. Pode mudá-la, ou deixá-la sem tecla, em Preferências ▸ «Tecla do painel».
 
 **Ativo / Suspenso.** No topo da configuração há dois botões, **Ativo** (verde quando selecionado) e **Suspenso** (vermelho quando selecionado). Fazem o mesmo que a tecla de suspensão e podem ser usados com o rato ou com o teclado (Tab até ao botão e Espaço). O botão com foco tem um contorno de foco visível.
 
 **Configuração.** Tem quatro separadores, por esta ordem:
-- *Macros*: grelha de botões das macros ativas e editor com título, tecla, texto, repetições e intervalo. Arraste os botões (ou use ◀ ▶) para mudar a ordem. A tecla atribuída não muda. Para mudar a tecla, clique no campo **Tecla** e prima a tecla ou a combinação pretendida. **Sem tecla** deixa a macro disponível só no painel. As alterações válidas são gravadas automaticamente.
+- *Macros*: duas áreas, **Ativo** e **Arquivo**, e o editor do botão selecionado. A área **Ativo** está centrada e tem o mesmo aspeto do painel real (tamanho, cores, espaçamento, colunas, posição do título e da tecla); se for grande, a janela desloca-se. As alterações válidas são gravadas automaticamente.
+  - **Arrastar**: largue um botão antes ou depois de outro para o pôr nessa posição (uma linha azul mostra onde fica), dentro da mesma área ou entre **Ativo** e **Arquivo**, nos dois sentidos. Largar sobre um espaço vazio troca os dois de lugar. Largar no título da área, ou numa zona vazia, põe o botão no fim. Tudo fica gravado logo. A tecla atribuída não muda. ◀ ▶ também mudam a ordem.
+  - **Tecla**: clique no campo **Tecla** e prima a tecla ou combinação; ou, mais rápido, ponha o rato sobre um botão (a etiqueta da tecla fica amarela, «Tecla…») e prima a tecla. Só é atribuída se não estiver em uso por outra macro ativa nem for a tecla de suspensão ou do painel; caso contrário aparece um aviso, com a opção **Não voltar a mostrar** (reative em Preferências ▸ «Avisar quando a tecla atribuída com o rato já está em uso»). Por cima de um botão, Delete/Backspace, Tab, Ctrl+C e Ctrl+V mantêm as suas funções e Esc cancela. **Sem tecla** deixa a macro disponível só no painel.
   - **Nova macro** acrescenta uma única macro, sem tecla e com o texto vazio, e põe o cursor no campo **Texto**.
+  - **Contador** acrescenta um botão que conta: um clique curto no painel (ou a sua tecla) soma o **incremento** (por omissão 1); manter premido durante a **pressão longa** (por omissão 800 ms) repõe o **valor de reposição** (por omissão 0), sem somar. O contador só mostra a contagem: não escreve nada. A contagem fica guardada em `estado.toml` e mantém-se entre sessões; **Repor agora** no editor repõe-na.
+  - **Espaço vazio** ocupa uma posição da grelha sem botão. Na configuração aparece tracejado e pode ser arrastado; no painel é invisível e não faz nada, mas ocupa o lugar. Os espaços não vão para o Arquivo.
   - **Vermelho** (selo «!») indica um erro, incluindo um *conflito de tecla*, quando duas macros ativas têm a mesma tecla. Os erros não são gravados.
   - **Amarelo** (selo «=») indica *conteúdo duplicado*: macros com a mesma sequência de texto e comandos, mesmo que tenham títulos ou teclas diferentes (`{enter}`, `{Enter}` e uma quebra de linha contam como iguais). Passe o rato por cima do botão, ou veja a linha amarela no editor, para saber com que macros coincide. Os duplicados são apenas um aviso e são gravados.
-- *Painel*: estilo, colunas, tamanho dos botões, espaçamento, arredondamento, borda, tamanho do texto, cores (botão, texto, borda, fundo), elementos visíveis (ícone, tecla, barra de estado, botões Ativo/Suspenso), «sempre por cima» e opacidade. A **pré-visualização**, centrada, usa o mesmo desenho do painel real (incluindo os botões Ativo/Suspenso) e atualiza-se a cada alteração, sem abrir o painel. Há estilos predefinidos (Predefinido, Compacto, Grande, Claro, Néon, Redondo, Minimalista). **Repor predefinição** volta ao aspeto original sem mexer nas colunas, na opacidade nem em «sempre por cima».
+- *Painel*: estilo, colunas, tamanho dos botões, espaçamento, arredondamento, borda, tamanho do texto, cores (botão, texto, borda, fundo), posição do título e posição da tecla (em cima, ao centro, em baixo, independentes e sem se sobreporem), elementos visíveis (tecla, barra de estado, botões Ativo/Suspenso), «sempre por cima» e opacidade. A **pré-visualização**, centrada, usa o mesmo desenho do painel real (incluindo os botões Ativo/Suspenso) e atualiza-se a cada alteração, sem abrir o painel. Há estilos predefinidos (Predefinido, Compacto, Grande, Claro, Néon, Redondo, Minimalista, Título em cima). **Repor predefinição** volta ao aspeto original sem mexer nas colunas, na opacidade nem em «sempre por cima».
 - *Âmbito*: o conjunto funciona em todas as aplicações ou só nas aplicações indicadas, identificadas pelo executável, por exemplo `notepad.exe`. Fora delas, as teclas funcionam normalmente e o painel não envia texto.
-- *Preferências*: tema, idioma, arranque com o Windows, confirmação antes de eliminar, tecla de suspensão, modificadores e modo de texto.
+- *Preferências*: tema, idioma, arranque com o Windows, «Não pedir confirmação antes de eliminar macros», aviso de tecla em uso, tecla de suspensão, tecla do painel, modificadores e modo de texto. Cada alteração aplica-se logo. O arranque com o Windows é confirmado depois de aplicado (incluindo a aprovação em Gestor de Tarefas ▸ Aplicações de arranque); se não for possível, aparece um erro por baixo da opção.
 - Menu **⋯**: novo, duplicar, mudar o nome, eliminar, importar e exportar conjuntos, e abrir a pasta de configuração.
 
 **Seleção de várias macros.** Ctrl+clique acrescenta ou retira macros da seleção, e Shift+clique seleciona um intervalo. Com várias selecionadas, os botões **Arquivar (n)**/**Restaurar (n)** e 🗑 atuam em todas. Antes de eliminar várias, o programa pede sempre confirmação e indica a quantidade.
@@ -63,16 +69,16 @@ Os testes cobrem a interpretação de comandos, as teclas e os modificadores, as
 |---|---|
 | Delete ou Backspace | elimina a(s) macro(s) (pede confirmação) |
 | Ctrl+C | copia a(s) macro(s) |
-| Ctrl+V | cola cópias a seguir à seleção. Se a tecla já estiver em uso, a cópia fica sem tecla |
+| Ctrl+V | cola cópias a seguir à seleção, na mesma área: a cópia de uma macro arquivada fica no Arquivo, logo a seguir à original. Se a tecla já estiver em uso, uma cópia ativa fica sem tecla |
 
-Com o foco num campo de texto, estes atalhos copiam, colam e apagam texto como habitualmente. A caixa de confirmação de eliminação tem a opção **Não voltar a perguntar**. Para voltar a ativar as confirmações, use Preferências ▸ «Pedir confirmação antes de eliminar macros».
+Com o foco num campo de texto, estes atalhos copiam, colam e apagam texto como habitualmente. A caixa de confirmação de eliminação tem a opção **Não voltar a perguntar**. Para voltar a ativar as confirmações, desmarque Preferências ▸ «Não pedir confirmação antes de eliminar macros».
 
 **Arquivo.** Por baixo das macros ativas, a divisória **Arquivo** mostra as macros arquivadas, com uma caixa de pesquisa por título, texto ou tecla.
-- **Arquivar** retira a macro das teclas e do painel sem a apagar. Fica no ficheiro do conjunto com `arquivada = true`. Também pode arrastar uma macro ativa, ou a seleção inteira, para a área abaixo da linha **Arquivo**: ao largar, fica arquivada imediatamente. Arrastar dentro da grelha só reordena e não altera as teclas.
-- **Restaurar** volta a ativá-la. Se a tecla dela já estiver atribuída a uma macro ativa, o programa pede confirmação. Ao confirmar, a macro restaurada fica no lugar da ativa e essa passa para o arquivo. Ao cancelar, nada muda.
+- **Arquivar** retira a macro das teclas e do painel sem a apagar. Fica no ficheiro do conjunto com `arquivada = true`. Também pode arrastar uma macro ativa, ou a seleção inteira, para a área **Arquivo**: fica arquivada imediatamente, na posição largada.
+- **Restaurar** (ou arrastá-la para **Ativo**) volta a ativá-la. Se a tecla dela já estiver atribuída a uma macro ativa, o programa pede confirmação. Ao confirmar, a macro restaurada fica no lugar da ativa e essa passa para o arquivo. Ao cancelar, nada muda.
 - Arquivar e restaurar não alteram ficheiros exportados anteriormente.
 
-**Painel.** O painel mostra as macros ativas em grelha, com título e tecla, e um indicador de estado (ativo / suspenso / fora do âmbito / a executar). Clicar num botão não tira o foco à aplicação onde está a escrever, e o texto vai para lá. Fica sempre por cima por omissão. A aparência configura-se no separador *Painel*.
+**Painel.** O painel mostra as macros ativas em grelha, com título e tecla, e um indicador de estado (ativo / suspenso / fora do âmbito / a executar). Tem uma barra de título própria, com as cores do tema, o nome do conjunto, a tecla do painel e ✕ para o ocultar; arraste-a para mover o painel (a posição fica gravada). Clicar num botão não tira o foco à aplicação onde está a escrever, e o texto vai para lá. Fica sempre por cima por omissão. A aparência configura-se no separador *Painel*.
 - Os botões **Ativo**/**Suspenso** do painel têm o mesmo estado e efeito dos da configuração e não tiram o foco à aplicação de destino.
 - Com o ponteiro sobre o painel, a **roda do rato** ajusta a transparência em passos de 5 % (para cima fica mais opaco, para baixo mais transparente, entre 20 % e 100 %). O nível aparece brevemente no centro do painel e fica gravado. Só o painel é afetado.
 - Se a roda não reagir enquanto o painel não está em foco, ative a definição do Windows «Deslocar janelas inativas ao pairar sobre elas».
@@ -125,7 +131,7 @@ Ficam em `%APPDATA%\Macropad\`:
 |---|---|
 | `config.toml` | preferências gerais e do painel |
 | `conjuntos\<id>.toml` | um ficheiro por conjunto. O nome do ficheiro é o identificador do conjunto |
-| `estado.toml` | estado da sessão (ativo/suspenso, conjunto, painel visível). Gerido pelo programa e não é observado |
+| `estado.toml` | estado da sessão (ativo/suspenso, conjunto, painel visível e posição, contagens dos contadores, migrações feitas). Gerido pelo programa e não é observado |
 | `macropad.log` | registo de erros |
 
 O exemplo comentado está em [examples/conjunto-exemplo.toml](examples/conjunto-exemplo.toml) e inclui a macro 1 → `3E03305`. Todos os ficheiros têm `versao_esquema = 1`. Os campos novos desta versão são opcionais, por isso os ficheiros antigos continuam válidos e mantêm o aspeto original.
@@ -137,6 +143,9 @@ O exemplo comentado está em [examples/conjunto-exemplo.toml](examples/conjunto-
 tema = "diurno"              # "diurno" | "noturno" | "automatico"
 idioma = "pt"                # "pt" | "en" | outro ficheiro em locales/
 confirmar_eliminacao = true
+tecla_suspensao = "Shift+Escape"
+tecla_painel = "Shift+F12"   # "" = sem tecla
+avisar_conflito_tecla = true
 
 [painel]
 colunas = 4
@@ -149,7 +158,8 @@ cor_fundo = ""               # "" segue o tema; ou "#RRGGBB"
 cor_botao = "#000000"
 cor_texto = "#ffffff"
 cor_borda = "#5a5a5a"
-mostrar_icone = true
+posicao_titulo = "centro"    # "cima" | "centro" | "baixo"
+posicao_tecla = "baixo"
 mostrar_tecla = true
 mostrar_estado = true
 mostrar_controlos = true     # botões Ativo/Suspenso no painel
@@ -169,7 +179,21 @@ tecla = "1"
 texto = "3E03305"
 repeticoes = 1
 intervalo_ms = 0
+
+[[macros]]
+tipo = "espaco"            # espaço vazio (sem outros campos)
+
+[[macros]]
+tipo = "contador"
+id = "pecas"               # identifica a contagem em estado.toml
+titulo = "Peças"
+tecla = "F9"
+incremento = 1
+reposicao = 0
+pressao_longa_ms = 800
 ```
+
+O campo `mostrar_icone` das versões anteriores é aceite e ignorado.
 
 **Recarregamento automático.** Ao guardar um destes ficheiros num editor, o Macropad deteta a alteração, espera que o ficheiro fique estável (o que agrupa gravações seguidas e evita ler ficheiros a meio da escrita), valida-o e aplica-o. Funciona também com editores que gravam substituindo o ficheiro.
 - Se o ficheiro for **inválido**, mantém-se a última configuração válida e aparece um aviso com o ficheiro, a linha e a coluna, por exemplo `conjuntos/predefinido.toml, linha 12, coluna 9: macro 2: comando desconhecido {Entr}`.
@@ -190,7 +214,8 @@ intervalo_ms = 0
 - O Windows remove hooks de teclado que respondem devagar (LowLevelHooksTimeout). O callback do Macropad só consulta dados em memória, mas uma máquina muito sobrecarregada pode fazê-lo perder o hook. Nesse caso, reinicie o programa.
 - No modo *Colar*, aplicações que leiam a área de transferência de forma muito lenta podem colar o texto anterior. O programa espera 80 ms depois de cada Ctrl+V.
 - `AltGr` é tratado pelo Windows como `Ctrl+Alt`.
-- A tecla de suspensão é global e intercetada mesmo nas janelas do Macropad, exceto enquanto um campo **Tecla** está a gravar.
+- As teclas de suspensão e do painel são globais e intercetadas mesmo nas janelas do Macropad, exceto enquanto um campo **Tecla** está a gravar ou o rato está sobre um botão da configuração (com a janela ativa).
+- O contador decide entre toque e pressão longa quando a tecla é largada. O Windows repete a tecla enquanto está premida; essas repetições são ignoradas.
 
 ## Arquitetura
 

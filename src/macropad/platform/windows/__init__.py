@@ -215,34 +215,54 @@ class WindowsPlatform:
 
     # ------------------------------------------------------------- arranque
     @staticmethod
-    def autostart_command() -> str:
+    def autostart_command(extra_args: str = "") -> str:
         if getattr(sys, "frozen", False):
-            return f'"{sys.executable}"'
-        exe = sys.executable
-        pyw = os.path.join(os.path.dirname(exe), "pythonw.exe")
-        if os.path.exists(pyw):
-            exe = pyw
-        return f'"{exe}" -m macropad'
+            cmd = f'"{sys.executable}"'
+        else:
+            exe = sys.executable
+            pyw = os.path.join(os.path.dirname(exe), "pythonw.exe")
+            if os.path.exists(pyw):
+                exe = pyw
+            cmd = f'"{exe}" -m macropad'
+        return f"{cmd} {extra_args}".strip()
+
+    # O Windows guarda a aprovação de cada entrada de arranque (Gestor de
+    # Tarefas ▸ Aplicações de arranque) em StartupApproved\Run: o primeiro byte
+    # par = ativa, ímpar = desativada. Uma entrada em Run desativada ali não arranca.
+    APPROVED_KEY = r"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run"
 
     def get_autostart(self) -> bool:
         import winreg
         try:
             with winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY) as k:
                 winreg.QueryValueEx(k, APP_NAME)
-                return True
         except OSError:
             return False
+        try:
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, self.APPROVED_KEY) as k:
+                data, _ = winreg.QueryValueEx(k, APP_NAME)
+                if isinstance(data, (bytes, bytearray)) and data and data[0] % 2 == 1:
+                    return False
+        except OSError:
+            pass
+        return True
 
-    def set_autostart(self, enabled: bool) -> None:
+    def set_autostart(self, enabled: bool, extra_args: str = "") -> None:
+        """Ativa/desativa o arranque. Lança OSError se não for possível."""
         import winreg
         with winreg.CreateKey(winreg.HKEY_CURRENT_USER, RUN_KEY) as k:
             if enabled:
-                winreg.SetValueEx(k, APP_NAME, 0, winreg.REG_SZ, self.autostart_command())
+                winreg.SetValueEx(k, APP_NAME, 0, winreg.REG_SZ,
+                                  self.autostart_command(extra_args))
             else:
                 try:
                     winreg.DeleteValue(k, APP_NAME)
                 except FileNotFoundError:
                     pass
+        if enabled:
+            # Se o utilizador a tinha desativado no Gestor de Tarefas, reativa.
+            with winreg.CreateKey(winreg.HKEY_CURRENT_USER, self.APPROVED_KEY) as k:
+                winreg.SetValueEx(k, APP_NAME, 0, winreg.REG_BINARY, bytes([2] + [0] * 11))
 
     # -------------------------------------------------------- instância única
     def acquire_single_instance(self, name: str) -> bool:

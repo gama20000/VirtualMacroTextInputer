@@ -6,6 +6,7 @@ arquivadas depois. A ordem de cada grupo é a ordem visual."""
 from __future__ import annotations
 
 import copy
+import uuid
 from typing import Optional
 
 from .commands import CommandError, parse_action
@@ -42,6 +43,8 @@ def duplicate_groups(macros: list[Macro]) -> dict[int, list[int]]:
     o mesmo conteúdo (independentemente do título, tecla ou arquivo)."""
     by_key: dict[tuple, list[int]] = {}
     for i, m in enumerate(macros):
+        if m.tipo != "texto":
+            continue                    # espaços e contadores não têm conteúdo
         k = content_key(m.texto)
         if k is not None:
             by_key.setdefault(k, []).append(i)
@@ -66,7 +69,8 @@ def archive(ms: MacroSet, i: int) -> int:
 def archive_many(ms: MacroSet, idxs: list[int]) -> list[int]:
     """Arquiva várias macros (mantendo a ordem relativa); ficam no início do
     arquivo. Devolve os novos índices."""
-    chosen = [ms.macros[i] for i in sorted(set(idxs)) if not ms.macros[i].arquivada]
+    chosen = [ms.macros[i] for i in sorted(set(idxs))
+              if not ms.macros[i].arquivada and not ms.macros[i].is_space]
     ids = {id(m) for m in chosen}
     for m in chosen:
         m.arquivada = True
@@ -129,24 +133,87 @@ def matches_query(m: Macro, query: str) -> bool:
 
 # --------------------------------------------------------- copiar / colar
 def insert_copy(ms: MacroSet, m: Macro, after: Optional[int]) -> int:
-    """Insere uma cópia ativa de ``m`` a seguir a ``after`` (ou no fim das
-    ativas). A tecla é limpa se já estiver em uso por uma macro ativa."""
+    """Insere uma cópia de ``m`` logo a seguir a ``after``, na mesma área de
+    ``after`` (Ativo ou Arquivo); sem ``after``, no fim das ativas.
+
+    Numa cópia ativa, a tecla é limpa se já estiver em uso por uma macro ativa.
+    Os contadores copiados recebem um id novo (contagem própria)."""
     new = copy.deepcopy(m)
-    new.arquivada = False
+    valid_after = after is not None and 0 <= after < len(ms.macros)
+    new.arquivada = bool(valid_after and ms.macros[after].arquivada) and not new.is_space
+    if new.is_counter:
+        new.id = new_id()
     b = _binding(new.tecla)
-    if b is not None and any(not x.arquivada and _binding(x.tecla) == b for x in ms.macros):
+    if (not new.arquivada and b is not None
+            and any(not x.arquivada and _binding(x.tecla) == b for x in ms.macros)):
         new.tecla = ""
-    n_active = len([x for x in ms.macros if not x.arquivada])
-    pos = n_active if after is None or after >= n_active or after < 0 else after + 1
+    if valid_after and ms.macros[after].arquivada == new.arquivada:
+        pos = after + 1
+    else:
+        pos = len([x for x in ms.macros if not x.arquivada])
     ms.macros.insert(pos, new)
     return pos
 
 
+def new_id() -> str:
+    return uuid.uuid4().hex[:10]
+
+
 def new_macro(ms: MacroSet, title: str) -> int:
     """Acrescenta uma única macro nova (sem tecla, texto vazio) no fim das ativas."""
+    return _append_active(ms, Macro(titulo=title))
+
+
+def new_space(ms: MacroSet) -> int:
+    """Acrescenta um espaço vazio no fim das ativas."""
+    return _append_active(ms, Macro(tipo="espaco"))
+
+
+def new_counter(ms: MacroSet, title: str) -> int:
+    """Acrescenta um contador (incremento 1, reposição 0) no fim das ativas."""
+    return _append_active(ms, Macro(titulo=title, tipo="contador", id=new_id()))
+
+
+def _append_active(ms: MacroSet, m: Macro) -> int:
     pos = len([x for x in ms.macros if not x.arquivada])
-    ms.macros.insert(pos, Macro(titulo=title))
+    ms.macros.insert(pos, m)
     return pos
+
+
+def move_items(ms: MacroSet, items: list[Macro], to_archive: bool,
+               anchor: Optional[Macro] = None, after: bool = False) -> list[int]:
+    """Move ``items`` para a área indicada, imediatamente antes (ou depois) de
+    ``anchor``; sem âncora, para o fim da área. Serve para reorganizar dentro de
+    uma área e para mover entre Ativo e Arquivo.
+
+    Espaços vazios não vão para o Arquivo (ficam onde estão). A âncora tem de
+    estar na área de destino e não pode ser um dos itens movidos. Devolve os
+    novos índices dos itens movidos, pela ordem dada. Não verifica conflitos de
+    tecla (ver ``key_conflict``)."""
+    if to_archive:
+        items = [m for m in items if not m.is_space]
+    if not items:
+        return []
+    moving = {id(m) for m in items}
+    if anchor is not None and (id(anchor) in moving or anchor.arquivada != to_archive):
+        anchor = None
+    rest = [m for m in ms.macros if id(m) not in moving]
+    for m in items:
+        m.arquivada = to_archive
+    if anchor is not None:
+        pos = next(k for k, m in enumerate(rest) if m is anchor) + (1 if after else 0)
+    else:
+        n_active = len([m for m in rest if not m.arquivada])
+        pos = len(rest) if to_archive else n_active
+    ms.macros = rest[:pos] + list(items) + rest[pos:]
+    normalize_order(ms)
+    return [index_of(ms, m) for m in items]
+
+
+def swap(ms: MacroSet, a: int, b: int) -> None:
+    """Troca dois itens da mesma área (ex.: um botão com um espaço vazio)."""
+    if ms.macros[a].arquivada == ms.macros[b].arquivada:
+        ms.macros[a], ms.macros[b] = ms.macros[b], ms.macros[a]
 
 
 # ---------------------------------------------------------------- reordenar

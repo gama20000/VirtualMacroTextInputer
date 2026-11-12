@@ -10,6 +10,8 @@ TEXT_MODES = ("escrever", "colar")          # SendInput Unicode | área de trans
 MODIFIER_MODES = ("exatos", "ignorar")
 SCOPE_MODES = ("global", "aplicacoes")
 THEMES = ("diurno", "noturno", "automatico")
+POSITIONS = ("cima", "centro", "baixo")
+ITEM_TYPES = ("texto", "espaco", "contador")
 
 MAX_REPEAT = 1000
 MAX_INTERVAL_MS = 600_000
@@ -17,16 +19,39 @@ MAX_INTERVAL_MS = 600_000
 
 @dataclass
 class Macro:
+    """Item da grelha. ``tipo``:
+
+    * ``texto``    – macro de texto (o caso normal);
+    * ``espaco``   – célula vazia, só para compor a grelha (não executa);
+    * ``contador`` – mostra uma contagem; toque soma, pressão longa repõe.
+    """
     titulo: str = ""
     tecla: str = ""            # associação canónica ("1", "Ctrl+F1") ou "" (só painel)
     texto: str = ""
     repeticoes: int = 1
     intervalo_ms: int = 0
     arquivada: bool = False    # fora da execução por tecla e do painel
+    tipo: str = "texto"
+    id: str = ""               # identificador estável (contadores)
+    incremento: int = 1
+    reposicao: int = 0         # valor para que a contagem é reposta
+    pressao_longa_ms: int = 800
+
+    @property
+    def is_space(self) -> bool:
+        return self.tipo == "espaco"
+
+    @property
+    def is_counter(self) -> bool:
+        return self.tipo == "contador"
 
     def display_title(self) -> str:
+        if self.is_space:
+            return ""
         if self.titulo.strip():
             return self.titulo
+        if self.is_counter:
+            return "#"
         t = self.texto.replace("\n", " ").strip()
         return t[:12] if t else "…"
 
@@ -70,7 +95,8 @@ class PanelSettings:
     cor_botao: str = "#000000"
     cor_texto: str = "#ffffff"
     cor_borda: str = "#5a5a5a"
-    mostrar_icone: bool = True
+    posicao_titulo: str = "centro"   # "cima" | "centro" | "baixo"
+    posicao_tecla: str = "baixo"
     mostrar_tecla: bool = True
     mostrar_estado: bool = True
     mostrar_controlos: bool = True   # botões Ativo/Suspenso no painel
@@ -84,6 +110,8 @@ class PanelSettings:
                 if f.name not in ("sempre_por_cima", "opacidade", "colunas")]
 
 
+LEGACY_HOTKEY = "Ctrl+Alt+P"          # predefinição até à versão 0.3
+
 # (mínimo, máximo) dos campos numéricos do painel
 PANEL_RANGES: dict[str, tuple[float, float]] = {
     "opacidade": (0.2, 1.0), "colunas": (1, 12), "tamanho_botao": (40, 160),
@@ -91,12 +119,14 @@ PANEL_RANGES: dict[str, tuple[float, float]] = {
     "escala_texto": (60, 180),
 }
 PANEL_COLORS = ("cor_fundo", "cor_botao", "cor_texto", "cor_borda")
+PANEL_ENUMS = {"posicao_titulo": POSITIONS, "posicao_tecla": POSITIONS}
+PANEL_OBSOLETE = ("mostrar_icone",)   # aceites nos ficheiros antigos, ignorados
 
 # Estilos predefinidos do painel. "predefinido" repõe o aspeto original.
 PANEL_PRESETS: dict[str, dict] = {
     "predefinido": {},
     "compacto": {"tamanho_botao": 56, "espacamento": 3, "arredondamento": 14,
-                 "mostrar_icone": False, "escala_texto": 95},
+                 "escala_texto": 95},
     "grande": {"tamanho_botao": 112, "espacamento": 10, "arredondamento": 14,
                "escala_texto": 115},
     "claro": {"cor_fundo": "#e9e9ee", "cor_botao": "#ffffff", "cor_texto": "#1b1b1f",
@@ -104,8 +134,9 @@ PANEL_PRESETS: dict[str, dict] = {
     "neon": {"cor_fundo": "#070a14", "cor_botao": "#0b1020", "cor_texto": "#00e5ff",
              "cor_borda": "#00e5ff", "arredondamento": 26, "borda": 2},
     "redondo": {"arredondamento": 50, "espacamento": 8, "mostrar_tecla": False},
-    "minimalista": {"borda": 0, "mostrar_icone": False, "cor_botao": "#2a2a2e",
-                    "arredondamento": 8, "espacamento": 4},
+    "minimalista": {"borda": 0, "cor_botao": "#2a2a2e", "arredondamento": 8,
+                    "espacamento": 4},
+    "titulo_em_cima": {"posicao_titulo": "cima", "posicao_tecla": "baixo"},
 }
 
 
@@ -135,10 +166,12 @@ class Settings:
     arrancar_com_windows: bool = True
     modo_texto: str = "escrever"
     modificadores: str = "exatos"
-    tecla_suspensao: str = "Ctrl+Alt+P"
+    tecla_suspensao: str = "Shift+Escape"
+    tecla_painel: str = "Shift+F12"     # "" = sem tecla
     tema: str = "diurno"
     idioma: str = "pt"
     confirmar_eliminacao: bool = True
+    avisar_conflito_tecla: bool = True
     painel: PanelSettings = field(default_factory=PanelSettings)
 
     def clone(self) -> "Settings":
@@ -160,6 +193,10 @@ class State:
     suspenso: bool = False
     conjunto: str = ""
     painel_visivel: bool = False
+    painel_x: int | None = None
+    painel_y: int | None = None
+    contadores: dict = field(default_factory=dict)    # id -> contagem
+    migracoes: list = field(default_factory=list)     # migrações já aplicadas
 
 
 def app_matches(entry: str, exe_path: str) -> bool:

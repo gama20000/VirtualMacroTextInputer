@@ -177,6 +177,7 @@ class _ActiveSet:
     ms: MacroSet
     bindings: dict[Binding, int] = field(default_factory=dict)
     plans: list[Optional[MacroPlan]] = field(default_factory=list)
+    counters: dict[Binding, int] = field(default_factory=dict)   # tecla -> índice
 
 
 class Engine:
@@ -189,6 +190,8 @@ class Engine:
         self._active_id = ""
         self._suspended = False
         self._hotkey: Optional[Binding] = None
+        self._panel_key: Optional[Binding] = None
+        self._counter_down: dict[str, tuple[int, float]] = {}   # tecla -> (índice, início)
         self._running: Optional[Execution] = None
         self._held: set[str] = set()        # teclas cujo keydown foi suprimido
         self._passed: set[str] = set()      # teclas premidas que passaram normalmente
@@ -218,6 +221,11 @@ class Engine:
                 self._hotkey = parse_binding(config.settings.tecla_suspensao)
             except KeyBindingError:
                 self._hotkey = None
+            try:
+                pk = config.settings.tecla_painel
+                self._panel_key = parse_binding(pk) if pk else None
+            except KeyBindingError:
+                self._panel_key = None
             if self._active_id not in config.sets:
                 ordered = config.ordered_sets()
                 self._active_id = ordered[0].id if ordered else ""
@@ -232,8 +240,16 @@ class Engine:
         ms = cfg.sets[self._active_id]
         act = _ActiveSet(ms)
         for i, m in enumerate(ms.macros):
-            if m.arquivada:                 # arquivadas: fora das teclas e do painel
+            if m.arquivada or m.is_space:   # arquivadas e espaços: nada a executar
                 act.plans.append(None)
+                continue
+            if m.is_counter:
+                act.plans.append(None)
+                if m.tecla:
+                    try:
+                        act.counters.setdefault(parse_binding(m.tecla), i)
+                    except KeyBindingError:
+                        pass
                 continue
             try:
                 steps = tuple(parse_action(m.texto))
@@ -365,6 +381,33 @@ class Engine:
         assert fg is not None
         return (True, "") if self._start(index, fg, source) else (False, tr("eng.not_run"))
 
+    # ------------------------------------------------------------ contadores
+    def _counter_released(self, index: int, held_s: float) -> None:
+        act = self._active
+        if act is None or not (0 <= index < len(act.ms.macros)):
+            return
+        m = act.ms.macros[index]
+        if not m.is_counter:
+            return
+        reset = held_s * 1000 >= m.pressao_longa_ms
+        self._emit("counter", id=m.id, index=index,
+                   action="reset" if reset else "inc",
+                   step=m.incremento, value=m.reposicao)
+
+    def counter_press(self, index: int, long_press: bool) -> tuple[bool, str]:
+        """Contador acionado no painel (clique curto ou pressão longa)."""
+        if self._suspended:
+            return False, tr("eng.suspended")
+        act = self._active
+        if act is None or not (0 <= index < len(act.ms.macros)):
+            return False, tr("eng.not_run")
+        m = act.ms.macros[index]
+        if not m.is_counter or m.arquivada:
+            return False, tr("eng.not_run")
+        self._emit("counter", id=m.id, index=index, action="reset" if long_press else "inc",
+                   step=m.incremento, value=m.reposicao)
+        return True, ""
+
     def shutdown(self) -> None:
         run = self._running
         if run:
@@ -378,6 +421,11 @@ class Engine:
             return False
         key = ev.key
         if not ev.down:
+            if key in self._counter_down:
+                idx, t0 = self._counter_down.pop(key)
+                self._held.discard(key)
+                self._counter_released(idx, time.monotonic() - t0)
+                return True
             if key in self._held:
                 self._held.discard(key)
                 return True
@@ -399,6 +447,11 @@ class Engine:
             self._held.add(key)
             self.toggle_suspended()
             return True
+        pk = self._panel_key
+        if pk is not None and pk.key == key and pk.mods == ev.mods:
+            self._held.add(key)
+            self._emit("toggle_panel")
+            return True
 
         if self._suspended:
             self._passed.add(key)
@@ -413,6 +466,14 @@ class Engine:
         if idx is None and ev.mods and self._settings.modificadores == "ignorar":
             idx = act.bindings.get(Binding(key))
         if idx is None:
+            cidx = act.counters.get(b)
+            if cidx is None and ev.mods and self._settings.modificadores == "ignorar":
+                cidx = act.counters.get(Binding(key))
+            if cidx is not None and self._target_ok(self.platform.foreground())[0]:
+                # contador: decide no keyup (toque soma, manter premida repõe)
+                self._held.add(key)
+                self._counter_down[key] = (cidx, time.monotonic())
+                return True
             self._passed.add(key)
             return False
 

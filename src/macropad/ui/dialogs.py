@@ -10,16 +10,23 @@ from ..i18n import tr
 
 def ask(parent: QWidget, title: str, text: str, yes: Optional[str] = None,
         no: Optional[str] = None, checkbox: Optional[str] = None,
-        danger: bool = False) -> tuple[bool, bool]:
-    """Pergunta sim/não. Devolve (confirmado, caixa_marcada)."""
+        danger: bool = False, only_ok: bool = False) -> tuple[bool, bool]:
+    """Pergunta sim/não (ou só aviso, com ``only_ok``).
+    Devolve (confirmado, caixa_marcada)."""
     box = QMessageBox(parent)
     box.setIcon(QMessageBox.Warning if danger else QMessageBox.Question)
     box.setWindowTitle(title)
     box.setText(text)
     b_yes = box.addButton(yes or tr("btn.yes"), QMessageBox.AcceptRole)
-    b_no = box.addButton(no or tr("btn.cancel"), QMessageBox.RejectRole)
-    box.setDefaultButton(b_no if danger else b_yes)
-    box.setEscapeButton(b_no)
+    if only_ok:
+        box.setIcon(QMessageBox.Warning)
+        b_no = b_yes
+        box.setDefaultButton(b_yes)
+        box.setEscapeButton(b_yes)
+    else:
+        b_no = box.addButton(no or tr("btn.cancel"), QMessageBox.RejectRole)
+        box.setDefaultButton(b_no if danger else b_yes)
+        box.setEscapeButton(b_no)
     cb = None
     if checkbox:
         cb = QCheckBox(checkbox)

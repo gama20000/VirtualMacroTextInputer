@@ -119,3 +119,35 @@ Preparação: abra o Bloco de Notas e use o conjunto **Predefinido**, em que 1 �
 | 59 | Botões Ativo/Suspenso no painel (com o cursor no Bloco de Notas) | mudam o estado; o Bloco de Notas mantém o foco; configuração e ícone acompanham | ✅ |
 | 60 | Roda do rato sobre o painel | para cima mais opaco, para baixo mais transparente; mostra «Opacidade n %»; outras janelas inalteradas | ✅ |
 | 61 | Caixas de verificação e setas dos campos numéricos (pasta com acentos/espaços) | visíveis e com o estado correto | ✅ |
+
+## Versão 0.4 — organização, atalhos e preferências
+
+Antes de começar: na configuração de teste, a tecla de suspensão anterior
+(`Ctrl+Alt+P`) deve ter passado para `Shift+Escape`, com um aviso no ícone.
+
+| # | Ação | Esperado | OK |
+|---|---|---|---|
+| 62 | Primeiro arranque da 0.4 com uma configuração que tinha `Ctrl+Alt+P` | aviso de migração; Preferências mostra `Shift+Escape`; não volta a avisar no arranque seguinte | ☐ |
+| 63 | Shift+Esc no Bloco de Notas | suspende/reativa; Esc sozinho continua normal | ☐ |
+| 64 | Shift+F12 no Bloco de Notas (também com as macros suspensas) | mostra/oculta o painel; o Bloco de Notas mantém o foco | ☐ |
+| 65 | Painel: barra de título | cores do tema (preta no Diurno, escura no Noturno); mostra o conjunto e «Shift+F12 mostra/oculta»; ✕ oculta o painel | ☐ |
+| 66 | Arraste a barra de título do painel, feche e reabra o programa | o painel move-se sem tirar o foco; reabre na mesma posição | ☐ |
+| 67 | Separador Macros: área «Ativo» | centrada, com o mesmo tamanho, cores, colunas e espaçamento do painel; o título «Ativo (n)» tem o estilo de «Arquivo (n)» | ☐ |
+| 68 | **Espaço vazio**, depois arraste-o para o meio dos botões | tracejado na configuração; no painel a célula fica vazia e não reage a cliques | ☐ |
+| 69 | Arraste um botão para cima de um espaço vazio | trocam de lugar; gravado logo | ☐ |
+| 70 | Arraste um botão para entre dois outros (Ativo) e para entre dois arquivados | linha azul na posição; fica exatamente aí; teclas inalteradas | ☐ |
+| 71 | Arraste um arquivado para «Ativo», entre dois botões | restaurado nessa posição; com conflito de tecla pede confirmação (Cancelar não muda nada) | ☐ |
+| 72 | Arraste um espaço vazio para «Arquivo» | não é arquivado; mensagem na barra de estado | ☐ |
+| 73 | Selecione uma macro arquivada, Ctrl+C, Ctrl+V | a cópia aparece no Arquivo, logo a seguir à original | ☐ |
+| 74 | Rato sobre um botão (janela ativa), prima F8 | etiqueta amarela «Tecla…» enquanto o rato está por cima; F8 fica atribuída e gravada | ☐ |
+| 75 | Rato sobre um botão, prima a tecla de outra macro ativa | aviso «já está atribuída»; marque «Não voltar a mostrar»; a seguir só aparece na barra de estado; Preferências mostra a opção desmarcada | ☐ |
+| 76 | Rato sobre um botão, prima Shift+Esc e Shift+F12 | não suspende nem mostra o painel; aviso de tecla global | ☐ |
+| 77 | Rato sobre um botão, mude para o Bloco de Notas com Alt+Tab e prima 1 | a macro 1 funciona no Bloco de Notas (a captura só vale com a configuração ativa) | ☐ |
+| 78 | Rato sobre um botão: Delete, Ctrl+C, Ctrl+V, Tab, Esc | mantêm as funções (Esc cancela sem atribuir) | ☐ |
+| 79 | **Contador**: no painel, 3 cliques curtos; depois manter premido 1 s | 1, 2, 3; ao manter premido volta a 0 sem somar | ☐ |
+| 80 | Contador com incremento 5, reposição 10, pressão longa 500 ms; atribua F9; no Bloco de Notas toque F9 e mantenha F9 | soma 5; manter repõe 10; nada é escrito no Bloco de Notas | ☐ |
+| 81 | Feche e reabra o programa | a contagem e a configuração do contador mantêm-se | ☐ |
+| 82 | Separador Painel: posição do título/tecla em todas as combinações | pré-visualização e painel real iguais; título e tecla nunca se sobrepõem | ☐ |
+| 83 | Preferências: marque «Não pedir confirmação…» e elimine uma macro | elimina sem perguntar; desmarcar volta a perguntar (sem reiniciar) | ☐ |
+| 84 | Preferências: desmarque e marque «Arrancar automaticamente com o Windows»; veja Gestor de Tarefas ▸ Aplicações de arranque | aplicado logo; Macropad aparece «Ativado»; desativado no Gestor de Tarefas e voltado a marcar → volta a «Ativado» | 👤 |
+| 85 | Reinicie sessão do Windows com o arranque ativo | o Macropad arranca sozinho com a mesma pasta de configuração | 👤 |

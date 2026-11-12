@@ -1,6 +1,6 @@
 """Janela de configuração.
 
-Separadores: Macros · Preferências do painel · Âmbito · Preferências.
+Separadores: Macros · Painel · Âmbito · Preferências.
 As alterações válidas são gravadas automaticamente (de forma atómica) e
 aplicadas a execuções futuras."""
 from __future__ import annotations
@@ -10,26 +10,28 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
 from PySide6.QtCore import QEvent, QMimeData, QObject, QTimer, Qt, QUrl
-from PySide6.QtGui import QColor, QDesktopServices, QKeySequence
+from PySide6.QtGui import QColor, QCursor, QDesktopServices, QKeySequence
 from PySide6.QtWidgets import (QAbstractSpinBox, QApplication, QButtonGroup, QCheckBox,
                                QColorDialog, QComboBox, QFileDialog, QFormLayout, QFrame,
                                QGridLayout, QHBoxLayout, QLabel, QLineEdit, QListWidget, QMenu,
                                QPlainTextEdit, QPushButton, QRadioButton, QScrollArea, QSlider,
-                               QSpinBox, QTabWidget, QTextEdit, QToolButton, QVBoxLayout, QWidget)
+                               QSpinBox, QStackedWidget, QTabWidget, QTextEdit, QToolButton,
+                               QVBoxLayout, QWidget)
 
 from ..core import macro_ops as ops
 from ..core.commands import CommandError, describe_steps, parse_action
 from ..core.configio import (ConfigError, Issue, macro_label, macros_from_clipboard,
                              macros_to_clipboard, validate_macros)
-from ..core.keys import KeyBindingError, parse_binding
-from ..core.model import (MAX_INTERVAL_MS, MAX_REPEAT, PANEL_PRESETS, PANEL_RANGES, MacroSet,
-                          PanelSettings, Settings, apply_preset, matching_preset)
+from ..core.keys import Binding, KeyBindingError, parse_binding
+from ..core.model import (MAX_INTERVAL_MS, MAX_REPEAT, PANEL_PRESETS, PANEL_RANGES, POSITIONS,
+                          MacroSet, PanelSettings, Settings, apply_preset, matching_preset)
 from ..i18n import available as available_languages
 from ..i18n import tr
 from . import theme
 from .dialogs import ask, get_text, info
-from .panel import PanelPreview
-from .widgets import ArchiveDropZone, KeyCaptureEdit, MacroGrid
+from .panel import PanelPreview, panel_hint
+from .widgets import (_MOD_KEYS, AreaDropZone, KeyCaptureEdit, MacroGrid, key_name_from_event,
+                      mods_from_event)
 
 if TYPE_CHECKING:
     from .app import MacropadApp
@@ -86,6 +88,10 @@ class ConfigWindow(QWidget):
         self.selected: list[int] = []            # índices reais selecionados
         self._loading = False
         self._last_add = 0.0
+        self._capture_field = False              # um campo de tecla está a gravar
+        self._capture_hover = False              # o rato está sobre um botão (atribuir tecla)
+        self._hover_real = -1
+        self._hover_grid: Optional[MacroGrid] = None
         self._save_set_timer = QTimer(self, singleShot=True, interval=450,
                                       timeout=self._save_set_now)
         self._save_settings_timer = QTimer(self, singleShot=True, interval=450,
@@ -183,24 +189,56 @@ class ConfigWindow(QWidget):
         gl.setContentsMargins(14, 10, 14, 10)
         gl.setSpacing(8)
 
+        # ----- área «Ativo»: mesmo aspeto do painel real (centrada)
+        self.active_zone = AreaDropZone(self.pal, archived=False)
+        self.active_zone.dropped.connect(lambda src, idxs: self._on_drop(False, src, idxs))
+        al = QVBoxLayout(self.active_zone)
+        al.setContentsMargins(8, 6, 8, 8)
+        al.setSpacing(8)
+        hrow = QHBoxLayout()
+        self.active_title = QLabel(objectName="section")
+        hrow.addWidget(self.active_title)
+        line = QFrame(objectName="divider")
+        line.setFrameShape(QFrame.HLine)
+        hrow.addWidget(line, 1)
+        al.addLayout(hrow)
+        self.active_box = QFrame(objectName="activebox")
+        bl = QHBoxLayout(self.active_box)
+        bl.setContentsMargins(10, 10, 10, 10)
         self.grid = MacroGrid(self.pal)
         self.grid.itemSelectionChanged.connect(lambda: self._on_selection(self.grid))
-        self.grid.reordered.connect(lambda o: self._on_reordered(False, o))
-        gl.addWidget(self.grid)
+        self.grid.dropped.connect(lambda *a: self._on_drop(False, *a))
+        self.grid.hover_changed.connect(lambda r: self._on_hover(self.grid, r))
+        bl.addWidget(self.grid)
         self.empty_label = QLabel(tr("macros.empty"), objectName="hint")
-        gl.addWidget(self.empty_label)
+        self.empty_label.setAlignment(Qt.AlignCenter)
+        bl.addWidget(self.empty_label)
+        crow = QHBoxLayout()
+        crow.addStretch(1)
+        crow.addWidget(self.active_box)
+        crow.addStretch(1)
+        al.addLayout(crow)
 
         brow = QHBoxLayout()
         self.add_btn = QPushButton("＋  " + tr("macros.new"))
-        self.add_btn.clicked.connect(self._add_macro)
-        brow.addWidget(self.add_btn)
+        self.add_btn.clicked.connect(lambda: self._add_item("texto"))
+        self.add_counter_btn = QPushButton("＋  " + tr("macros.new_counter"))
+        self.add_counter_btn.setToolTip(tr("macros.new_counter_tip"))
+        self.add_counter_btn.clicked.connect(lambda: self._add_item("contador"))
+        self.add_space_btn = QPushButton("＋  " + tr("macros.new_space"))
+        self.add_space_btn.setToolTip(tr("macros.new_space_tip"))
+        self.add_space_btn.clicked.connect(lambda: self._add_item("espaco"))
+        for b in (self.add_btn, self.add_counter_btn, self.add_space_btn):
+            brow.addWidget(b)
         brow.addStretch(1)
-        brow.addWidget(QLabel(tr("macros.drag_hint"), objectName="hint"))
-        gl.addLayout(brow)
+        al.addLayout(brow)
+        hint = QLabel(tr("macros.drag_hint"), objectName="hint", wordWrap=True)
+        al.addWidget(hint)
+        gl.addWidget(self.active_zone)
 
-        # divisória «Arquivo» — também é zona para largar macros a arquivar
-        self.archive_zone = ArchiveDropZone(self.pal)
-        self.archive_zone.archive_requested.connect(self._archive_indices)
+        # ----- área «Arquivo» — também é zona para largar macros
+        self.archive_zone = AreaDropZone(self.pal, archived=True)
+        self.archive_zone.dropped.connect(lambda src, idxs: self._on_drop(True, src, idxs))
         zl = QVBoxLayout(self.archive_zone)
         zl.setContentsMargins(8, 6, 8, 8)
         zl.setSpacing(6)
@@ -219,7 +257,8 @@ class ConfigWindow(QWidget):
         zl.addLayout(arow)
         self.archive_grid = MacroGrid(self.pal, archived=True)
         self.archive_grid.itemSelectionChanged.connect(lambda: self._on_selection(self.archive_grid))
-        self.archive_grid.reordered.connect(lambda o: self._on_reordered(True, o))
+        self.archive_grid.dropped.connect(lambda *a: self._on_drop(True, *a))
+        self.archive_grid.hover_changed.connect(lambda r: self._on_hover(self.archive_grid, r))
         zl.addWidget(self.archive_grid)
         self.archive_empty = QLabel(objectName="hint")
         self.archive_empty.setMinimumHeight(48)
@@ -273,15 +312,25 @@ class ConfigWindow(QWidget):
         self.no_key_btn = clear
         form.addRow(tr("field.key"), krow)
 
+        el.addLayout(form)
+
+        # páginas próprias de cada tipo de botão
+        self.type_pages = QStackedWidget()
+        page_text = QWidget()
+        tf = QFormLayout(page_text)
+        tf.setContentsMargins(0, 0, 0, 0)
+        tf.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        tf.setHorizontalSpacing(14)
+        tf.setVerticalSpacing(8)
         self.f_text = QPlainTextEdit()
         self.f_text.setTabChangesFocus(True)
         self.f_text.setPlaceholderText(tr("field.text_placeholder"))
         self.f_text.setFixedHeight(80)
         self.f_text.textChanged.connect(self._on_edit)
-        form.addRow(tr("field.text"), self.f_text)
+        tf.addRow(tr("field.text"), self.f_text)
         self.f_preview = QLabel(objectName="hint")
         self.f_preview.setWordWrap(True)
-        form.addRow("", self.f_preview)
+        tf.addRow("", self.f_preview)
 
         rrow = QHBoxLayout()
         self.f_repeat = QSpinBox()
@@ -297,10 +346,66 @@ class ConfigWindow(QWidget):
         self.f_interval.valueChanged.connect(self._on_edit)
         rrow.addWidget(self.f_interval)
         rrow.addStretch(1)
-        form.addRow(tr("field.repeats"), rrow)
-        el.addLayout(form)
+        tf.addRow(tr("field.repeats"), rrow)
+        tf.addRow("", QLabel(tr("macros.commands_hint"), objectName="hint", wordWrap=True))
+        self.type_pages.addWidget(page_text)
 
-        el.addWidget(QLabel(tr("macros.commands_hint"), objectName="hint", wordWrap=True))
+        page_counter = QWidget()
+        cf = QFormLayout(page_counter)
+        cf.setContentsMargins(0, 0, 0, 0)
+        cf.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        cf.setHorizontalSpacing(14)
+        cf.setVerticalSpacing(8)
+        self.f_step = QSpinBox()
+        self.f_step.setRange(-1_000_000, 1_000_000)
+        self.f_step.valueChanged.connect(self._on_edit)
+        cf.addRow(tr("field.counter_step"), self.f_step)
+        self.f_reset = QSpinBox()
+        self.f_reset.setRange(-1_000_000_000, 1_000_000_000)
+        self.f_reset.valueChanged.connect(self._on_edit)
+        cf.addRow(tr("field.counter_reset"), self.f_reset)
+        self.f_long = QSpinBox()
+        self.f_long.setRange(200, 10_000)
+        self.f_long.setSingleStep(100)
+        self.f_long.setSuffix(" ms")
+        self.f_long.valueChanged.connect(self._on_edit)
+        cf.addRow(tr("field.counter_long"), self.f_long)
+        cnow = QHBoxLayout()
+        self.f_count = QLabel()
+        cnow.addWidget(self.f_count)
+        cnow.addSpacing(10)
+        reset_now = QPushButton(tr("field.counter_reset_now"))
+        reset_now.clicked.connect(self._reset_counter_now)
+        cnow.addWidget(reset_now)
+        cnow.addStretch(1)
+        cf.addRow(tr("field.counter_value"), cnow)
+        cf.addRow("", QLabel(tr("macros.counter_hint"), objectName="hint", wordWrap=True))
+        self.type_pages.addWidget(page_counter)
+
+        page_space = QWidget()
+        sl = QVBoxLayout(page_space)
+        sl.setContentsMargins(0, 0, 0, 0)
+        sl.addWidget(QLabel(tr("macros.space_hint"), objectName="hint", wordWrap=True))
+        sl.addStretch(1)
+        self.type_pages.addWidget(page_space)
+        self.type_pages.setObjectName("typepages")
+        for k in range(self.type_pages.count()):
+            self.type_pages.widget(k).setObjectName("typepage")
+        self.type_pages.setStyleSheet(
+            "QStackedWidget#typepages, QWidget#typepage { background: transparent; }")
+        el.addWidget(self.type_pages)
+        # rótulos alinhados entre o formulário comum e as páginas de cada tipo
+        forms = [form, tf, cf]
+        labels = [f.labelForField(f.itemAt(r, QFormLayout.FieldRole).widget()
+                                  or f.itemAt(r, QFormLayout.FieldRole).layout())
+                  for f in forms for r in range(f.rowCount())
+                  if f.itemAt(r, QFormLayout.FieldRole) is not None]
+        labels = [lb for lb in labels if isinstance(lb, QLabel)]
+        width = max(lb.sizeHint().width() for lb in labels)
+        for lb in labels:
+            lb.setMinimumWidth(width)
+            lb.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+
         self.f_dup = QLabel(objectName="dupinfo")
         self.f_dup.setWordWrap(True)
         el.addWidget(self.f_dup)
@@ -383,12 +488,26 @@ class ConfigWindow(QWidget):
         crow.addWidget(self.p_bg_theme, 2, 2, 1, 2)
         v.addLayout(crow)
 
+        pos = QHBoxLayout()
+        self.p_title_pos = QComboBox()
+        self.p_key_pos = QComboBox()
+        for combo in (self.p_title_pos, self.p_key_pos):
+            for key in POSITIONS:
+                combo.addItem(tr(f"panel.pos_{key}"), key)
+            combo.currentIndexChanged.connect(self._on_panel_edit)
+        pos.addWidget(QLabel(tr("panel.title_pos")))
+        pos.addWidget(self.p_title_pos)
+        pos.addSpacing(18)
+        pos.addWidget(QLabel(tr("panel.key_pos")))
+        pos.addWidget(self.p_key_pos)
+        pos.addStretch(1)
+        v.addLayout(pos)
+
         show = QHBoxLayout()
-        self.p_show_icon = QCheckBox(tr("panel.show_icon"))
         self.p_show_key = QCheckBox(tr("panel.show_key"))
         self.p_show_status = QCheckBox(tr("panel.show_status"))
         self.p_show_controls = QCheckBox(tr("panel.show_controls"))
-        for cb in (self.p_show_icon, self.p_show_key, self.p_show_status, self.p_show_controls):
+        for cb in (self.p_show_key, self.p_show_status, self.p_show_controls):
             cb.toggled.connect(self._on_panel_edit)
             show.addWidget(cb)
         show.addStretch(1)
@@ -476,14 +595,33 @@ class ConfigWindow(QWidget):
         self.p_autostart = QCheckBox(tr("prefs.autostart"))
         self.p_autostart.toggled.connect(self._on_prefs_edit)
         form.addRow("", self.p_autostart)
+        self.autostart_error = QLabel(objectName="error")
+        self.autostart_error.setWordWrap(True)
+        self.autostart_error.hide()
+        form.addRow("", self.autostart_error)
 
-        self.p_confirm = QCheckBox(tr("prefs.confirm_delete"))
-        self.p_confirm.toggled.connect(self._on_prefs_edit)
-        form.addRow("", self.p_confirm)
+        # marcado = NÃO pedir confirmação (texto pedido pelo utilizador)
+        self.p_no_confirm = QCheckBox(tr("prefs.no_confirm_delete"))
+        self.p_no_confirm.toggled.connect(self._on_prefs_edit)
+        form.addRow("", self.p_no_confirm)
+
+        self.p_warn_conflict = QCheckBox(tr("prefs.warn_key_conflict"))
+        self.p_warn_conflict.toggled.connect(self._on_prefs_edit)
+        form.addRow("", self.p_warn_conflict)
 
         self.p_hotkey = KeyCaptureEdit(self._set_capture_mode)
         self.p_hotkey.captured.connect(lambda _b: self._on_prefs_edit())
         form.addRow(tr("prefs.hotkey"), self.p_hotkey)
+
+        pk = QHBoxLayout()
+        self.p_panelkey = KeyCaptureEdit(self._set_capture_mode)
+        self.p_panelkey.captured.connect(lambda _b: self._on_prefs_edit())
+        pk.addWidget(self.p_panelkey, 1)
+        nopk = QPushButton(tr("field.no_key"))
+        nopk.setToolTip(tr("prefs.panel_key_none_tip"))
+        nopk.clicked.connect(lambda: (self.p_panelkey.set_binding(""), self._on_prefs_edit()))
+        pk.addWidget(nopk)
+        form.addRow(tr("prefs.panel_key"), pk)
 
         self.p_mods = QComboBox()
         self.p_mods.addItem(tr("prefs.mods_exact"), "exatos")
@@ -545,8 +683,10 @@ class ConfigWindow(QWidget):
         self.p_theme.setCurrentIndex(max(0, self.p_theme.findData(s.tema)))
         self.p_lang.setCurrentIndex(max(0, self.p_lang.findData(s.idioma)))
         self.p_autostart.setChecked(s.arrancar_com_windows)
-        self.p_confirm.setChecked(s.confirmar_eliminacao)
+        self.p_no_confirm.setChecked(not s.confirmar_eliminacao)
+        self.p_warn_conflict.setChecked(s.avisar_conflito_tecla)
         self.p_hotkey.set_binding(s.tecla_suspensao)
+        self.p_panelkey.set_binding(s.tecla_painel)
         self.p_mods.setCurrentIndex(max(0, self.p_mods.findData(s.modificadores)))
         self.p_textmode.setCurrentIndex(max(0, self.p_textmode.findData(s.modo_texto)))
         self.g_error.clear()
@@ -559,7 +699,8 @@ class ConfigWindow(QWidget):
             cb.set_color(getattr(p, name) or self.pal.panel_bg)
         self.p_bg_theme.setChecked(p.cor_fundo == "")
         self.p_colors["cor_fundo"].setEnabled(p.cor_fundo != "")
-        self.p_show_icon.setChecked(p.mostrar_icone)
+        self.p_title_pos.setCurrentIndex(max(0, self.p_title_pos.findData(p.posicao_titulo)))
+        self.p_key_pos.setCurrentIndex(max(0, self.p_key_pos.findData(p.posicao_tecla)))
         self.p_show_key.setChecked(p.mostrar_tecla)
         self.p_show_status.setChecked(p.mostrar_estado)
         self.p_show_controls.setChecked(p.mostrar_controlos)
@@ -597,21 +738,34 @@ class ConfigWindow(QWidget):
             parts.append(lab)
         return tr("dup.info", others=", ".join(parts))
 
-    def _tile(self, i: int, bad: set, dups: dict) -> dict:
+    def _counts(self) -> dict[str, int]:
+        return self.app.counts_for(self.ms) if self.ms else {}
+
+    def _tile(self, i: int, bad: set, dups: dict, counts: Optional[dict] = None) -> dict:
         m = self.ms.macros[i]
+        if m.is_space:
+            return {"index": i, "kind": "espaco", "title": "", "key": "", "error": i in bad,
+                    "dup": False, "tip": tr("tile.space_tip"), "count": None}
         tip = tr("tile.tooltip", title=m.display_title(), key=m.tecla or tr("tile.no_key"))
         if i in dups:
             tip += "\n" + self._dup_text(i, dups)
         if i in bad:
             tip += "\n" + tr("tile.has_error")
-        return {"index": i, "title": m.display_title(), "key": m.tecla,
-                "error": i in bad, "dup": i in dups, "tip": tip}
+        if not m.arquivada:
+            tip += "\n" + tr("tile.hover_key_tip")
+        count = None
+        if m.is_counter:
+            counts = self._counts() if counts is None else counts
+            count = counts.get(m.id, m.reposicao)
+        return {"index": i, "kind": m.tipo, "title": m.display_title(), "key": m.tecla,
+                "error": i in bad, "dup": i in dups, "tip": tip, "count": count}
 
     def _refresh_grid(self) -> None:
         if not self.ms:
             self.grid.set_tiles([], -1)
             self.archive_grid.set_tiles([], -1)
             self.editor.setEnabled(False)
+            self.active_title.setText(tr("active.title", n=0))
             self.archive_title.setText(tr("archive.title", n=0))
             return
         n = len(self.ms.macros)
@@ -625,10 +779,21 @@ class ConfigWindow(QWidget):
         q = self.archive_search.text()
         shown = [i for i in arch if ops.matches_query(self.ms.macros[i], q)]
         sel = set(self.selected)
-        self.grid.set_tiles([self._tile(i, bad, dups) for i in act], sel, self.cur)
-        self.archive_grid.set_tiles([self._tile(i, bad, dups) for i in shown], sel, self.cur)
+        counts = self._counts()
+        style = self.settings.painel
+        self.grid.apply_style(style, columns=style.colunas)
+        self.archive_grid.apply_style(style)
+        bg = style.cor_fundo or self.pal.panel_bg
+        self.active_box.setStyleSheet(
+            f"QFrame#activebox {{ background: {bg}; border: 1px solid {self.pal.border};"
+            f" border-radius: 8px; }} QFrame#activebox QListWidget#grid {{ background: {bg}; }}"
+            f" QFrame#activebox QLabel {{ background: transparent; }}")
+        self.grid.set_tiles([self._tile(i, bad, dups, counts) for i in act], sel, self.cur)
+        self.archive_grid.set_tiles([self._tile(i, bad, dups, counts) for i in shown], sel,
+                                    self.cur)
         self.empty_label.setVisible(not act)
         self.grid.setVisible(bool(act))
+        self.active_title.setText(tr("active.title", n=len(act)))
         self.archive_title.setText(tr("archive.title", n=len(arch)))
         self.archive_grid.setVisible(bool(shown))
         self.archive_empty.setVisible(not shown)
@@ -648,9 +813,15 @@ class ConfigWindow(QWidget):
         self._loading = True
         m = self._macro()
         multi = self._multi()
-        for wdg in (self.f_title, self.f_key, self.f_text, self.f_repeat, self.f_interval,
-                    self.left_btn, self.right_btn, self.no_key_btn):
-            wdg.setEnabled(m is not None and not multi)
+        single = m is not None and not multi
+        is_space = single and m.is_space
+        for wdg in (self.f_title, self.f_key, self.no_key_btn):
+            wdg.setEnabled(single and not is_space)
+        for wdg in (self.f_text, self.f_repeat, self.f_interval, self.f_step, self.f_reset,
+                    self.f_long, self.left_btn, self.right_btn):
+            wdg.setEnabled(single)
+        self.type_pages.setCurrentIndex(2 if is_space else (1 if single and m.is_counter else 0))
+        self.type_pages.setVisible(single)
         if m is None or multi:
             self.f_title.setText("")
             self.f_key.set_binding("")
@@ -666,6 +837,10 @@ class ConfigWindow(QWidget):
             self.f_text.setPlainText(m.texto)
             self.f_repeat.setValue(m.repeticoes)
             self.f_interval.setValue(m.intervalo_ms)
+            self.f_step.setValue(m.incremento)
+            self.f_reset.setValue(m.reposicao)
+            self.f_long.setValue(m.pressao_longa_ms)
+            self._update_count_label()
             self._update_preview_and_errors()
         self._update_editor_header()
         self._loading = False
@@ -683,8 +858,10 @@ class ConfigWindow(QWidget):
                                      else tr("macros.archive_n", n=n))
             self.del_btn.setToolTip(tr("macros.delete_n_tip", n=n))
         else:
-            self.editor_title.setText(tr("editor.header_archived" if archived
-                                         else "editor.header"))
+            key = ("editor.header_space" if m.is_space else
+                   "editor.header_counter" if m.is_counter else
+                   "editor.header_archived" if archived else "editor.header")
+            self.editor_title.setText(tr(key))
             self.archive_btn.setText(tr("macros.restore") if archived else tr("macros.archive"))
             self.del_btn.setToolTip(tr("macros.delete_tip"))
         self.archive_btn.setToolTip(tr("macros.restore_tip") if archived
@@ -698,7 +875,7 @@ class ConfigWindow(QWidget):
     def _update_preview_and_errors(self) -> list[Issue]:
         m = self._macro()
         issues = self._issues()
-        if m is not None and not self._multi():
+        if m is not None and not self._multi() and m.tipo == "texto":
             if not m.texto:
                 self.f_preview.setText(tr("editor.empty_text"))
             else:
@@ -743,13 +920,45 @@ class ConfigWindow(QWidget):
         if self._loading or self._multi():
             return
         m = self._macro()
-        if m is None:
+        if m is None or m.is_space:
             return
         m.titulo = self.f_title.text()
-        m.texto = self.f_text.toPlainText()
-        m.repeticoes = self.f_repeat.value()
-        m.intervalo_ms = self.f_interval.value()
+        if m.is_counter:
+            m.incremento = self.f_step.value()
+            m.reposicao = self.f_reset.value()
+            m.pressao_longa_ms = self.f_long.value()
+        else:
+            m.texto = self.f_text.toPlainText()
+            m.repeticoes = self.f_repeat.value()
+            m.intervalo_ms = self.f_interval.value()
         self._changed(refresh=False)
+
+    def _update_count_label(self) -> None:
+        m = self._macro()
+        if m is not None and m.is_counter:
+            self.f_count.setText(str(self._counts().get(m.id, m.reposicao)))
+
+    def _reset_counter_now(self) -> None:
+        m = self._macro()
+        if m is None or not m.is_counter or not self.ms:
+            return
+        self.app.set_count(self.ms.id, m.id, m.reposicao)
+
+    def on_counts_changed(self) -> None:
+        """Uma contagem mudou (painel ou tecla): atualiza os botões e o editor."""
+        if not self.ms:
+            return
+        counts = self._counts()
+        from .widgets import COUNT_ROLE, INDEX_ROLE
+        for g in (self.grid, self.archive_grid):
+            for r in range(g.count()):
+                it = g.item(r)
+                m = self.ms.macros[it.data(INDEX_ROLE)]
+                if m.is_counter:
+                    it.setData(COUNT_ROLE, counts.get(m.id, m.reposicao))
+            g.viewport().update()
+        self._update_count_label()
+        self._update_preview()
 
     def _on_key_captured(self, b: str) -> None:
         m = self._macro()
@@ -767,12 +976,14 @@ class ConfigWindow(QWidget):
             # atualização leve dos tiles (sem reconstruir a grelha)
             bad = {i.macro_index for i in issues if i.macro_index is not None}
             dups = ops.duplicate_groups(self.ms.macros)
-            from .widgets import DUP_ROLE, ERROR_ROLE, INDEX_ROLE, KEY_ROLE, TITLE_ROLE
+            from .widgets import COUNT_ROLE, DUP_ROLE, ERROR_ROLE, INDEX_ROLE, KEY_ROLE, TITLE_ROLE
+            counts = self._counts()
             for g in (self.grid, self.archive_grid):
                 for r in range(g.count()):
                     it = g.item(r)
                     i = it.data(INDEX_ROLE)
-                    t = self._tile(i, bad, dups)
+                    t = self._tile(i, bad, dups, counts)
+                    it.setData(COUNT_ROLE, t["count"])
                     it.setData(TITLE_ROLE, t["title"])
                     it.setData(KEY_ROLE, t["key"])
                     it.setData(ERROR_ROLE, t["error"])
@@ -815,18 +1026,32 @@ class ConfigWindow(QWidget):
         self._load_editor()
 
     def _add_macro(self) -> None:
+        self._add_item("texto")
+
+    def _add_item(self, kind: str) -> None:
+        """Nova macro, contador ou espaço vazio (no fim da área Ativo)."""
         if not self.ms:
             return
-        # Uma pressão = uma macro (ignora cliques repetidos muito rápidos).
+        # Uma pressão = um item (ignora cliques repetidos muito rápidos).
         import time
         now = time.monotonic()
         if now - self._last_add < 0.35:
             return
         self._last_add = now
-        i = ops.new_macro(self.ms, tr("macros.new_title"))
+        if kind == "contador":
+            i = ops.new_counter(self.ms, tr("macros.new_counter_title"))
+        elif kind == "espaco":
+            i = ops.new_space(self.ms)
+        else:
+            i = ops.new_macro(self.ms, tr("macros.new_title"))
         self._select(i)
         self._changed()
-        self.f_text.setFocus()
+        self.flush()
+        if kind == "texto":
+            self.f_text.setFocus()
+        elif kind == "contador":
+            self.f_title.setFocus()
+            self.f_title.selectAll()
 
     def _delete_macro(self) -> None:
         """Elimina a macro selecionada, ou todas as selecionadas."""
@@ -853,7 +1078,7 @@ class ConfigWindow(QWidget):
                 self.app.store.save_settings(s)
                 self.app.apply_config()
                 self._loading = True
-                self.p_confirm.setChecked(False)
+                self.p_no_confirm.setChecked(True)
                 self._loading = False
         was_archived = targets[0].arquivada
         first = min(self.selected)
@@ -871,17 +1096,73 @@ class ConfigWindow(QWidget):
         self._select(ops.move(self.ms, self.cur, delta))
         self._changed()
 
-    def _on_reordered(self, archived: bool, order: list) -> None:
+    def _on_drop(self, to_archive: bool, src, idxs: list, anchor: int = -1,
+                 after: bool = False, space: int = -1) -> None:
+        """Macros largadas numa área (Ativo ou Arquivo), na posição indicada.
+
+        * ``anchor``/``after``: inserir antes/depois desse item (-1 = no fim);
+        * ``space``: largou-se um único item sobre um espaço vazio da mesma
+          área — trocam de lugar.
+        Ao passar do Arquivo para Ativo, um conflito de tecla pede
+        confirmação (como «Restaurar»). Grava logo a seguir."""
         if not self.ms:
             return
-        sel = self._sel_macros()
-        cur_macro = self._macro()
-        ops.reorder_group(self.ms, archived, order)
-        self.selected = [ops.index_of(self.ms, m) for m in sel]
-        if cur_macro is not None:
-            self.cur = ops.index_of(self.ms, cur_macro)
-        self._refresh_grid()
+        n = len(self.ms.macros)
+        idxs = [i for i in idxs if 0 <= i < n]
+        if not idxs:
+            return
+        items = [self.ms.macros[i] for i in idxs]
+        anchor_m = self.ms.macros[anchor] if 0 <= anchor < n else None
+        # troca com um espaço vazio (mesma área, um só item)
+        if (0 <= space < n and len(items) == 1 and space != idxs[0]
+                and self.ms.macros[space].arquivada == items[0].arquivada == to_archive):
+            ops.swap(self.ms, idxs[0], space)
+            self._select_many([ops.index_of(self.ms, items[0])])
+            self._changed()
+            self.flush()
+            return
+        if to_archive:
+            spaces = [m for m in items if m.is_space]
+            items = [m for m in items if not m.is_space]
+            if spaces and not items:
+                self.show_status(tr("status.space_not_archived"), error=True)
+                return
+        else:
+            # do Arquivo para Ativo: conflitos de tecla
+            keep = []
+            for m in items:
+                if not m.arquivada:
+                    keep.append(m)
+                    continue
+                i = ops.index_of(self.ms, m)
+                j = ops.key_conflict(self.ms, i)
+                if j is not None and self.ms.macros[j] not in items:
+                    other = self.ms.macros[j]
+                    ok, _ = ask(self, tr("restore.title"),
+                                tr("restore.conflict", key=m.tecla, title=m.display_title(),
+                                   other=other.display_title()),
+                                yes=tr("restore.replace"))
+                    if not ok:
+                        continue
+                    if anchor_m is other:
+                        anchor_m = None
+                    # a ativa em conflito vai para o Arquivo, onde estava esta
+                    ops.move_items(self.ms, [other], True, m, False)
+                keep.append(m)
+            items = keep
+        if not items:
+            return
+        if anchor_m is not None and anchor_m in items:
+            anchor_m = None
+        moved_between = any(m.arquivada != to_archive for m in items)
+        ops.move_items(self.ms, items, to_archive, anchor_m, after)
+        self._select_many([ops.index_of(self.ms, m) for m in items])
         self._changed()
+        self.flush()
+        if moved_between:
+            key = "status.archived" if to_archive else "status.restored"
+            self.show_status(tr(key, title=items[0].display_title()) if len(items) == 1
+                             else tr(key + "_n", n=len(items)))
 
     def _archive_indices(self, idxs: list[int]) -> None:
         """Arquiva as macros ativas indicadas (botão, menu ou arrasto)."""
@@ -958,8 +1239,8 @@ class ConfigWindow(QWidget):
         if not macros:
             self.show_status(tr("status.nothing_to_paste"), error=True)
             return
-        actives = [i for i in self.selected if not self.ms.macros[i].arquivada]
-        after = max(actives) if actives else None
+        # cola logo a seguir à seleção, na mesma área (Ativo ou Arquivo)
+        after = max(self.selected) if self.selected else None
         new = []
         for m in macros:
             pos = ops.insert_copy(self.ms, m, after)
@@ -982,6 +1263,8 @@ class ConfigWindow(QWidget):
         if self.tabs.currentIndex() != 0:
             return False
         has_sel = bool(self._sel_macros())
+        if self._hover_assign_key(e):
+            return True
         if e.key() in (Qt.Key_Delete, Qt.Key_Backspace) and not (
                 e.modifiers() & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier)):
             if has_sel:
@@ -995,6 +1278,104 @@ class ConfigWindow(QWidget):
             self._paste_macro()
             return True
         return False
+
+    # ============================================== tecla pelo rato (hover)
+    def _on_hover(self, grid: MacroGrid, real: int) -> None:
+        """O rato entrou/saiu de um botão: enquanto estiver sobre ele, a próxima
+        tecla premida fica atribuída a esse botão."""
+        if real < 0 and grid is not self._hover_grid:
+            return
+        valid = (real >= 0 and self.ms is not None and real < len(self.ms.macros)
+                 and not self.ms.macros[real].is_space)
+        if self._hover_grid is not None and self._hover_grid is not grid:
+            self._hover_grid.capture_hover = False
+            self._hover_grid.viewport().update()
+        self._hover_grid = grid if valid else None
+        self._hover_real = real if valid else -1
+        grid.hovered = real
+        for g in (self.grid, self.archive_grid):
+            g.capture_hover = valid and g is grid
+            g.viewport().update()
+        self._capture_hover = valid
+        self._sync_capture()
+
+    def _hover_target(self) -> int:
+        g = self._hover_grid
+        if g is None or self._hover_real < 0 or not g.isVisible():
+            return -1
+        # confirma que o rato ainda está sobre esse botão
+        if not g.viewport().rect().contains(g.viewport().mapFromGlobal(QCursor.pos())):
+            return -1
+        return self._hover_real
+
+    def _hover_assign_key(self, e) -> bool:
+        """Atribui a tecla premida ao botão sob o rato. Delete/Backspace, Tab,
+        Ctrl+C e Ctrl+V mantêm as suas funções; Esc sozinho cancela."""
+        real = self._hover_target()
+        if real < 0 or not self.ms:
+            return False
+        k = e.key()
+        if k in _MOD_KEYS:
+            return True                      # espera pela tecla principal
+        if k in (Qt.Key_Delete, Qt.Key_Backspace, Qt.Key_Tab, Qt.Key_Backtab):
+            return False
+        if e.matches(QKeySequence.Copy) or e.matches(QKeySequence.Paste):
+            return False
+        mods = mods_from_event(e)
+        if k == Qt.Key_Escape and not mods:
+            return True
+        name = key_name_from_event(e)
+        if name is None:
+            self.show_status(tr("key.unsupported"), error=True)
+            return True
+        self.assign_key(real, str(Binding(name, mods)))
+        return True
+
+    def assign_key(self, real: int, binding: str) -> bool:
+        """Atribui ``binding`` ao item ``real`` se não estiver em uso por outra
+        macro ativa nem for uma tecla global. Devolve True se atribuiu."""
+        m = self.ms.macros[real]
+        if m.is_space:
+            return False
+        b = parse_binding(binding)
+        conflict = ""
+        st = self.app.store.settings
+        for label, hk in ((tr("prefs.hotkey").rstrip(":").lower(), st.tecla_suspensao),
+                          (tr("prefs.panel_key").rstrip(":").lower(), st.tecla_painel)):
+            try:
+                if hk and parse_binding(hk) == b:
+                    conflict = tr("hover.conflict_global", key=binding, what=label)
+            except KeyBindingError:
+                pass
+        if not conflict and not m.arquivada:
+            for j, x in enumerate(self.ms.macros):
+                if j == real or x.arquivada or x.is_space or not x.tecla:
+                    continue
+                try:
+                    if parse_binding(x.tecla) == b:
+                        conflict = tr("hover.conflict", key=binding, title=x.display_title())
+                        break
+                except KeyBindingError:
+                    continue
+        if conflict:
+            self.show_status(conflict, error=True)
+            if st.avisar_conflito_tecla:
+                _ok, dont_show = ask(self, tr("hover.conflict_title"), conflict,
+                                     yes=tr("btn.ok"), no=None,
+                                     checkbox=tr("hover.dont_show"), only_ok=True)
+                if dont_show:
+                    self.settings.avisar_conflito_tecla = False
+                    self._loading = True
+                    self.p_warn_conflict.setChecked(False)
+                    self._loading = False
+                    self._save_settings_now()
+            return False
+        m.tecla = binding
+        self._select(real)
+        self._changed()
+        self.flush()
+        self.show_status(tr("status.key_assigned", key=binding, title=m.display_title()))
+        return True
 
     # ============================================================ âmbito
     def _on_scope_edit(self, *_):
@@ -1038,7 +1419,8 @@ class ConfigWindow(QWidget):
         if self.p_bg_theme.isChecked():
             p.cor_fundo = ""
         self.p_colors["cor_fundo"].setEnabled(not self.p_bg_theme.isChecked())
-        p.mostrar_icone = self.p_show_icon.isChecked()
+        p.posicao_titulo = self.p_title_pos.currentData()
+        p.posicao_tecla = self.p_key_pos.currentData()
         p.mostrar_tecla = self.p_show_key.isChecked()
         p.mostrar_estado = self.p_show_status.isChecked()
         p.mostrar_controlos = self.p_show_controls.isChecked()
@@ -1077,7 +1459,8 @@ class ConfigWindow(QWidget):
         ms = self.ms
         status = self.app.engine.status()
         txt = status[1] + (f" · {ms.nome}" if ms and status[0] in ("ativo", "fora") else "")
-        self.preview.update_preview(self.settings.painel, self.pal, ms, (status[0], txt))
+        self.preview.update_preview(self.settings.painel, self.pal, ms, (status[0], txt),
+                                    panel_hint(self.settings), self._counts())
         self.preview_scroll.setMinimumHeight(min(self.preview.sizeHint().height() + 4, 340))
 
     # ======================================================= preferências
@@ -1088,8 +1471,10 @@ class ConfigWindow(QWidget):
         s.tema = self.p_theme.currentData()
         s.idioma = self.p_lang.currentData()
         s.arrancar_com_windows = self.p_autostart.isChecked()
-        s.confirmar_eliminacao = self.p_confirm.isChecked()
+        s.confirmar_eliminacao = not self.p_no_confirm.isChecked()
+        s.avisar_conflito_tecla = self.p_warn_conflict.isChecked()
         s.tecla_suspensao = self.p_hotkey.binding()
+        s.tecla_painel = self.p_panelkey.binding()
         s.modificadores = self.p_mods.currentData()
         s.modo_texto = self.p_textmode.currentData()
         try:
@@ -1098,7 +1483,9 @@ class ConfigWindow(QWidget):
             self.g_error.setText(tr("prefs.hotkey_error", err=e))
             return
         self.g_error.clear()
-        self._save_settings_timer.start()
+        # aplicadas de imediato (não esperam pelo temporizador)
+        self._save_settings_timer.stop()
+        self._save_settings_now()
 
     def _save_settings_now(self) -> None:
         self._read_panel()
@@ -1111,12 +1498,41 @@ class ConfigWindow(QWidget):
             return
         self.g_error.clear()
         self.p_error.clear()
-        self.app.apply_config()
+        err = self.app.apply_config()
+        self.show_autostart_error(err)
         self._refresh_grid()
-        self.show_status(tr("status.prefs_saved"))
+        hk = self.app.store.settings.tecla_suspensao
+        self.btn_on.setToolTip(tr("state.on_tip", hotkey=hk))
+        self.btn_off.setToolTip(tr("state.off_tip", hotkey=hk))
+        if err:
+            self.show_status(err, error=True)
+        else:
+            self.show_status(tr("status.prefs_saved"))
+
+    def show_autostart_error(self, err: Optional[str]) -> None:
+        self.autostart_error.setText(err or "")
+        self.autostart_error.setVisible(bool(err))
 
     def _set_capture_mode(self, on: bool) -> None:
-        self.app.engine.capture_mode = on
+        self._capture_field = on
+        self._sync_capture()
+
+    def _sync_capture(self) -> None:
+        # Enquanto se grava uma tecla (campo ou rato sobre um botão), o motor
+        # deixa passar todas as teclas, incluindo as teclas globais.
+        # O rato sobre um botão só conta com esta janela ativa: noutra aplicação
+        # as teclas globais e as macros têm de continuar a funcionar.
+        hover = self._capture_hover and self.isVisible() and self.isActiveWindow()
+        self.app.engine.capture_mode = self._capture_field or hover
+
+    def changeEvent(self, e):
+        super().changeEvent(e)
+        if e.type() == QEvent.ActivationChange:
+            self._sync_capture()
+
+    def hideEvent(self, e):
+        super().hideEvent(e)
+        self._sync_capture()
 
     # =========================================================== conjuntos
     def _on_set_chosen(self, idx: int) -> None:

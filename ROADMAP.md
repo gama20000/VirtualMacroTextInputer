@@ -6,12 +6,11 @@ Ver [SPEC.md](SPEC.md#destino).
 
 ## Estado atual
 
-O código está implementado até à versão 0.3. A Fase 1 (revisão independente)
-está concluída: dois problemas confirmados e corrigidos, com 110 testes
-automáticos a passar. A Fase 2 (validação manual no Windows) está em curso e
-em pausa: 16 passos verificados, 3 parciais e um problema encontrado (a barra
-de título do painel não segue o tema). Ver `TASKS.md`. Ainda não há remotos
-git.
+O código está na versão 0.4. A Fase 1 (revisão independente) e a Fase 2
+(versão 0.4, incluindo a barra de título própria do painel) estão concluídas,
+com 136 testes automáticos a passar. Falta a validação manual no Windows
+(Fase 3, em pausa desde 12-11-2026, com 16 passos verificados e 3 parciais;
+os passos 62–85 cobrem a 0.4). Ainda não há remotos git.
 
 ## Decisões em aberto
 
@@ -25,6 +24,11 @@ git.
   o repositório nem enviar.
 - [ ] **Servidor para o Forgejo** (`Q-012`): que máquina (VPS, homelab, NAS) e
   com que sistema operativo.
+
+- [ ] **Reescrita em Rust** (`Q-024`): vale a pena reescrever o Macropad em
+  Rust para ter um executável mais leve e com arranque mais rápido? A decisão
+  deve esperar pela validação da versão Python (Fase 3), que fixa o
+  comportamento a reproduzir. Nada da Fase 2 depende disto.
 
 ### Bloqueado
 
@@ -58,6 +62,11 @@ git.
 - [x] [Ferramenta de revisão independente](ANSWERS.md#q-009-ferramenta-de-revisão-independente) (`Q-009`): Codex CLI só de leitura com o `AGENTS.md`.
 - [x] [Instalação do Codex CLI](ANSWERS.md#q-013-instalação-do-codex-cli) (`Q-013`): o utilizador correu a revisão no PC.
 - [x] [Método da validação manual](ANSWERS.md#q-018-método-da-validação-manual) (`Q-018`): o agente controla o ecrã, com uma configuração separada; o utilizador faz os passos 👤.
+- [x] [Ícone dos botões e posição do título e da tecla](ANSWERS.md#q-019-ícone-dos-botões-e-posição-do-título-e-da-tecla) (`Q-019`): sem ícone; título e tecla em cima, ao centro ou em baixo.
+- [x] [Teclas globais predefinidas](ANSWERS.md#q-020-teclas-globais-predefinidas) (`Q-020`): Shift+Escape suspende; Shift+F12 mostra/oculta o painel.
+- [x] [Funcionamento do contador](ANSWERS.md#q-021-funcionamento-do-contador) (`Q-021`): painel e tecla, só mostra; manter premido repõe.
+- [x] [Atribuição de tecla por cima do botão e atalhos existentes](ANSWERS.md#q-022-atribuição-de-tecla-por-cima-do-botão-e-atalhos-existentes) (`Q-022`): Delete, Backspace, Tab, Ctrl+C e Ctrl+V mantêm-se.
+- [x] [Barra de título do painel](ANSWERS.md#q-023-barra-de-título-do-painel) (`Q-023`): o painel desenha a sua própria barra.
 - [x] [Tratamento dos resultados da revisão](ANSWERS.md#q-017-tratamento-dos-resultados-da-revisão) (`Q-017`): P1 e P2 confirmados e corrigidos.
 
 ## Fase 1: Revisão independente e correções — concluída (12-11-2026)
@@ -94,7 +103,47 @@ P0/P1 estão corrigidos ou aceites por decisão registada.
 - Novos testes de regressão para os problemas corrigidos que sejam testáveis
   fora do Windows.
 
-## Fase 2: Validação manual no Windows e distribuição — em curso (em pausa)
+## Fase 2: Versão 0.4 — organização do painel, atalhos e preferências — concluída (12-11-2026)
+
+### Resultado
+
+Os 12 pontos do pedido de 12-11-2026 estão implementados, juntamente com a
+correção da barra de título do painel. A versão passa a 0.4.
+
+### Trabalho incluído
+
+- Espaços vazios na grelha; contadores; sem ícone; posição do título e da tecla.
+- Áreas Ativo/Arquivo com arrasto nos dois sentidos e inserção na posição
+  largada; colar no Arquivo; área Ativo com o mesmo aspeto do painel, centrada.
+- Atribuição de tecla por cima do botão, com avisos de conflito desativáveis.
+- Teclas globais Shift+Escape (suspender, com migração) e Shift+F12 (painel,
+  indicada no painel).
+- Preferências que se aplicam logo: arranque com o Windows (incluindo a
+  aprovação de arranque do Windows) e confirmação de eliminação (texto
+  invertido), com indicação de erro.
+- Barra de título própria do painel (`Q-023`), com a posição gravada.
+
+### Dependências e riscos
+
+- Ficheiros antigos (`mostrar_icone`, `Ctrl+Alt+P`) têm de continuar válidos.
+- O arrasto entre grelhas no Qt (`QListWidget`) exige tratamento próprio da
+  largada, para que a grelha de origem não remova itens.
+- Rollback: um commit da versão; `git revert`.
+
+### Critérios de saída
+
+- Cada ponto tem comportamento coberto por testes automáticos, ou verificação
+  manual descrita em `docs/VERIFICACAO-MANUAL.md`.
+- `pytest` sem falhas; capturas da interface (Diurno e Noturno) revistas.
+
+### Validação
+
+- Automática: testes novos do núcleo (espaços, contadores, inserção
+  posicional, colar no Arquivo, migração, conflitos de teclas globais) e da
+  interface (Qt offscreen).
+- Manual: passos novos acrescentados à lista, executados na Fase 3.
+
+## Fase 3: Validação manual no Windows e distribuição — em pausa
 
 ### Resultado
 
@@ -102,7 +151,7 @@ O Macropad está validado no Windows real, a partir do código e do executável.
 
 ### Trabalho incluído
 
-- Percorrer os passos 1–61 de `docs/VERIFICACAO-MANUAL.md` com `run-dev.ps1`,
+- Percorrer os passos 1–85 de `docs/VERIFICACAO-MANUAL.md` com `run-dev.ps1`,
   e depois com `dist\Macropad\Macropad.exe` gerado por `build.ps1`.
 - Corrigir as falhas encontradas, cada uma com o seu passo de verificação
   repetido.
@@ -111,7 +160,7 @@ O Macropad está validado no Windows real, a partir do código e do executável.
 
 ### Dependências e riscos
 
-- Depende da Fase 1.
+- Depende das Fases 1 e 2.
 - Os passos são feitos pelo agente por controlo do ecrã (`Q-018`). Os
   passos 2, 23, 26, 27, 32 e 33 ficam para o utilizador.
 - Problema encontrado: a barra de título do painel real não segue o tema
@@ -131,7 +180,7 @@ O Macropad está validado no Windows real, a partir do código e do executável.
 - Manual: a lista completa, nos temas Diurno e Noturno e em português e inglês.
 - Automática: `pytest` sem falhas, executado também por `build.ps1`.
 
-## Fase 3: Forgejo e publicação
+## Fase 4: Forgejo e publicação
 
 ### Resultado
 

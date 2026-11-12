@@ -1,15 +1,16 @@
 """Painel flutuante opcional e a vista partilhada com a pré-visualização.
 
 O painel não aceita foco: clicar num botão deixa a aplicação de destino em
-primeiro plano e com o cursor, e o texto vai para lá. A pré-visualização nas
-preferências usa exatamente a mesma ``PanelView``, por isso tem a mesma
-disposição e aparência da janela real."""
+primeiro plano e com o cursor, e o texto vai para lá. Não usa a moldura do
+sistema: desenha a sua própria barra de título (cores do tema), que se
+arrasta para mover o painel. A pré-visualização nas preferências usa a mesma
+barra e a mesma ``PanelView``, por isso é igual à janela real."""
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional
 
-from PySide6.QtCore import QRectF, QSize, QTimer, Qt, Signal
-from PySide6.QtGui import QColor, QPainter, QPainterPath
+from PySide6.QtCore import QPoint, QPointF, QRectF, QSize, QTimer, Qt, Signal
+from PySide6.QtGui import QColor, QFontMetrics, QGuiApplication, QPainter, QPen
 from PySide6.QtWidgets import (QButtonGroup, QGraphicsOpacityEffect, QGridLayout, QHBoxLayout,
                                QLabel, QPushButton, QSizePolicy, QVBoxLayout, QWidget)
 
@@ -28,10 +29,117 @@ def _contrast_text(bg: str) -> str:
     return "#1b1b1f" if lum > 150 else "#e6e6e6"
 
 
+def counter_key(set_id: str, counter_id: str) -> str:
+    """Chave da contagem em ``estado.toml`` (por conjunto e contador)."""
+    return f"{set_id}/{counter_id}"
+
+
+class PanelTitleBar(QWidget):
+    """Barra de título do painel (e da pré-visualização): logótipo, nome do
+    conjunto, tecla para mostrar/ocultar o painel e botão de fechar.
+    Arrastá-la move a janela (sem a ativar)."""
+
+    close_clicked = Signal()
+    moved = Signal()                       # fim de um arrasto
+
+    HEIGHT = 28
+
+    def __init__(self, interactive: bool = True, parent=None):
+        super().__init__(parent)
+        self.title = "Macropad"
+        self.hint = ""
+        self.caption, self.text = "#000000", "#ffffff"
+        self.interactive = interactive
+        self._drag: Optional[QPoint] = None
+        self._hover_close = False
+        self.setFixedHeight(self.HEIGHT)
+        self.setMouseTracking(True)
+
+    def _close_rect(self) -> QRectF:
+        return QRectF(self.width() - 32, 0, 32, self.height())
+
+    def paintEvent(self, _e):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        p.fillRect(self.rect(), QColor(self.caption))
+        p.drawPixmap(8, (self.height() - 16) // 2, theme.logo_pixmap(16))
+        f = p.font()
+        f.setPointSizeF(9)
+        p.setFont(f)
+        fm = QFontMetrics(f)
+        close = self._close_rect()
+        right = close.left() - 4
+        hint_w = 0
+        if self.hint:
+            hint_w = min(fm.horizontalAdvance(self.hint) + 12, max(0, int(right - 90)))
+            if hint_w > 24:
+                c = QColor(self.text)
+                c.setAlpha(150)
+                p.setPen(c)
+                p.drawText(QRectF(right - hint_w, 0, hint_w, self.height()),
+                           Qt.AlignVCenter | Qt.AlignRight,
+                           fm.elidedText(self.hint, Qt.ElideRight, hint_w))
+            else:
+                hint_w = 0
+        p.setPen(QColor(self.text))
+        avail = int(right - hint_w - 30 - 4)
+        p.drawText(QRectF(30, 0, max(0, avail), self.height()), Qt.AlignVCenter | Qt.AlignLeft,
+                   fm.elidedText(self.title, Qt.ElideRight, max(0, avail)))
+        xc = QColor(self.text)
+        if self._hover_close:
+            p.fillRect(close, QColor("#c42b1c"))
+            xc = QColor("#ffffff")
+        # cruz desenhada (não depende de o tipo de letra ter o símbolo)
+        p.setPen(QPen(xc, 1.4))
+        c = close.center()
+        d = 4.5
+        p.drawLine(QPointF(c.x() - d, c.y() - d), QPointF(c.x() + d, c.y() + d))
+        p.drawLine(QPointF(c.x() - d, c.y() + d), QPointF(c.x() + d, c.y() - d))
+        p.end()
+
+    # ---------------------------------------------------------------- rato
+    def mousePressEvent(self, e):
+        if not self.interactive or e.button() != Qt.LeftButton:
+            return
+        if self._close_rect().contains(e.position()):
+            return
+        self._drag = e.globalPosition().toPoint() - self.window().frameGeometry().topLeft()
+        e.accept()
+
+    def mouseMoveEvent(self, e):
+        if not self.interactive:
+            return
+        over = self._close_rect().contains(e.position())
+        if over != self._hover_close:
+            self._hover_close = over
+            self.update()
+        if self._drag is not None and e.buttons() & Qt.LeftButton:
+            self.window().move(e.globalPosition().toPoint() - self._drag)
+            e.accept()
+
+    def mouseReleaseEvent(self, e):
+        if not self.interactive or e.button() != Qt.LeftButton:
+            return
+        if self._drag is not None:
+            self._drag = None
+            self.moved.emit()
+        elif self._close_rect().contains(e.position()):
+            self.close_clicked.emit()
+
+    def leaveEvent(self, e):
+        if self._hover_close:
+            self._hover_close = False
+            self.update()
+        super().leaveEvent(e)
+
+
 class PanelView(QWidget):
-    """Barra de estado + grelha de botões, com o estilo configurado."""
+    """Barra de estado + grelha de botões, com o estilo configurado.
+
+    Os espaços vazios ocupam a sua célula mas não se veem nem fazem nada."""
 
     clicked = Signal(int)                 # índice real da macro
+    counter_pressed = Signal(int, bool)   # índice real, pressão longa?
     suspend_requested = Signal(bool)      # True = suspender, False = ativar
 
     def __init__(self, parent=None):
@@ -73,15 +181,21 @@ class PanelView(QWidget):
         v.addStretch(0)
         self.buttons: list[TileButton] = []
         self.indices: list[int] = []
+        self.spacers: list[QWidget] = []
+        self.counter_buttons: dict[str, TileButton] = {}     # id do contador -> botão
         self.pal = theme.DAY
         self.style_ = PanelSettings()
 
-    def rebuild(self, style: PanelSettings, pal: theme.Palette, ms: Optional[MacroSet]) -> None:
+    def rebuild(self, style: PanelSettings, pal: theme.Palette, ms: Optional[MacroSet],
+                counts: Optional[dict[str, int]] = None) -> None:
+        """``counts``: contagem atual de cada contador (id -> valor)."""
         self.style_, self.pal = style, pal
-        for b in self.buttons:
-            b.setParent(None)
-            b.deleteLater()
-        self.buttons, self.indices = [], []
+        counts = counts or {}
+        for w in self.buttons + self.spacers:
+            w.setParent(None)
+            w.deleteLater()
+        self.buttons, self.indices, self.spacers = [], [], []
+        self.counter_buttons = {}
         bg = style.cor_fundo or pal.panel_bg
         fg = _contrast_text(bg)
         muted = "#6b6b73" if fg.startswith("#1") else "#8a8a8a"
@@ -102,14 +216,38 @@ class PanelView(QWidget):
         if ms is not None:
             for pos, i in enumerate(ms.active_indices()):
                 m = ms.macros[i]
-                b = TileButton(m.display_title(), m.tecla, style, pal)
-                b.clicked.connect(lambda _=False, idx=i: self.clicked.emit(idx))
-                self.grid.addWidget(b, pos // cols, pos % cols)
+                r, c = pos // cols, pos % cols
+                if m.is_space:
+                    sp = QWidget()
+                    sp.setFixedSize(style.tamanho_botao, style.tamanho_botao)
+                    sp.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+                    sp.setStyleSheet("background: transparent;")
+                    self.grid.addWidget(sp, r, c)
+                    sp.show()
+                    self.spacers.append(sp)
+                    continue
+                if m.is_counter:
+                    b = TileButton(m.display_title(), m.tecla, style, pal,
+                                   count=counts.get(m.id, m.reposicao),
+                                   long_ms=m.pressao_longa_ms)
+                    b.short_clicked.connect(lambda idx=i: self.counter_pressed.emit(idx, False))
+                    b.long_pressed.connect(lambda idx=i: self.counter_pressed.emit(idx, True))
+                    self.counter_buttons[m.id] = b
+                else:
+                    b = TileButton(m.display_title(), m.tecla, style, pal)
+                    b.clicked.connect(lambda _=False, idx=i: self.clicked.emit(idx))
+                self.grid.addWidget(b, r, c)
                 b.show()      # senão o tamanho é calculado sem os botões novos
                 self.buttons.append(b)
                 self.indices.append(i)
         self.grid_host.adjustSize()
         self.adjustSize()
+
+    def set_count(self, counter_id: str, value: int) -> None:
+        b = self.counter_buttons.get(counter_id)
+        if b is not None and b.count != value:
+            b.count = value
+            b.update()
 
     def set_status(self, code: str, text: str, running_index: Optional[int] = None,
                    suspended: Optional[bool] = None) -> None:
@@ -123,11 +261,17 @@ class PanelView(QWidget):
         self.label.setText(text)
         enabled = code in ("ativo", "executar")
         for b, i in zip(self.buttons, self.indices):
-            b.setEnabled(enabled)
+            # os contadores não dependem da aplicação em primeiro plano
+            b.setEnabled(enabled or (b.count is not None and not suspended))
             r = running_index is not None and running_index == i
             if b.running != r:
                 b.running = r
                 b.update()
+
+
+def panel_hint(app_settings) -> str:
+    key = getattr(app_settings, "tecla_painel", "")
+    return tr("panel.key_hint", key=key) if key else ""
 
 
 class PanelWindow(QWidget):
@@ -135,14 +279,21 @@ class PanelWindow(QWidget):
         super().__init__(None)
         self.app = app
         self._on_top: Optional[bool] = None
+        self.setObjectName("panelwindow")
         self.setWindowIcon(theme.app_icon())
         self.setAttribute(Qt.WA_ShowWithoutActivating, True)
         self.setFocusPolicy(Qt.NoFocus)
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setContentsMargins(1, 1, 1, 1)
+        lay.setSpacing(0)
+        self.titlebar = PanelTitleBar(interactive=True)
+        self.titlebar.close_clicked.connect(lambda: self.app.set_panel_visible(False))
+        self.titlebar.moved.connect(self._moved)
         self.view = PanelView()
         self.view.clicked.connect(self._clicked)
+        self.view.counter_pressed.connect(self._counter)
         self.view.suspend_requested.connect(self.app.engine.set_suspended)
+        lay.addWidget(self.titlebar)
         lay.addWidget(self.view)
         # Indicação breve da transparência (roda do rato)
         self.osd = QLabel(self)
@@ -153,6 +304,7 @@ class PanelWindow(QWidget):
         self._osd_timer = QTimer(self, singleShot=True, interval=900, timeout=self.osd.hide)
         self._wheel_acc = 0
         self.setToolTip(tr("panel.wheel_tip"))
+        self._placed = False
         self._apply_flags(True)
         self._timer = QTimer(self, interval=350, timeout=self.refresh_status)
         self._timer.start()
@@ -162,19 +314,42 @@ class PanelWindow(QWidget):
     def _apply_flags(self, on_top: bool) -> None:
         if on_top == self._on_top:
             return
-        flags = Qt.Tool | Qt.WindowDoesNotAcceptFocus | Qt.WindowCloseButtonHint
+        flags = Qt.Tool | Qt.FramelessWindowHint | Qt.WindowDoesNotAcceptFocus
         if on_top:
             flags |= Qt.WindowStaysOnTopHint
         self._on_top = on_top
         visible = self.isVisible()
+        pos = self.pos()
         self.setWindowFlags(flags)
         if visible:
+            self.move(pos)
             self.show()
 
     def showEvent(self, e):
+        if not self._placed:
+            self._placed = True
+            self._restore_position()
         super().showEvent(e)
         self.app.platform.make_window_noactivate(int(self.winId()))
         self.app.style_window(self)
+
+    def _restore_position(self) -> None:
+        st = self.app.state
+        if st.painel_x is None or st.painel_y is None:
+            scr = QGuiApplication.primaryScreen()
+            if scr is not None:
+                g = scr.availableGeometry()
+                self.adjustSize()
+                self.move(g.right() - self.width() - 24, g.bottom() - self.height() - 24)
+            return
+        p = QPoint(st.painel_x, st.painel_y)
+        # só repõe se o canto (com alguma margem) estiver num ecrã ligado
+        probe = p + QPoint(20, 10)
+        if any(s.availableGeometry().contains(probe) for s in QGuiApplication.screens()):
+            self.move(p)
+
+    def _moved(self) -> None:
+        self.app.save_panel_position(self.x(), self.y())
 
     def nativeEvent(self, event_type, message):
         r = self.app.platform.native_event_noactivate(event_type, message)
@@ -214,17 +389,36 @@ class PanelWindow(QWidget):
         self.osd.show()
         self._osd_timer.start()
 
+    def paintEvent(self, _e):
+        # contorno de 1 px (a janela não tem moldura do sistema)
+        p = QPainter(self)
+        p.fillRect(self.rect(), QColor(self.app.pal.border))
+        p.end()
+
     def rebuild(self, style: Optional[PanelSettings] = None) -> None:
         style = style or self.app.engine.settings.painel
         ms = self.app.engine.active_set
         self.setWindowTitle(f"Macropad — {ms.nome}" if ms else "Macropad")
-        self.view.rebuild(style, self.app.pal, ms)
+        self.titlebar.title = ms.nome if ms else "Macropad"
+        self.titlebar.hint = panel_hint(self.app.engine.settings)
+        self.titlebar.setToolTip(self.titlebar.hint)
+        self.titlebar.caption, self.titlebar.text = self.app.pal.caption, self.app.pal.caption_text
+        self.titlebar.update()
+        self.view.rebuild(style, self.app.pal, ms, self.app.counts_for(ms))
         self.apply_settings(style)
         self.adjustSize()
         self.refresh_status()
 
+    def set_count(self, counter_id: str, value: int) -> None:
+        self.view.set_count(counter_id, value)
+
     def _clicked(self, idx: int) -> None:
         ok, why = self.app.engine.trigger(idx, "painel")
+        if not ok:
+            self.view.label.setText(why[0].upper() + why[1:])
+
+    def _counter(self, idx: int, long_press: bool) -> None:
+        ok, why = self.app.engine.counter_press(idx, long_press)
         if not ok:
             self.view.label.setText(why[0].upper() + why[1:])
 
@@ -258,34 +452,9 @@ class _Checker(QWidget):
         p.end()
 
 
-class _FakeTitleBar(QWidget):
-    """Imitação da barra de título da janela do painel (cores do tema)."""
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.title = "Macropad"
-        self.caption, self.text = "#000000", "#ffffff"
-        self.setFixedHeight(28)
-
-    def paintEvent(self, _e):
-        p = QPainter(self)
-        p.setRenderHint(QPainter.Antialiasing)
-        p.fillRect(self.rect(), QColor(self.caption))
-        p.drawPixmap(8, 6, theme.logo_pixmap(16))
-        p.setPen(QColor(self.text))
-        f = p.font()
-        f.setPointSizeF(9)
-        p.setFont(f)
-        p.drawText(QRectF(30, 0, self.width() - 70, self.height()),
-                   Qt.AlignVCenter | Qt.AlignLeft,
-                   p.fontMetrics().elidedText(self.title, Qt.ElideRight, self.width() - 70))
-        p.drawText(QRectF(self.width() - 34, 0, 26, self.height()), Qt.AlignCenter, "✕")
-        p.end()
-
-
 class PanelPreview(QWidget):
-    """Pré-visualização do painel: mesma vista, estilo e cores da janela real.
-    Não executa macros (só mostra)."""
+    """Pré-visualização do painel: mesma barra, vista, estilo e cores da janela
+    real. Não executa macros (só mostra)."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -297,11 +466,10 @@ class PanelPreview(QWidget):
         bl.setContentsMargins(16, 16, 16, 16)
         self.window_frame = QWidget()
         self.window_frame.setObjectName("previewframe")
-        self.window_frame.setStyleSheet("#previewframe { border: 1px solid #555; }")
         wl = QVBoxLayout(self.window_frame)
-        wl.setContentsMargins(0, 0, 0, 0)
+        wl.setContentsMargins(1, 1, 1, 1)
         wl.setSpacing(0)
-        self.titlebar = _FakeTitleBar()
+        self.titlebar = PanelTitleBar(interactive=False)
         self.view = PanelView()
         self.view.setAttribute(Qt.WA_TransparentForMouseEvents, True)
         wl.addWidget(self.titlebar)
@@ -312,11 +480,14 @@ class PanelPreview(QWidget):
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
 
     def update_preview(self, style: PanelSettings, pal: theme.Palette, ms: Optional[MacroSet],
-                       status: tuple[str, str]) -> None:
+                       status: tuple[str, str], hint: str = "",
+                       counts: Optional[dict[str, int]] = None) -> None:
+        self.window_frame.setStyleSheet(f"#previewframe {{ background: {pal.border}; }}")
         self.titlebar.caption, self.titlebar.text = pal.caption, pal.caption_text
-        self.titlebar.title = f"Macropad — {ms.nome}" if ms else "Macropad"
+        self.titlebar.title = ms.nome if ms else "Macropad"
+        self.titlebar.hint = hint
         self.titlebar.update()
-        self.view.rebuild(style, pal, ms)
+        self.view.rebuild(style, pal, ms, counts)
         self.view.set_status(*status)
         self.effect.setOpacity(style.opacidade)
         self.view.grid.activate()
@@ -324,7 +495,7 @@ class PanelPreview(QWidget):
         self.view.adjustSize()
         w = max(self.view.sizeHint().width(), 220)
         self.window_frame.setFixedWidth(w + 2)
-        self.window_frame.setFixedHeight(self.view.sizeHint().height() + 30)
+        self.window_frame.setFixedHeight(self.view.sizeHint().height() + PanelTitleBar.HEIGHT + 2)
         self.backdrop.setMinimumHeight(self.window_frame.height() + 32)
         self.backdrop.setMinimumWidth(self.window_frame.width() + 32)
         self.updateGeometry()
