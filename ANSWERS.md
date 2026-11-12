@@ -148,3 +148,30 @@ conversa de 11-11-2026 e nos commits `6da0f2f`, `5d330ce` e `936fe38`.
   Fase 2 (validação manual no Windows).
 - **Rever quando:** Uma nova revisão ou a validação manual encontrar problemas
   relacionados.
+
+## Q-018: Método da validação manual
+
+- **Resolvido:** 2026-11-12
+- **Resposta:** O agente executa a lista de verificação no PC por controlo do
+  ecrã. Usa o lançador `tools\macropad-teste.cmd`, que arranca a aplicação com
+  `python.exe` (com consola) e com uma configuração separada em
+  `%TEMP%\MacropadTeste`. O utilizador faz os passos que o agente não consegue
+  fazer (👤 em `docs/VERIFICACAO-MANUAL.md`).
+- **Justificação:** O utilizador pediu que o agente fizesse os passos. Uma
+  configuração separada protege as macros reais. O terminal só aceita cliques
+  do agente, por isso a aplicação arranca a partir de um `.cmd` aberto no
+  Explorador.
+- **Evidência:** Pedido do utilizador de 12-11-2026; resultados registados em
+  `docs/VERIFICACAO-MANUAL.md`.
+- **Consequências:**
+  - O agente não consegue usar o botão direito na barra de tarefas (menu do
+    ícone), premir a tecla 1 do teclado numérico, reiniciar a sessão nem
+    responder ao UAC: esses passos ficam para o utilizador.
+  - O mutex de instância única é partilhado: se uma instância já estiver a
+    correr (real ou de teste), o lançador limita-se a abrir a configuração
+    dela.
+  - As janelas do Macropad pertencem ao `pythonw`/`python` do Python 3.12
+    da Microsoft Store e só ficam visíveis ao agente depois de esse processo
+    ser autorizado.
+- **Rever quando:** For preciso testar o `.exe` gerado pelo PyInstaller
+  (processo diferente, exige nova autorização).

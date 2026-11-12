@@ -8,8 +8,10 @@ Ver [SPEC.md](SPEC.md#destino).
 
 O código está implementado até à versão 0.3. A Fase 1 (revisão independente)
 está concluída: dois problemas confirmados e corrigidos, com 110 testes
-automáticos a passar. Nada foi validado no Windows real: os passos 1–61 de
-`docs/VERIFICACAO-MANUAL.md` estão por assinalar. Ainda não há remotos git.
+automáticos a passar. A Fase 2 (validação manual no Windows) está em curso e
+em pausa: 16 passos verificados, 3 parciais e um problema encontrado (a barra
+de título do painel não segue o tema). Ver `TASKS.md`. Ainda não há remotos
+git.
 
 ## Decisões em aberto
 
@@ -55,6 +57,7 @@ automáticos a passar. Nada foi validado no Windows real: os passos 1–61 de
 - [x] [Local do Forgejo](ANSWERS.md#q-008-local-do-forgejo) (`Q-008`): num servidor.
 - [x] [Ferramenta de revisão independente](ANSWERS.md#q-009-ferramenta-de-revisão-independente) (`Q-009`): Codex CLI só de leitura com o `AGENTS.md`.
 - [x] [Instalação do Codex CLI](ANSWERS.md#q-013-instalação-do-codex-cli) (`Q-013`): o utilizador correu a revisão no PC.
+- [x] [Método da validação manual](ANSWERS.md#q-018-método-da-validação-manual) (`Q-018`): o agente controla o ecrã, com uma configuração separada; o utilizador faz os passos 👤.
 - [x] [Tratamento dos resultados da revisão](ANSWERS.md#q-017-tratamento-dos-resultados-da-revisão) (`Q-017`): P1 e P2 confirmados e corrigidos.
 
 ## Fase 1: Revisão independente e correções — concluída (12-11-2026)
@@ -91,7 +94,7 @@ P0/P1 estão corrigidos ou aceites por decisão registada.
 - Novos testes de regressão para os problemas corrigidos que sejam testáveis
   fora do Windows.
 
-## Fase 2: Validação manual no Windows e distribuição
+## Fase 2: Validação manual no Windows e distribuição — em curso (em pausa)
 
 ### Resultado
 
@@ -109,9 +112,10 @@ O Macropad está validado no Windows real, a partir do código e do executável.
 ### Dependências e riscos
 
 - Depende da Fase 1.
-- Os passos que exigem controlo de teclado e rato podem ser feitos pelo
-  utilizador ou pelo agente com controlo do computador, se o utilizador o
-  autorizar.
+- Os passos são feitos pelo agente por controlo do ecrã (`Q-018`). Os
+  passos 2, 23, 26, 27, 32 e 33 ficam para o utilizador.
+- Problema encontrado: a barra de título do painel real não segue o tema
+  (tarefa em `TASKS.md`).
 - Risco: o PyInstaller pode não incluir os recursos (`ui/assets`, `locales`).
   Verificar os ícones e as traduções no executável.
 
