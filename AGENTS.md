@@ -18,6 +18,14 @@ a aplicação em primeiro plano, e a tecla original é suprimida.
 - Documentação de utilização: `README.md`. Verificação manual no Windows:
   `docs/VERIFICACAO-MANUAL.md`.
 
+## Planeamento
+
+O trabalho é planeado com quatro documentos na raiz (skill wayfinder):
+`SPEC.md` (destino e critérios de aceitação), `ROADMAP.md` (decisões em aberto
+e fases), `TASKS.md` (tarefas da fase atual) e `ANSWERS.md` (registo de
+decisões). Lê-os antes de começar. Não implementes uma fase sem autorização e
+não marques tarefas como concluídas sem a validação exigida.
+
 ## Estrutura
 
 ```
