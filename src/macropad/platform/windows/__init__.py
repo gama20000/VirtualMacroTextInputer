@@ -117,8 +117,13 @@ class WindowsPlatform:
             if not h:
                 raise MemoryError("GlobalAlloc falhou")
             p = w.GlobalLock(h)
-            ctypes.memmove(p, data, len(data))
-            w.GlobalUnlock(h)
+            if not p:
+                w.GlobalFree(h)
+                raise OSError(tr("win.clipboard_set"))
+            try:
+                ctypes.memmove(p, data, len(data))
+            finally:
+                w.GlobalUnlock(h)
             if not w.SetClipboardData(w.CF_UNICODETEXT, h):
                 w.GlobalFree(h)
                 raise OSError(tr("win.clipboard_set"))

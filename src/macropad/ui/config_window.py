@@ -5,6 +5,8 @@ As alterações válidas são gravadas automaticamente (de forma atómica) e
 aplicadas a execuções futuras."""
 from __future__ import annotations
 
+import time
+
 import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
@@ -37,6 +39,15 @@ if TYPE_CHECKING:
     from .app import MacropadApp
 
 MIME_MACRO = "application/x-macropad-macro"
+
+
+def _binding_or_none(text: str):
+    if not text:
+        return None
+    try:
+        return parse_binding(text)
+    except KeyBindingError:
+        return None
 
 
 def _is_editable(w: Optional[QWidget]) -> bool:
@@ -92,6 +103,7 @@ class ConfigWindow(QWidget):
         self._capture_hover = False              # o rato está sobre um botão (atribuir tecla)
         self._hover_real = -1
         self._hover_grid: Optional[MacroGrid] = None
+        self._counter_keys: dict[int, tuple[str, float]] = {}   # tecla Qt -> (id, início)
         self._save_set_timer = QTimer(self, singleShot=True, interval=450,
                                       timeout=self._save_set_now)
         self._save_settings_timer = QTimer(self, singleShot=True, interval=450,
@@ -1121,6 +1133,7 @@ class ConfigWindow(QWidget):
             self._changed()
             self.flush()
             return
+        left_out = 0
         if to_archive:
             spaces = [m for m in items if m.is_space]
             items = [m for m in items if not m.is_space]
@@ -1130,9 +1143,16 @@ class ConfigWindow(QWidget):
         else:
             # do Arquivo para Ativo: conflitos de tecla
             keep = []
+            group_keys: dict = {}            # teclas já usadas por itens deste grupo
             for m in items:
                 if not m.arquivada:
                     keep.append(m)
+                    continue
+                b = _binding_or_none(m.tecla)
+                if b is not None and b in group_keys:
+                    # duas arquivadas do mesmo grupo com a mesma tecla: só a
+                    # primeira é restaurada; a outra fica no Arquivo
+                    left_out += 1
                     continue
                 i = ops.index_of(self.ms, m)
                 j = ops.key_conflict(self.ms, i)
@@ -1149,8 +1169,12 @@ class ConfigWindow(QWidget):
                     # a ativa em conflito vai para o Arquivo, onde estava esta
                     ops.move_items(self.ms, [other], True, m, False)
                 keep.append(m)
+                if b is not None:
+                    group_keys[b] = m
             items = keep
         if not items:
+            if left_out:
+                self.show_status(tr("status.group_key_conflict", n=left_out), error=True)
             return
         if anchor_m is not None and anchor_m in items:
             anchor_m = None
@@ -1163,6 +1187,8 @@ class ConfigWindow(QWidget):
             key = "status.archived" if to_archive else "status.restored"
             self.show_status(tr(key, title=items[0].display_title()) if len(items) == 1
                              else tr(key + "_n", n=len(items)))
+        if left_out:
+            self.show_status(tr("status.group_key_conflict", n=left_out), error=True)
 
     def _archive_indices(self, idxs: list[int]) -> None:
         """Arquiva as macros ativas indicadas (botão, menu ou arrasto)."""
@@ -1254,8 +1280,14 @@ class ConfigWindow(QWidget):
     def eventFilter(self, obj: QObject, e: QEvent) -> bool:
         """Atalhos da grelha: Delete/Backspace elimina, Ctrl+C copia, Ctrl+V cola.
         Só atuam quando o foco não está num campo de edição (aí mantêm o
-        comportamento normal de texto)."""
-        if e.type() != QEvent.KeyPress or not self.isVisible() or not self.isActiveWindow():
+        comportamento normal de texto). As teclas dos contadores também
+        contam com esta janela à frente."""
+        if e.type() not in (QEvent.KeyPress, QEvent.KeyRelease) or not self.isVisible() \
+                or not self.isActiveWindow():
+            return False
+        if self._counter_key(e):
+            return True
+        if e.type() != QEvent.KeyPress:
             return False
         fw = QApplication.focusWidget()
         if fw is None or fw.window() is not self or _is_editable(fw):
@@ -1278,6 +1310,43 @@ class ConfigWindow(QWidget):
             self._paste_macro()
             return True
         return False
+
+    def _counter_key(self, e) -> bool:
+        """Tecla de um contador premida com esta janela à frente (o hook deixa
+        passar as teclas nas janelas do Macropad). Toque curto soma; manter
+        premida repõe — decidido ao largar, como no hook."""
+        k = e.key()
+        if e.type() == QEvent.KeyRelease:
+            if e.isAutoRepeat() or k not in self._counter_keys:
+                return k in self._counter_keys
+            cid, t0 = self._counter_keys.pop(k)
+            eng = self.app.engine
+            idx = eng.counter_index(cid)
+            if idx is not None:
+                m = eng.active_set.macros[idx]
+                ok, why = eng.counter_press(idx, (time.monotonic() - t0) * 1000
+                                            >= m.pressao_longa_ms)
+                if not ok:
+                    self.show_status(why, error=True)
+            return True
+        if e.isAutoRepeat():
+            return k in self._counter_keys
+        if k in _MOD_KEYS:
+            return False
+        fw = QApplication.focusWidget()
+        if fw is not None and _is_editable(fw):
+            return False
+        if self._hover_target() >= 0:
+            return False                      # rato sobre um botão: atribui a tecla
+        name = key_name_from_event(e)
+        if name is None:
+            return False
+        idx = self.app.engine.counter_for(Binding(name, mods_from_event(e)))
+        if idx is None:
+            return False
+        cid = self.app.engine.active_set.macros[idx].id
+        self._counter_keys[k] = (cid, time.monotonic())
+        return True
 
     # ============================================== tecla pelo rato (hover)
     def _on_hover(self, grid: MacroGrid, real: int) -> None:
@@ -1528,6 +1597,7 @@ class ConfigWindow(QWidget):
     def changeEvent(self, e):
         super().changeEvent(e)
         if e.type() == QEvent.ActivationChange:
+            self._counter_keys.clear()        # o keyup pode ir para outra janela
             self._sync_capture()
 
     def hideEvent(self, e):

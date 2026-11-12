@@ -34,6 +34,14 @@ parte da Fase 3.
     captura por cima do botão e a barra de título sem moldura só se confirmam
     no Windows (Fase 3).
 
+## Correções da segunda revisão do Codex (concluídas a 12-11-2026)
+
+- [x] Migração da tecla de suspensão, restauro em grupo com teclas iguais,
+  contadores e âmbito/suspensão, `GlobalLock`, e a tecla do contador com a
+  configuração à frente (relatado pelo utilizador). Detalhe e testes em
+  `docs/revisao-codex.md`; passos manuais 80a–80c. `pytest`: 142 passam, 1
+  ignorado.
+
 ## Fase atual: Fase 3 — Validação manual no Windows e distribuição (em pausa)
 
 

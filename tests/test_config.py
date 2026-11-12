@@ -400,3 +400,26 @@ def test_estado_com_contadores_posicao_e_migracoes(tmp_path):
     s = State(True, "x", True, 120, -30, {"abc": 7, "d e": -2}, ["m1"])
     st.save_state(s)
     assert st.load_state() == s
+
+
+def test_migracao_falhada_nao_fica_marcada(tmp_path):
+    """Revisão Codex: se Shift+Escape já estiver numa macro, a migração não é
+    registada, avisa e volta a ser tentada depois de resolvido o conflito."""
+    from macropad.core.model import State
+    st = ConfigStore(tmp_path)
+    st.ensure_defaults()
+    st.config_path.write_text(st.config_path.read_text("utf-8").replace(
+        '"Shift+Escape"', '"Ctrl+Alt+P"'), "utf-8")
+    st.load_all()
+    ms = st.sets["predefinido"].clone()
+    ms.macros[0].tecla = "Shift+Escape"
+    assert st.save_set(ms) == []
+    state = State()
+    msgs = st.migrate(state)
+    assert msgs and "Ctrl+Alt+P" in msgs[0] and st.settings.tecla_suspensao == "Ctrl+Alt+P"
+    assert state.migracoes == []
+    ms.macros[0].tecla = "1"
+    assert st.save_set(ms) == []
+    msgs = st.migrate(state)
+    assert st.settings.tecla_suspensao == "Shift+Escape"
+    assert state.migracoes == [ConfigStore.MIGRATION_HOTKEY]

@@ -328,3 +328,46 @@ def test_espacos_e_contadores_nao_executam(fake):
     e = Engine(fake)
     e.set_config(make_config([Macro(tipo="espaco"), Macro("C", tipo="contador", id="c")]))
     assert e.trigger(0)[0] is False and e.trigger(1)[0] is False
+
+
+def test_contador_revalida_ao_largar_a_tecla(fake):
+    """Revisão Codex: suspender (ou sair do âmbito) entre premir e largar a
+    tecla de um contador não altera a contagem."""
+    from macropad.core.model import Macro, Scope
+    e = Engine(fake)
+    e.set_config(make_config([Macro("C", "5", tipo="contador", id="c1")],
+                             scope=Scope("aplicacoes", ["editor.exe"])))
+    got = _events(e)
+    assert e.handle_key(down("5")) is True
+    e.set_suspended(True)
+    assert e.handle_key(up("5")) is True             # keyup suprimido, mas sem contar
+    e.set_suspended(False)
+    assert e.handle_key(down("5")) is True
+    fake.fg = OTHER                                  # mudou para fora do âmbito
+    assert e.handle_key(up("5")) is True
+    assert [ev for ev, _ in got if ev == "counter"] == []
+    # o contador mudou de posição entre premir e largar: conta o mesmo id
+    fake.fg = TARGET
+    e.handle_key(down("5"))
+    e.set_config(make_config([Macro("X", "9"), Macro("C", "5", tipo="contador", id="c1")],
+                             scope=Scope("aplicacoes", ["editor.exe"])))
+    e.handle_key(up("5"))
+    c = [p for ev, p in got if ev == "counter"]
+    assert len(c) == 1 and c[0]["id"] == "c1" and c[0]["index"] == 1
+
+
+def test_contador_no_painel_respeita_o_ambito(fake):
+    from macropad.core.model import Macro, Scope
+    e = Engine(fake)
+    e.set_config(make_config([Macro("C", "5", tipo="contador", id="c1")],
+                             scope=Scope("aplicacoes", ["editor.exe"])))
+    assert e.counter_press(0, False)[0] is True
+    fake.fg = OTHER
+    assert e.counter_allowed()[0] is False
+    assert e.counter_press(0, False)[0] is False
+    # janela do próprio Macropad à frente: o contador funciona (não escreve)
+    fake.fg = WindowInfo(9, fake.own_pid(), "C:\\macropad.exe")
+    assert e.counter_press(0, False)[0] is True
+    assert e.handle_key(down("5")) is False          # o hook deixa a tecla para a janela
+    assert e.counter_for(__import__("macropad.core.keys", fromlist=["Binding"])
+                         .Binding("5")) == 0

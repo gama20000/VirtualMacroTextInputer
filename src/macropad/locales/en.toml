@@ -93,6 +93,7 @@ key_is_hotkey = "{label}: key {key} is the suspend hotkey"
 key_hotkey_ignore = "{label}: with modificadores='ignorar', key {key} clashes with the suspend hotkey {hotkey}"
 
 [store]
+migrate_hotkey_failed = "Could not change the suspend key from {old} to {new}: {err}. {old} is kept; the change will be tried again at the next start."
 migrated_hotkey = "The suspend hotkey changed from {old} to {new} (new default). You can change it in Preferences."
 not_utf8 = "the file is not UTF-8"
 config_removed = "file removed; keeping the current configuration (save again to recreate it)"
@@ -325,6 +326,7 @@ export_title = "Export set"
 toml_filter = "Macropad sets (*.toml)"
 
 [status]
+group_key_conflict = "{n} macro(s) stayed in the Archive: they have the same key as another macro restored in the same group."
 space_not_archived = "Empty spaces don't go to the Archive."
 key_assigned = "Key {key} assigned to «{title}»."
 pasted_n = "{n} macros pasted."

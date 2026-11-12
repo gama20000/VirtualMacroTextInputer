@@ -94,6 +94,7 @@ key_is_hotkey = "{label}: a tecla {key} é a tecla de suspensão"
 key_hotkey_ignore = "{label}: com modificadores='ignorar', a tecla {key} colide com a tecla de suspensão {hotkey}"
 
 [store]
+migrate_hotkey_failed = "Não foi possível mudar a tecla de suspensão de {old} para {new}: {err}. Mantém-se {old}; a mudança volta a ser tentada no próximo arranque."
 migrated_hotkey = "A tecla de suspensão passou de {old} para {new} (nova predefinição). Pode mudá-la nas Preferências."
 not_utf8 = "o ficheiro não está em UTF-8"
 config_removed = "ficheiro removido; mantém-se a configuração atual (volte a gravar para o recriar)"
@@ -326,6 +327,7 @@ export_title = "Exportar conjunto"
 toml_filter = "Conjuntos Macropad (*.toml)"
 
 [status]
+group_key_conflict = "{n} macro(s) ficaram no Arquivo: têm a mesma tecla que outra macro restaurada no mesmo grupo."
 space_not_archived = "Os espaços vazios não vão para o Arquivo."
 key_assigned = "Tecla {key} atribuída a «{title}»."
 pasted_n = "{n} macros coladas."

@@ -57,3 +57,23 @@ verificação no Windows.
 
 Validação: `pytest` com 110 testes a passar e 1 ignorado (o teste de tamanhos
 Win32, que só corre no Windows).
+
+---
+
+# Segunda revisão do Codex (versão 0.4, 12-11-2026)
+
+O Codex confirmou que os dois achados anteriores (P1 e P2) estão corrigidos e
+reportou quatro bugs e uma suspeita. O utilizador acrescentou um problema
+encontrado no uso: a tecla de um contador não contava, mas o clique no botão
+sim.
+
+| Ponto | Classificação | Evidência | Correção |
+|---|---|---|---|
+| Migração da tecla de suspensão marcada mesmo quando falha | **Confirmado** | `test_config.py::test_migracao_falhada_nao_fica_marcada` | `store.migrate` só regista a migração quando a gravação tem sucesso; senão mantém `Ctrl+Alt+P`, avisa com o conflito e volta a tentar no arranque seguinte |
+| Restaurar em grupo duas arquivadas com a mesma tecla | **Confirmado** | `test_ui_smoke.py::test_restaurar_grupo_com_teclas_iguais` | só a primeira é restaurada; as outras ficam no Arquivo, com mensagem; a alteração é gravada |
+| Contadores do painel fora do âmbito | **Confirmado** | `test_engine.py::test_contador_no_painel_respeita_o_ambito`, `test_ui_smoke.py::test_contador_do_painel_fora_do_ambito_desativado` | `Engine.counter_allowed` (suspensão + âmbito) em `counter_press`; os botões de contador do painel ficam desativados fora do âmbito |
+| Tecla de contador conta depois de suspender | **Confirmado** | `test_engine.py::test_contador_revalida_ao_largar_a_tecla` | ao largar, revalida suspensão e âmbito; guarda o `id` do contador em vez do índice |
+| Falha de `GlobalLock` não tratada (suspeita) | **Confirmado por leitura** (não reproduzível sem provocar a falha no Windows) | `platform/windows/__init__.py::_set_clipboard` | verifica o ponteiro; se for nulo liberta o bloco e dá erro; `GlobalUnlock` num `finally` |
+| Tecla do contador não conta (utilizador) | **Confirmado** | `test_ui_smoke.py::test_tecla_do_contador_com_a_configuracao_a_frente` | causa: com uma janela do Macropad à frente, o hook deixa passar todas as teclas (regra para não escrever nas próprias janelas). Os contadores não escrevem, por isso a janela de configuração conta-os ela própria quando o foco não está num campo de texto nem o rato sobre um botão |
+
+Validação: `pytest` com 142 testes a passar e 1 ignorado (só Windows).

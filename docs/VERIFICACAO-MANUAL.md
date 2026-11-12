@@ -160,6 +160,9 @@ Antes de começar: na configuração de teste, a tecla de suspensão anterior
 | 78 | Rato sobre um botão: Delete, Ctrl+C, Ctrl+V, Tab, Esc | mantêm as funções (Esc cancela sem atribuir) | ☐ |
 | 79 | **Contador**: no painel, 3 cliques curtos; depois manter premido 1 s | 1, 2, 3; ao manter premido volta a 0 sem somar | ☐ |
 | 80 | Contador com incremento 5, reposição 10, pressão longa 500 ms; atribua F9; no Bloco de Notas toque F9 e mantenha F9 | soma 5; manter repõe 10; nada é escrito no Bloco de Notas | ☐ |
+| 80a | Com a configuração à frente (foco fora dos campos de texto, rato fora dos botões), toque e mantenha F9 | conta e repõe, tal como no Bloco de Notas; num campo de texto F9 não conta | ☐ |
+| 80b | Contador num conjunto com âmbito só `notepad.exe`; com o Explorador à frente, clique no contador do painel e prima F9 | botão desativado e F9 normal; com o Bloco de Notas à frente volta a contar | ☐ |
+| 80c | Prima e mantenha F9, suspenda com o rato (botão Suspenso do painel) e largue F9 | a contagem não muda | ☐ |
 | 81 | Feche e reabra o programa | a contagem e a configuração do contador mantêm-se | ☐ |
 | 82 | Separador Painel: posição do título/tecla em todas as combinações | pré-visualização e painel real iguais; título e tecla nunca se sobrepõem | ☐ |
 | 83 | Preferências: marque «Não pedir confirmação…» e elimine uma macro | elimina sem perguntar; desmarcar volta a perguntar (sem reiniciar) | ☐ |

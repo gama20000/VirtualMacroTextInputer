@@ -250,7 +250,8 @@ class PanelView(QWidget):
             b.update()
 
     def set_status(self, code: str, text: str, running_index: Optional[int] = None,
-                   suspended: Optional[bool] = None) -> None:
+                   suspended: Optional[bool] = None,
+                   counters_ok: Optional[bool] = None) -> None:
         if suspended is None:
             suspended = code == "suspenso"
         self.btn_on.setChecked(not suspended)
@@ -260,9 +261,12 @@ class PanelView(QWidget):
         self.dot.setStyleSheet(f"color:{colors.get(code, '#888')}; background: transparent;")
         self.label.setText(text)
         enabled = code in ("ativo", "executar")
+        if counters_ok is None:
+            counters_ok = not suspended
         for b, i in zip(self.buttons, self.indices):
-            # os contadores não dependem da aplicação em primeiro plano
-            b.setEnabled(enabled or (b.count is not None and not suspended))
+            # contadores: respeitam a suspensão e o âmbito, mas funcionam com uma
+            # janela do Macropad à frente (não escrevem nada)
+            b.setEnabled(counters_ok if b.count is not None else enabled)
             r = running_index is not None and running_index == i
             if b.running != r:
                 b.running = r
@@ -431,7 +435,7 @@ class PanelWindow(QWidget):
             text = f"{text} · {ms.nome}"
         run = self.app.engine.running
         self.view.set_status(code, text, run.index if run is not None else None,
-                             self.app.engine.suspended)
+                             self.app.engine.suspended, self.app.engine.counter_allowed()[0])
 
     def closeEvent(self, e):
         e.ignore()

@@ -191,7 +191,7 @@ class Engine:
         self._suspended = False
         self._hotkey: Optional[Binding] = None
         self._panel_key: Optional[Binding] = None
-        self._counter_down: dict[str, tuple[int, float]] = {}   # tecla -> (índice, início)
+        self._counter_down: dict[str, tuple[str, float]] = {}   # tecla -> (id, início)
         self._running: Optional[Execution] = None
         self._held: set[str] = set()        # teclas cujo keydown foi suprimido
         self._passed: set[str] = set()      # teclas premidas que passaram normalmente
@@ -382,24 +382,58 @@ class Engine:
         return (True, "") if self._start(index, fg, source) else (False, tr("eng.not_run"))
 
     # ------------------------------------------------------------ contadores
-    def _counter_released(self, index: int, held_s: float) -> None:
+    def counter_index(self, counter_id: str) -> Optional[int]:
+        """Índice atual do contador ativo com este id (ou None)."""
         act = self._active
-        if act is None or not (0 <= index < len(act.ms.macros)):
-            return
-        m = act.ms.macros[index]
-        if not m.is_counter:
-            return
-        reset = held_s * 1000 >= m.pressao_longa_ms
-        self._emit("counter", id=m.id, index=index,
-                   action="reset" if reset else "inc",
-                   step=m.incremento, value=m.reposicao)
+        if act is None:
+            return None
+        for i, m in enumerate(act.ms.macros):
+            if m.is_counter and not m.arquivada and m.id == counter_id:
+                return i
+        return None
 
-    def counter_press(self, index: int, long_press: bool) -> tuple[bool, str]:
-        """Contador acionado no painel (clique curto ou pressão longa)."""
+    def _counter_released(self, counter_id: str, held_s: float) -> None:
+        # Revalida ao largar: a suspensão, o âmbito ou o próprio contador
+        # podem ter mudado desde que a tecla foi premida.
+        idx = self.counter_index(counter_id)
+        if idx is None:
+            return
+        m = self._active.ms.macros[idx]
+        reset = held_s * 1000 >= m.pressao_longa_ms
+        self.counter_press(idx, reset)
+
+    def counter_allowed(self) -> tuple[bool, str]:
+        """Os contadores podem ser usados agora? Respeitam a suspensão e o
+        âmbito; ao contrário das macros de texto, funcionam também com uma
+        janela do próprio Macropad em primeiro plano (não escrevem nada)."""
         if self._suspended:
             return False, tr("eng.suspended")
         act = self._active
-        if act is None or not (0 <= index < len(act.ms.macros)):
+        if act is None:
+            return False, tr("eng.no_set")
+        fg = self.platform.foreground()
+        if fg is not None and fg.pid == self.platform.own_pid():
+            return True, ""
+        return self._target_ok(fg)
+
+    def counter_for(self, binding: Binding) -> Optional[int]:
+        """Índice do contador ativo associado a esta tecla (ou None)."""
+        act = self._active
+        if act is None:
+            return None
+        idx = act.counters.get(binding)
+        if idx is None and binding.mods and self._settings.modificadores == "ignorar":
+            idx = act.counters.get(Binding(binding.key))
+        return idx
+
+    def counter_press(self, index: int, long_press: bool) -> tuple[bool, str]:
+        """Contador acionado (painel, tecla ou janela do Macropad): toque curto
+        soma o incremento, pressão longa repõe o valor."""
+        ok, why = self.counter_allowed()
+        if not ok:
+            return False, why
+        act = self._active
+        if not (0 <= index < len(act.ms.macros)):
             return False, tr("eng.not_run")
         m = act.ms.macros[index]
         if not m.is_counter or m.arquivada:
@@ -422,9 +456,9 @@ class Engine:
         key = ev.key
         if not ev.down:
             if key in self._counter_down:
-                idx, t0 = self._counter_down.pop(key)
+                cid, t0 = self._counter_down.pop(key)
                 self._held.discard(key)
-                self._counter_released(idx, time.monotonic() - t0)
+                self._counter_released(cid, time.monotonic() - t0)
                 return True
             if key in self._held:
                 self._held.discard(key)
@@ -466,13 +500,11 @@ class Engine:
         if idx is None and ev.mods and self._settings.modificadores == "ignorar":
             idx = act.bindings.get(Binding(key))
         if idx is None:
-            cidx = act.counters.get(b)
-            if cidx is None and ev.mods and self._settings.modificadores == "ignorar":
-                cidx = act.counters.get(Binding(key))
+            cidx = self.counter_for(b)
             if cidx is not None and self._target_ok(self.platform.foreground())[0]:
                 # contador: decide no keyup (toque soma, manter premida repõe)
                 self._held.add(key)
-                self._counter_down[key] = (cidx, time.monotonic())
+                self._counter_down[key] = (act.ms.macros[cidx].id, time.monotonic())
                 return True
             self._passed.add(key)
             return False

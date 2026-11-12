@@ -13,6 +13,7 @@ from macropad import i18n  # noqa: E402
 from macropad.platform.dummy import DummyPlatform  # noqa: E402
 from macropad.ui import dialogs  # noqa: E402
 from macropad.ui.app import MacropadApp  # noqa: E402
+from macropad.core.engine import WindowInfo  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -561,3 +562,76 @@ def test_area_ativo_igual_ao_painel(app, qapp):
     assert w.grid.columns == st.colunas
     assert w.grid.width() == st.colunas * (st.tamanho_botao + st.espacamento) + 4
     assert "Ativo (4)" in w.active_title.text()
+
+
+def test_restaurar_grupo_com_teclas_iguais(app, qapp):
+    """Revisão Codex: duas arquivadas com a mesma tecla, arrastadas juntas para
+    Ativo — só a primeira é restaurada; a alteração é gravada."""
+    w = app.config_window
+    w._archive_indices([2, 3])
+    w.flush()
+    arch = w.ms.archived_indices()
+    w.ms.macros[arch[0]].tecla = "F7"
+    w.ms.macros[arch[1]].tecla = "F7"
+    w._changed()
+    w.flush()
+    w._on_drop(False, w.archive_grid, list(arch))
+    ms = app.store.sets["predefinido"]
+    act = [m for m in ms.macros if not m.arquivada]
+    assert sum(1 for m in act if m.tecla == "F7") == 1
+    assert sum(1 for m in ms.macros if m.arquivada and m.tecla == "F7") == 1
+    assert "Arquivo" in w.status.text()
+
+
+def _key(qtkey, text, release=False, native=0):
+    from PySide6.QtGui import QKeyEvent
+    t = QEvent.KeyRelease if release else QEvent.KeyPress
+    return QKeyEvent(t, qtkey, Qt.NoModifier, 0, native, 0, text)
+
+
+def test_tecla_do_contador_com_a_configuracao_a_frente(app, qapp):
+    """A tecla de um contador também conta com a janela do Macropad à frente
+    (o hook deixa-a passar para a janela; quem conta é a própria janela)."""
+    w = app.config_window
+    w._last_add = 0
+    w._add_item("contador")
+    i = len(w.ms.active_indices()) - 1
+    w.ms.macros[i].tecla = "F9"
+    w._changed()
+    w.flush()
+    cid = app.engine.active_set.macros[i].id
+    w.activateWindow()
+    qapp.processEvents()
+    if not w.isActiveWindow():
+        pytest.skip("o QPA offscreen não ativou a janela")
+    w.tabs.setFocus()
+    app.platform.fg = WindowInfo(5, app.platform.own_pid(), "C:\\macropad.exe")
+    assert w.eventFilter(w.tabs, _key(Qt.Key_F9, "", native=0x78)) is True
+    assert w.eventFilter(w.tabs, _key(Qt.Key_F9, "", release=True, native=0x78)) is True
+    qapp.processEvents()
+    assert app.counts_for(app.engine.active_set)[cid] == 1
+    # num campo de texto a tecla é texto normal
+    w.f_title.setFocus()
+    qapp.processEvents()
+    assert w.eventFilter(w.f_title, _key(Qt.Key_F9, "", native=0x78)) is False
+
+
+def test_contador_do_painel_fora_do_ambito_desativado(app, qapp):
+    w = app.config_window
+    w._last_add = 0
+    w._add_item("contador")
+    w.flush()
+    ms = app.store.sets["predefinido"].clone()
+    ms.ambito.modo = "aplicacoes"
+    ms.ambito.aplicacoes = ["word.exe"]
+    assert app.store.save_set(ms) == []
+    app.apply_config()
+    app.set_panel_visible(True)
+    app.platform.fg = WindowInfo(1, 999_999, "C:\\Windows\\notepad.exe")
+    app.panel.rebuild()
+    app.panel.refresh_status()
+    b = next(iter(app.panel.view.counter_buttons.values()))
+    assert not b.isEnabled()
+    app.platform.fg = WindowInfo(1, 999_998, "C:\\Office\\WORD.EXE")
+    app.panel.refresh_status()
+    assert b.isEnabled()
