@@ -71,6 +71,18 @@ parte da Fase 3.
 - [x] `PlatformAPI.send_text` declara `still_ok`; teste compara a assinatura
   de todos os backends. `pytest`: 168 passam, 1 ignorado.
 
+## Fase 4 — Forgejo (parte concluída a 13-11-2026)
+
+- [x] Repositório privado `Macropad` no Forgejo do utilizador
+  (`Q-012`), histórico enviado pelo utilizador; `origin` configurado e `main`
+  a seguir `origin/main`.
+  - Validação: envio feito pelo utilizador com sucesso. O agente não chega ao
+    servidor (rede Tailscale), por isso não correu `git ls-remote`.
+- [ ] GitHub `virtual-visual-vext` como segundo endereço de envio —
+  bloqueado por `Q-010` e `Q-011`.
+- [ ] README: como clonar e enviar — espera por `Q-010` (se o README pode ter
+  o endereço privado).
+
 ## Fase atual: Fase 3 — Validação manual no Windows e distribuição (em pausa)
 
 

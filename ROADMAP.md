@@ -7,10 +7,12 @@ Ver [SPEC.md](SPEC.md#destino).
 ## Estado atual
 
 O código está na versão 0.4. A Fase 1 (revisão independente) e a Fase 2
-(versão 0.4, incluindo a barra de título própria do painel) estão concluídas,
-com 136 testes automáticos a passar. Falta a validação manual no Windows
-(Fase 3, em pausa desde 12-11-2026, com 16 passos verificados e 3 parciais;
-os passos 62–85 cobrem a 0.4). Ainda não há remotos git.
+(versão 0.4, incluindo a barra de título própria do painel) estão concluídas.
+Depois disso, seis revisões do Codex foram corrigidas; 168 testes automáticos
+passam. Falta a validação manual no Windows (Fase 3, em pausa desde
+12-11-2026, com 16 passos verificados e 3 parciais; os passos 62–86 cobrem a
+0.4). O repositório está no Forgejo do utilizador (privado, pelo Tailscale);
+falta o GitHub (Fase 4).
 
 ## Decisões em aberto
 
@@ -22,8 +24,6 @@ os passos 62–85 cobrem a 0.4). Ainda não há remotos git.
   definições do claude.ai, ou o utilizador cria o repositório
   `virtual-visual-vext` vazio e envia ele próprio. Sem isto não é possível criar
   o repositório nem enviar.
-- [ ] **Servidor para o Forgejo** (`Q-012`): que máquina (VPS, homelab, NAS) e
-  com que sistema operativo.
 
 - [ ] **Reescrita em Rust** (`Q-024`): vale a pena reescrever o Macropad em
   Rust para ter um executável mais leve e com arranque mais rápido? A decisão
@@ -32,18 +32,14 @@ os passos 62–85 cobrem a 0.4). Ainda não há remotos git.
 
 ### Bloqueado
 
-- [ ] **Forma de acesso ao servidor do Forgejo** (`Q-014`): o agente executa
-  os comandos através do PC ligado, ou prepara-os para o utilizador executar.
-  Depende de **Servidor para o Forgejo** (`Q-012`).
-- [ ] **Endereço e HTTPS do Forgejo** (`Q-015`): domínio (ex.:
-  `git.dominio.pt`) e proxy inverso existente (Caddy, Nginx, Traefik) ou novo.
-  Depende de **Servidor para o Forgejo** (`Q-012`).
-- [ ] **Modo de instalação do Forgejo** (`Q-016`): Docker, Podman ou binário
-  com systemd. Depende de **Servidor para o Forgejo** (`Q-012`).
+- (nenhuma)
 
 ### Nevoeiro
 
 - Cópias de segurança do Forgejo (o que guardar, onde, com que frequência).
+- HTTPS no Forgejo (`Q-025`): hoje o acesso é só pela rede Tailscale (já
+  cifrada), em HTTP. Só é preciso se o Forgejo tiver de ser acessível fora do
+  Tailscale.
 - Dar versões ao executável distribuído (etiquetas git, nome do zip, notas de
   versão).
 - Arranque automático com privilégios de administrador (Agendador de Tarefas)
@@ -67,6 +63,7 @@ os passos 62–85 cobrem a 0.4). Ainda não há remotos git.
 - [x] [Funcionamento do contador](ANSWERS.md#q-021-funcionamento-do-contador) (`Q-021`): painel e tecla, só mostra; manter premido repõe.
 - [x] [Atribuição de tecla por cima do botão e atalhos existentes](ANSWERS.md#q-022-atribuição-de-tecla-por-cima-do-botão-e-atalhos-existentes) (`Q-022`): Delete, Backspace, Tab, Ctrl+C e Ctrl+V mantêm-se.
 - [x] [Barra de título do painel](ANSWERS.md#q-023-barra-de-título-do-painel) (`Q-023`): o painel desenha a sua própria barra.
+- [x] [Servidor para o Forgejo](ANSWERS.md#q-012-servidor-para-o-forgejo) (`Q-012`): instalado pelo utilizador; `Macropad` pelo Tailscale. Torna `Q-014`, `Q-015` e `Q-016` desnecessárias.
 - [x] [Tratamento dos resultados da revisão](ANSWERS.md#q-017-tratamento-dos-resultados-da-revisão) (`Q-017`): P1 e P2 confirmados e corrigidos.
 
 ## Fase 1: Revisão independente e correções — concluída (12-11-2026)
@@ -197,7 +194,11 @@ no Forgejo e no GitHub com um único `git push`.
 
 ### Dependências e riscos
 
-- Bloqueada por `Q-010`, `Q-011`, `Q-012`, `Q-014`, `Q-015` e `Q-016`.
+- Forgejo feito pelo utilizador a 13-11-2026 (`Q-012`): repositório privado
+  `Macropad`, acessível pelo Tailscale em HTTP; o `origin` aponta
+  para lá e `main` segue `origin/main`.
+- Falta o GitHub: bloqueado por `Q-010` e `Q-011`. Depois, acrescentar o
+  GitHub como segundo endereço de envio do `origin`.
 - Ações em servidor (portas, firewall, certificados) são difíceis de reverter
   sem acesso. Antes de executar, gerar o plano exato de comandos e o
   procedimento para desinstalar.
@@ -207,7 +208,8 @@ no Forgejo e no GitHub com um único `git push`.
 
 - `git push` atualiza os dois remotos, e `git ls-remote` em ambos mostra o mesmo
   commit.
-- O Forgejo responde por HTTPS e sobrevive a um reinício do servidor.
+- O Forgejo responde (hoje em HTTP pelo Tailscale; HTTPS só se `Q-025` o
+  exigir) e sobrevive a um reinício do servidor.
 
 ### Validação
 

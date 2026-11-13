@@ -249,3 +249,24 @@ conversa de 11-11-2026 e nos commits `6da0f2f`, `5d330ce` e `936fe38`.
 - **Consequências:** Mover o painel faz-se pela barra própria. A posição do
   painel passa a ser gravada.
 - **Rever quando:** A barra própria der problemas de arrasto ou de foco.
+
+## Q-012: Servidor para o Forgejo
+
+- **Resolvido:** 2026-11-13
+- **Resposta:** O utilizador instalou o Forgejo no seu próprio servidor e criou
+  o repositório privado `Macropad`. É acessível pela rede Tailscale em
+  `http://(endereço privado):3333/Macropad.git` (HTTP). O histórico foi
+  enviado pelo utilizador a partir do PC.
+- **Justificação:** O utilizador tratou da instalação; o agente não administra
+  o servidor.
+- **Evidência:** Mensagens do utilizador de 13-11-2026 («já criei o
+  repositório privado do Forgejo», «Já consegui») e o endereço do repositório.
+- **Consequências:** `Q-014`, `Q-015` e `Q-016` (forma de acesso, endereço e
+  modo de instalação) deixam de ser decisões do projeto. O `origin` local
+  aponta para este endereço e `main` segue `origin/main`. O agente não chega ao
+  servidor a partir do seu ambiente (rede privada), por isso os envios são
+  feitos pelo utilizador com `git push`. O acesso é só pela rede Tailscale, que
+  já cifra o tráfego; HTTPS no próprio Forgejo fica por decidir (`Q-025`).
+- **Rever quando:** O servidor ou o endereço mudar, ou for preciso acesso fora
+  do Tailscale.
+
