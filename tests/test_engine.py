@@ -480,3 +480,65 @@ def test_reconstrucao_do_conjunto_fora_do_lock(engine, monkeypatch):
     assert seen and not any(seen)
     assert engine.trigger(0)[0] is True
     wait_idle(engine)
+
+
+# ------------------------------------------------- quinta revisão do Codex
+def test_colar_revalida_a_janela_antes_do_ctrl_v(fake):
+    """A preparação da área de transferência pode demorar; se a janela mudar
+    nesse intervalo, não se cola na nova janela."""
+    from macropad.core.engine import CANCEL_WINDOW
+    from macropad.core.model import Macro, Settings
+    st = Settings()
+    st.modo_texto = "colar"
+    e = Engine(fake)
+    e.set_config(make_config([Macro("A", "1", "abc{Enter}")], settings=st))
+    got = _events(e)
+
+    def switch():
+        fake.fg = OTHER                       # o utilizador muda de janela
+    fake.before_paste = switch
+    assert e.trigger(0)[0] is True
+    wait_idle(e)
+    assert fake.log == []
+    fin = [p for ev, p in got if ev == "finished"]
+    assert fin[0]["cancelled"] == CANCEL_WINDOW
+
+
+def test_tecla_nao_se_perde_se_o_retrato_mudar(fake, monkeypatch):
+    """Se o arranque for recusado (retrato obsoleto), a tecla não é suprimida."""
+    from macropad.core.model import Macro
+    e = Engine(fake)
+    e.set_config(make_config([Macro("A", "1", "abc")]))
+    monkeypatch.setattr(e, "_start", lambda *a, **k: False)
+    assert e.handle_key(down("1")) is False      # passa para a aplicação
+    assert e.handle_key(up("1")) is False
+    assert fake.log == []
+
+
+def test_decisao_e_arranque_sob_o_mesmo_lock(fake, monkeypatch):
+    from macropad.core.model import Macro
+    e = Engine(fake)
+    e.set_config(make_config([Macro("A", "1", "abc")]))
+    held = []
+    real_start = e._start
+
+    def spy(*a, **k):
+        ok = e._lock.acquire(blocking=False)     # RLock: mesma thread → já detido
+        held.append(ok and e._lock._is_owned())
+        if ok:
+            e._lock.release()
+        return real_start(*a, **k)
+    monkeypatch.setattr(e, "_start", spy)
+    assert e.handle_key(down("1")) is True
+    wait_idle(e)
+    assert held == [True]
+
+
+def test_contador_por_id_so_no_mesmo_conjunto(fake):
+    e = Engine(fake)
+    e.set_config(_two_sets(counter=True))
+    e.set_active_set("a")
+    got = _events(e)
+    assert e.counter_press_id("b", "c1", long_press=False)[0] is False
+    assert e.counter_press_id("a", "c1", long_press=False)[0] is True
+    assert [p["set_id"] for ev, p in got if ev == "counter"] == ["a"]

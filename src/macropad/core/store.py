@@ -386,7 +386,14 @@ class ConfigStore:
             if self.settings.tecla_suspensao == LEGACY_HOTKEY:
                 new = self.settings.clone()
                 new.tecla_suspensao = Settings().tecla_suspensao
-                issues = self.save_settings(new)
+                try:
+                    issues = self.save_settings(new)
+                except OSError as e:
+                    # não se conseguiu escrever: o arranque continua com a tecla
+                    # antiga e tenta-se outra vez no próximo arranque
+                    msgs.append(tr("store.migrate_hotkey_failed", old=LEGACY_HOTKEY,
+                                   new=new.tecla_suspensao, err=e.strerror or str(e)))
+                    return msgs
                 if issues:
                     # Conflito (por ex. uma macro já usa Shift+Escape): mantém a
                     # tecla antiga, avisa e volta a tentar no próximo arranque.

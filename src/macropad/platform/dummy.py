@@ -26,7 +26,9 @@ class DummyPlatform:
     def foreground(self) -> Optional[WindowInfo]:
         return self.fg
 
-    def send_text(self, text: str, mode: str) -> None:
+    def send_text(self, text: str, mode: str, still_ok=None) -> None:
+        if mode == "colar" and still_ok is not None and not still_ok():
+            return
         self.sent.append(("text", text))
 
     def send_key(self, key: str) -> None:

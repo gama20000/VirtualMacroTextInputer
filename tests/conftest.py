@@ -17,6 +17,7 @@ class FakePlatform:
         self.log = []
         self.lock = threading.Lock()
         self.on_send = None
+        self.before_paste = None
 
     def own_pid(self):
         return 1
@@ -24,7 +25,11 @@ class FakePlatform:
     def foreground(self):
         return self.fg
 
-    def send_text(self, text, mode):
+    def send_text(self, text, mode, still_ok=None):
+        if self.before_paste and mode == "colar":
+            self.before_paste()             # simula a espera pela área de transferência
+        if mode == "colar" and still_ok is not None and not still_ok():
+            return
         with self.lock:
             self.log.append(("text", text, mode))
         if self.on_send:

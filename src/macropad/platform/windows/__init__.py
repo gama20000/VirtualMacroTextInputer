@@ -151,11 +151,16 @@ class WindowsPlatform:
         finally:
             w.DestroyWindow(owner)
 
-    def send_text(self, text: str, mode: str) -> None:
+    def send_text(self, text: str, mode: str,
+                  still_ok: Optional[Callable[[], bool]] = None) -> None:
+        """``still_ok``: chamado no modo «colar» depois de preparar a área de
+        transferência e antes do Ctrl+V; se devolver False, não cola."""
         if not text:
             return
         if mode == "colar":
             self._set_clipboard(text)
+            if still_ok is not None and not still_ok():
+                return                # a janela mudou: não colar noutro sítio
             self._tap_vk(w.VK_V, with_ctrl=True)
             # A aplicação lê a área de transferência de forma assíncrona; dar
             # tempo antes de um eventual passo seguinte a substituir.

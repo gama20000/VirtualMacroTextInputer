@@ -1115,6 +1115,7 @@ class ConfigWindow(QWidget):
         targets = self._sel_macros()
         if not targets:
             return
+        pref_error = ""
         if len(targets) > 1:
             # várias: confirmação sempre, com a quantidade
             ok, _ = ask(self, tr("delete.many_title"), tr("delete.many_text", n=len(targets)),
@@ -1131,12 +1132,19 @@ class ConfigWindow(QWidget):
             if dont_ask:
                 s = self.app.store.settings.clone()
                 s.confirmar_eliminacao = False
-                self.settings.confirmar_eliminacao = False
-                self.app.store.save_settings(s)
-                self.app.apply_config()
-                self._loading = True
-                self.p_no_confirm.setChecked(True)
-                self._loading = False
+                try:
+                    issues = self.app.store.save_settings(s)
+                except OSError as e:
+                    # elimina na mesma (foi confirmado), mas a preferência não
+                    # ficou gravada: a interface não finge que ficou
+                    issues = None
+                    pref_error = tr("status.write_failed", err=e.strerror or e)
+                if issues == []:
+                    self.settings.confirmar_eliminacao = False
+                    self.app.apply_config()
+                    self._loading = True
+                    self.p_no_confirm.setChecked(True)
+                    self._loading = False
         was_archived = targets[0].arquivada
         first = min(self.selected)
         ops.delete_many(self.ms, self.selected)
@@ -1146,6 +1154,8 @@ class ConfigWindow(QWidget):
         self._changed()
         self.show_status(tr("status.deleted") if len(targets) == 1
                          else tr("status.deleted_n", n=len(targets)))
+        if pref_error:
+            self.show_status(pref_error, error=True)
 
     def _move(self, delta: int) -> None:
         if self._macro() is None or self._multi():
@@ -1365,15 +1375,12 @@ class ConfigWindow(QWidget):
             if e.isAutoRepeat() or k not in self._counter_keys:
                 return k in self._counter_keys
             sid, cid, t0 = self._counter_keys.pop(k)
-            eng = self.app.engine
-            # mudou de conjunto enquanto a tecla estava premida: não conta
-            idx = eng.counter_index(cid) if eng.active_set_id == sid else None
-            if idx is not None:
-                m = eng.active_set.macros[idx]
-                ok, why = eng.counter_press(idx, (time.monotonic() - t0) * 1000
-                                            >= m.pressao_longa_ms)
-                if not ok:
-                    self.show_status(why, error=True)
+            # só conta se o conjunto ainda for o mesmo (verificado no motor,
+            # sob o lock, junto com a operação)
+            ok, why = self.app.engine.counter_press_id(sid, cid,
+                                                       held_s=time.monotonic() - t0)
+            if not ok and self.app.engine.active_set_id == sid:
+                self.show_status(why, error=True)
             return True
         if e.isAutoRepeat():
             return k in self._counter_keys

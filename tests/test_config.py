@@ -439,3 +439,21 @@ def test_falha_de_escrita_nao_altera_preferencias_em_memoria(tmp_path, monkeypat
     with pytest.raises(OSError):
         st.save_settings(s)
     assert st.settings.tema == old
+
+
+def test_migracao_com_falha_de_escrita_nao_interrompe(tmp_path, monkeypatch):
+    from macropad.core.model import State
+    st = ConfigStore(tmp_path)
+    st.ensure_defaults()
+    st.config_path.write_text(st.config_path.read_text("utf-8").replace(
+        '"Shift+Escape"', '"Ctrl+Alt+P"'), "utf-8")
+    st.load_all()
+
+    def boom(*_a, **_k):
+        raise OSError(13, "Acesso negado")
+    monkeypatch.setattr(st, "_write", boom)
+    state = State()
+    msgs = st.migrate(state)                       # não lança
+    assert msgs and "Acesso negado" in msgs[0]
+    assert st.settings.tecla_suspensao == "Ctrl+Alt+P"
+    assert state.migracoes == []

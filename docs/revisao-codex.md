@@ -115,3 +115,17 @@ Validação: `pytest` com 154 testes a passar e 1 ignorado (só Windows).
 
 Validação: `pytest` com 161 testes a passar e 1 ignorado (só Windows). O modo
 «colar» precisa do passo manual 86 no Windows.
+
+---
+
+# Quinta revisão do Codex (13-11-2026)
+
+O Codex confirmou as correções da quarta revisão e reportou três problemas.
+
+| Ponto | Correção | Teste |
+|---|---|---|
+| P1 — «Colar» noutra janela depois da espera pela área de transferência | `send_text(..., still_ok=...)`: depois de preparar a área de transferência e mesmo antes do Ctrl+V, a janela-alvo é confirmada outra vez; se mudou, não cola e a execução é cancelada | `test_colar_revalida_a_janela_antes_do_ctrl_v` |
+| P2 — Corrida no estado do hook | a decisão de suprimir e o arranque da macro são feitos com o mesmo retrato, sob o lock (só consultas rápidas; os planos continuam a ser construídos fora); se o arranque for recusado, a tecla passa para a aplicação; os contadores usam `counter_press_id`, que verifica o conjunto e aplica a operação sob o lock | `test_tecla_nao_se_perde_se_o_retrato_mudar`, `test_decisao_e_arranque_sob_o_mesmo_lock`, `test_contador_por_id_so_no_mesmo_conjunto` |
+| P2 — Falhas de escrita não tratadas | migração (o arranque continua com a tecla antiga e avisa), transparência do painel (aviso no ícone), «Não voltar a perguntar» (elimina, avisa e não marca a preferência como gravada) | `test_migracao_com_falha_de_escrita_nao_interrompe`, `test_falhas_ao_gravar_opacidade_e_nao_perguntar` |
+
+Validação: `pytest` com 167 testes a passar e 1 ignorado (só Windows).

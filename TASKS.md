@@ -59,6 +59,13 @@ parte da Fase 3.
   - Risco residual: o modo «colar» só fica confirmado com o passo manual 86
     no Windows.
 
+## Correções da quinta revisão do Codex (concluídas a 13-11-2026)
+
+- [x] «Colar» revalida a janela antes do Ctrl+V; decisão do hook e arranque
+  atómicos; falhas de escrita tratadas na migração, na transparência e em
+  «Não voltar a perguntar». Detalhe em `docs/revisao-codex.md`. `pytest`: 167
+  passam, 1 ignorado.
+
 ## Fase atual: Fase 3 — Validação manual no Windows e distribuição (em pausa)
 
 

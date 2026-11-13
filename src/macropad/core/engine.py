@@ -151,7 +151,12 @@ class Execution:
                         return
                     if isinstance(step, TextStep):
                         if self.plan.text_mode == "colar":
-                            self.platform.send_text(step.text, "colar")
+                            # Preparar a área de transferência pode demorar
+                            # (outra aplicação pode tê-la aberta): a janela é
+                            # confirmada outra vez mesmo antes do Ctrl+V.
+                            self.platform.send_text(step.text, "colar", still_ok=self._check)
+                            if not self._check():
+                                return
                         else:
                             t = step.text
                             for i in range(0, len(t), self.CHUNK):
@@ -428,15 +433,28 @@ class Engine:
                 return i
         return None
 
-    def _counter_released(self, counter_id: str, held_s: float) -> None:
-        # Revalida ao largar: a suspensão, o âmbito ou o próprio contador
-        # podem ter mudado desde que a tecla foi premida.
-        idx = self.counter_index(counter_id)
-        if idx is None:
-            return
-        m = self._active.ms.macros[idx]
-        reset = held_s * 1000 >= m.pressao_longa_ms
-        self.counter_press(idx, reset)
+    def _counter_released(self, set_id: str, counter_id: str, held_s: float) -> None:
+        # Revalida ao largar: a suspensão, o âmbito, o conjunto ou o próprio
+        # contador podem ter mudado desde que a tecla foi premida.
+        self.counter_press_id(set_id, counter_id, held_s=held_s)
+
+    def counter_press_id(self, set_id: str, counter_id: str, *,
+                         held_s: Optional[float] = None,
+                         long_press: bool = False) -> tuple[bool, str]:
+        """Aciona o contador ``counter_id`` só se ``set_id`` ainda for o
+        conjunto ativo. Verificação e operação sob o lock, com o mesmo retrato
+        (conjuntos duplicados partilham ids de contador). Com ``held_s``, a
+        pressão longa é decidida pelo tempo da pressão."""
+        with self._lock:
+            act = self._active
+            if act is None or act.ms.id != set_id:
+                return False, tr("eng.not_run")
+            idx = self.counter_index(counter_id)
+            if idx is None:
+                return False, tr("eng.not_run")
+            if held_s is not None:
+                long_press = held_s * 1000 >= act.ms.macros[idx].pressao_longa_ms
+            return self.counter_press(idx, long_press)
 
     def counter_allowed(self) -> tuple[bool, str]:
         """Os contadores podem ser usados agora? Respeitam a suspensão e o
@@ -465,18 +483,20 @@ class Engine:
     def counter_press(self, index: int, long_press: bool) -> tuple[bool, str]:
         """Contador acionado (painel, tecla ou janela do Macropad): toque curto
         soma o incremento, pressão longa repõe o valor."""
-        ok, why = self.counter_allowed()
-        if not ok:
-            return False, why
-        act = self._active
-        if not (0 <= index < len(act.ms.macros)):
-            return False, tr("eng.not_run")
-        m = act.ms.macros[index]
-        if not m.is_counter or m.arquivada:
-            return False, tr("eng.not_run")
-        self._emit("counter", set_id=act.ms.id, id=m.id, index=index,
-                   action="reset" if long_press else "inc",
-                   step=m.incremento, value=m.reposicao)
+        with self._lock:
+            ok, why = self.counter_allowed()
+            if not ok:
+                return False, why
+            act = self._active
+            if not (0 <= index < len(act.ms.macros)):
+                return False, tr("eng.not_run")
+            m = act.ms.macros[index]
+            if not m.is_counter or m.arquivada:
+                return False, tr("eng.not_run")
+            payload = dict(set_id=act.ms.id, id=m.id, index=index,
+                           action="reset" if long_press else "inc",
+                           step=m.incremento, value=m.reposicao)
+        self._emit("counter", **payload)
         return True, ""
 
     def shutdown(self) -> None:
@@ -498,8 +518,7 @@ class Engine:
             if key in self._counter_down:
                 sid, cid, t0 = self._counter_down.pop(key)
                 self._held.discard(key)
-                if sid == self._active_id:   # mudou de conjunto entretanto: ignora
-                    self._counter_released(cid, time.monotonic() - t0)
+                self._counter_released(sid, cid, time.monotonic() - t0)
                 return True
             if key in self._held:
                 self._held.discard(key)
@@ -528,6 +547,15 @@ class Engine:
             self._emit("toggle_panel")
             return True
 
+        # A decisão (suprimir ou deixar passar) e o arranque são feitos com o
+        # mesmo retrato do motor, sob o lock: uma alteração de configuração ou
+        # de conjunto vinda da interface não se pode intercalar e fazer perder a
+        # tecla. É curto: só consultas a dicionários (os planos são construídos
+        # fora do lock).
+        with self._lock:
+            return self._decide_down(ev, key)
+
+    def _decide_down(self, ev: KeyEvent, key: str) -> bool:
         if self._suspended:
             self._passed.add(key)
             return False
@@ -541,7 +569,9 @@ class Engine:
         if idx is None and ev.mods and self._settings.modificadores == "ignorar":
             idx = act.bindings.get(Binding(key))
         if idx is None:
-            cidx = self.counter_for(b)
+            cidx = act.counters.get(b)
+            if cidx is None and ev.mods and self._settings.modificadores == "ignorar":
+                cidx = act.counters.get(Binding(key))
             if cidx is not None and self._target_ok(self.platform.foreground())[0]:
                 # contador: decide no keyup (toque soma, manter premida repõe)
                 self._held.add(key)
@@ -557,7 +587,10 @@ class Engine:
             self._passed.add(key)
             return False
 
-        self._held.add(key)
         assert fg is not None
-        self._start(act, idx, fg, "tecla")   # ignorado se já houver uma execução
-        return True
+        if self._start(act, idx, fg, "tecla") or self._running is not None:
+            # iniciou, ou já há uma execução (disparos durante ela são ignorados)
+            self._held.add(key)
+            return True
+        self._passed.add(key)
+        return False

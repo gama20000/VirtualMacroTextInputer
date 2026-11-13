@@ -316,7 +316,13 @@ class MacropadApp(QObject):
     def _save_panel_opacity(self) -> None:
         s = self.store.settings.clone()
         s.painel.opacidade = self._pending_opacity
-        if not self.store.save_settings(s):
+        try:
+            issues = self.store.save_settings(s)
+        except OSError as e:
+            log.exception("não foi possível gravar a transparência do painel")
+            self.notify("Macropad", tr("status.write_failed", err=e.strerror or e), error=True)
+            return
+        if not issues:
             self.engine.set_config(self.store.config())
 
     def preview_panel_settings(self, p: PanelSettings) -> None:

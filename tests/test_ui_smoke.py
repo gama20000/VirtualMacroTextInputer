@@ -775,3 +775,22 @@ def test_hover_usa_o_item_atual_sob_o_cursor(app, qapp, monkeypatch):
     t = w._hover_target()
     assert t >= 0 and w.ms.macros[t].titulo != moved
     assert w.ms.macros[t].titulo == g.item(0).data(Qt.UserRole + 1)
+
+
+# ------------------------------------------------- quinta revisão do Codex
+def test_falhas_ao_gravar_opacidade_e_nao_perguntar(app, qapp, monkeypatch):
+    w = app.config_window
+    def boom(*_a, **_k):
+        raise OSError(13, "Acesso negado")
+    monkeypatch.setattr(app.store, "_write", boom)
+    app._pending_opacity = 0.5
+    app._save_panel_opacity()                       # não lança
+    assert app.store.settings.painel.opacidade != 0.5
+    # «Não voltar a perguntar» ao eliminar: elimina, mas avisa que não gravou
+    assert app.store.settings.confirmar_eliminacao is True
+    w._select(0)
+    app.answers.append((True, True))
+    w._delete_macro()
+    assert app.store.settings.confirmar_eliminacao is True
+    assert not w.p_no_confirm.isChecked()
+    assert "Acesso negado" in w.status.text()
