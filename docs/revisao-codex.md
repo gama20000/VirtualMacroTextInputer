@@ -100,3 +100,18 @@ diretamente o passo intermédio).
 | P2 — `join()` numa thread por iniciar | `shutdown` só espera se a thread já arrancou | `test_encerrar_com_execucao_ainda_nao_iniciada` |
 
 Validação: `pytest` com 154 testes a passar e 1 ignorado (só Windows).
+
+---
+
+# Quarta revisão do Codex (13-11-2026)
+
+| Ponto | Classificação | Correção | Teste |
+|---|---|---|---|
+| P1 — Recarregamento externo apagado por uma edição pendente | **Confirmado**: `reload_from_store` gravava a cópia local antes de olhar para os caminhos alterados | os caminhos alterados são vistos primeiro; uma edição pendente cujo ficheiro mudou por fora é descartada sem ser gravada e aparece um aviso | `test_alteracao_externa_nao_e_sobrescrita_por_edicao_pendente` |
+| P1 — Modo «colar» falha (`OpenClipboard(NULL)`) | **Confirmado pela documentação da Microsoft** (`EmptyClipboard` com dono NULL faz `SetClipboardData` falhar); ainda por confirmar no Windows real | janela própria «só de mensagens» como dona; dados preparados antes de esvaziar a área; resultados de `EmptyClipboard`/`SetClipboardData` verificados; memória libertada em falha | `test_windows_layer.py::test_area_de_transferencia_*` (API simulada) |
+| P2 — Contador no conjunto errado (tecla na janela de configuração) | **Confirmado** | guarda o conjunto ao premir; se mudou ao largar, não conta | `test_tecla_do_contador_na_janela_ao_mudar_de_conjunto` |
+| P2 — Hover com índice antigo | **Confirmado** | no momento de atribuir, consulta o item que está sob o cursor; a grelha recalcula o hover ao ser reconstruída | `test_hover_usa_o_item_atual_sob_o_cursor` |
+| P2 (suspeita) — Reconstrução com o lock do hook | **Confirmado por leitura** | o retrato do conjunto é construído fora do lock e publicado numa secção curta (`set_config`, `set_active_set`) | `test_reconstrucao_do_conjunto_fora_do_lock` |
+
+Validação: `pytest` com 161 testes a passar e 1 ignorado (só Windows). O modo
+«colar» precisa do passo manual 86 no Windows.

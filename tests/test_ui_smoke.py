@@ -705,3 +705,73 @@ def test_mudar_idioma_grava_edicoes_pendentes(app, qapp):
     w.p_lang.setCurrentIndex(w.p_lang.findData("en"))
     qapp.processEvents()
     assert app.store.sets["predefinido"].macros[0].titulo == "Antes do idioma"
+
+
+# ------------------------------------------------- quarta revisão do Codex
+def test_alteracao_externa_nao_e_sobrescrita_por_edicao_pendente(app, qapp):
+    w = app.config_window
+    w._select(0)
+    w.f_title.setText("Edição local")
+    w._on_edit()                                    # válida, à espera dos 450 ms
+    assert w._save_set_timer.isActive()
+    path = app.store.set_path("predefinido")
+    txt = path.read_text("utf-8").replace('"3E03305"', '"Externa"', 1)
+    path.write_text(txt, "utf-8")
+    app.store.reload([path])
+    w.reload_from_store("x", changed=[path])
+    assert "Externa" in path.read_text("utf-8")       # o ficheiro externo ficou
+    assert w.ms.macros[0].titulo == "Externa"
+    assert "ficheiro" in w.status.text()
+
+
+def test_tecla_do_contador_na_janela_ao_mudar_de_conjunto(app, qapp):
+    w = app.config_window
+    w._last_add = 0
+    w._add_item("contador")
+    i = len(w.ms.active_indices()) - 1
+    w.ms.macros[i].tecla = "F9"
+    w._changed()
+    w.flush()
+    cid = w.ms.macros[i].id
+    other = app.store.duplicate_set("predefinido").id   # mesmos ids de contador
+    app.apply_config()
+    app.engine.set_active_set("predefinido")
+    w.activateWindow()
+    qapp.processEvents()
+    if not w.isActiveWindow():
+        pytest.skip("o QPA offscreen não ativou a janela")
+    w.tabs.setFocus()
+    app.platform.fg = WindowInfo(5, app.platform.own_pid(), "C:\\macropad.exe")
+    assert w.eventFilter(w.tabs, _key(Qt.Key_F9, "", native=0x78)) is True
+    app.engine.set_active_set(other)               # muda enquanto a tecla está premida
+    assert w.eventFilter(w.tabs, _key(Qt.Key_F9, "", release=True, native=0x78)) is True
+    qapp.processEvents()
+    assert app.counts_for(app.store.sets[other]).get(cid, 0) == 0
+    assert app.counts_for(app.store.sets["predefinido"]).get(cid, 0) == 0
+
+
+def test_hover_usa_o_item_atual_sob_o_cursor(app, qapp, monkeypatch):
+    from macropad.ui import config_window as cw
+    w = app.config_window
+    g = w.grid
+    rect = g.visualItemRect(g.item(3))
+    pos = g.viewport().mapToGlobal(rect.center())
+    monkeypatch.setattr(cw.QCursor, "pos", staticmethod(lambda: pos))
+    w._on_hover(g, 3)
+    assert w._hover_target() == 3
+    w._select(3)
+    app.answers.append((True, False))
+    w._delete_macro()                               # o cursor fica parado
+    w.flush()
+    assert len(w.ms.macros) == 3
+    # a última macro desapareceu: o cursor está agora sobre nada
+    assert w._hover_target() == -1
+    # reordenar sem mover o cursor: devolve o item que lá está agora
+    pos2 = g.viewport().mapToGlobal(g.visualItemRect(g.item(0)).center())
+    monkeypatch.setattr(cw.QCursor, "pos", staticmethod(lambda: pos2))
+    first = g.item(0).data(Qt.UserRole + 4)
+    moved = w.ms.macros[first].titulo
+    w._on_drop(False, g, [first], -1, False)        # o primeiro passa para o fim
+    t = w._hover_target()
+    assert t >= 0 and w.ms.macros[t].titulo != moved
+    assert w.ms.macros[t].titulo == g.item(0).data(Qt.UserRole + 1)

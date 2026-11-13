@@ -125,6 +125,17 @@ GlobalAlloc = _fn(kernel32, "GlobalAlloc", wintypes.HGLOBAL, wintypes.UINT, ctyp
 GlobalLock = _fn(kernel32, "GlobalLock", wintypes.LPVOID, wintypes.HGLOBAL)
 GlobalUnlock = _fn(kernel32, "GlobalUnlock", wintypes.BOOL, wintypes.HGLOBAL)
 GlobalFree = _fn(kernel32, "GlobalFree", wintypes.HGLOBAL, wintypes.HGLOBAL)
+GetClipboardData = _fn(user32, "GetClipboardData", wintypes.HANDLE, wintypes.UINT)
+GetClipboardOwner = _fn(user32, "GetClipboardOwner", wintypes.HWND)
+
+# Janela «só de mensagens» que é a dona da área de transferência: com
+# OpenClipboard(NULL), EmptyClipboard deixa o dono a NULL e SetClipboardData falha.
+HWND_MESSAGE = wintypes.HWND(-3)
+CreateWindowExW = _fn(user32, "CreateWindowExW", wintypes.HWND,
+                      wintypes.DWORD, wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.DWORD,
+                      ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int,
+                      wintypes.HWND, wintypes.HMENU, wintypes.HINSTANCE, wintypes.LPVOID)
+DestroyWindow = _fn(user32, "DestroyWindow", wintypes.BOOL, wintypes.HWND)
 
 if ctypes.sizeof(ctypes.c_void_p) == 8:
     GetWindowLongPtrW = _fn(user32, "GetWindowLongPtrW", ctypes.c_ssize_t,

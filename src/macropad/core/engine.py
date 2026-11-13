@@ -221,30 +221,45 @@ class Engine:
     def set_config(self, config: Config) -> None:
         """Aplica uma configuração. Não altera o estado ativo/suspenso; uma
         execução em curso continua com o plano com que começou."""
-        with self._lock:
-            self._config = config
-            self._settings = config.settings
-            try:
-                self._hotkey = parse_binding(config.settings.tecla_suspensao)
-            except KeyBindingError:
-                self._hotkey = None
-            try:
-                pk = config.settings.tecla_painel
-                self._panel_key = parse_binding(pk) if pk else None
-            except KeyBindingError:
-                self._panel_key = None
-            if self._active_id not in config.sets:
+        # Tudo o que é demorado (analisar comandos) faz-se fora do lock: o hook
+        # pode precisar dele para iniciar uma macro e não deve ficar à espera.
+        try:
+            hotkey = parse_binding(config.settings.tecla_suspensao)
+        except KeyBindingError:
+            hotkey = None
+        try:
+            pk = config.settings.tecla_painel
+            panel_key = parse_binding(pk) if pk else None
+        except KeyBindingError:
+            panel_key = None
+        for attempt in range(3):
+            seen = self._active_id
+            sid = seen
+            if sid not in config.sets:
                 ordered = config.ordered_sets()
-                self._active_id = ordered[0].id if ordered else ""
-            self._rebuild_active()
+                sid = ordered[0].id if ordered else ""
+            act = self._build_active(config, sid)
+            with self._lock:
+                if self._active_id != seen and attempt < 2:
+                    continue          # mudou de conjunto entretanto: refaz
+                if self._active_id != seen:
+                    sid = self._active_id if self._active_id in config.sets else sid
+                    act = self._build_active(config, sid)
+                self._config = config
+                self._settings = config.settings
+                self._hotkey = hotkey
+                self._panel_key = panel_key
+                self._active_id = sid
+                self._active = act
+                break
         self._emit("config")
 
-    def _rebuild_active(self) -> None:
-        cfg = self._config
-        if not cfg or self._active_id not in cfg.sets:
-            self._active = None
-            return
-        ms = cfg.sets[self._active_id]
+    def _build_active(self, cfg: Optional[Config], set_id: str) -> Optional["_ActiveSet"]:
+        """Retrato executável do conjunto ``set_id`` (sem efeitos no motor)."""
+        if not cfg or set_id not in cfg.sets:
+            return None
+        ms = cfg.sets[set_id]
+        settings = cfg.settings
         act = _ActiveSet(ms)
         for i, m in enumerate(ms.macros):
             if m.arquivada or m.is_space:   # arquivadas e espaços: nada a executar
@@ -263,14 +278,14 @@ class Engine:
             except ValueError:
                 steps = ()
             act.plans.append(MacroPlan(m.display_title(), steps, m.repeticoes,
-                                       m.intervalo_ms, self._settings.modo_texto)
+                                       m.intervalo_ms, settings.modo_texto)
                              if steps else None)
             if steps and m.tecla:
                 try:
                     act.bindings.setdefault(parse_binding(m.tecla), i)
                 except KeyBindingError:
                     pass
-        self._active = act
+        return act
 
     @property
     def settings(self) -> Settings:
@@ -286,10 +301,14 @@ class Engine:
         return a.ms if a else None
 
     def set_active_set(self, set_id: str) -> None:
+        cfg = self._config
+        act = self._build_active(cfg, set_id)      # fora do lock
         with self._lock:
+            if self._config is not cfg:            # a configuração mudou: refaz aqui
+                act = self._build_active(self._config, set_id)
             if self._config and set_id in self._config.sets:
                 self._active_id = set_id
-                self._rebuild_active()
+                self._active = act
         self._emit("active_set", set_id=self._active_id)
 
     # ------------------------------------------------------------ suspensão

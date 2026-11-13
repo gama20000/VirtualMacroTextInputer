@@ -449,3 +449,34 @@ def test_encerrar_com_execucao_ainda_nao_iniciada(engine, fake):
     engine._running = exe                        # publicada, thread por arrancar
     engine.shutdown()                            # não pode lançar RuntimeError
     assert exe.cancel_reason
+
+
+def test_reconstrucao_do_conjunto_fora_do_lock(engine, monkeypatch):
+    """Revisão Codex (suspeita): analisar os comandos não pode segurar o lock
+    que o hook usa para iniciar macros."""
+    import macropad.core.engine as eng_mod
+    seen = []
+    real = eng_mod.parse_action
+
+    def lock_held_elsewhere() -> bool:
+        res = []
+        def probe():
+            ok = engine._lock.acquire(blocking=False)
+            if ok:
+                engine._lock.release()
+            res.append(not ok)
+        t = threading.Thread(target=probe)
+        t.start()
+        t.join()
+        return res[0]
+
+    def spy(text):
+        seen.append(lock_held_elsewhere())
+        return real(text)
+    monkeypatch.setattr(eng_mod, "parse_action", spy)
+    from macropad.core.model import Macro
+    engine.set_config(make_config([Macro("A", "1", "abc"), Macro("B", "2", "x")]))
+    engine.set_active_set("teste")
+    assert seen and not any(seen)
+    assert engine.trigger(0)[0] is True
+    wait_idle(engine)

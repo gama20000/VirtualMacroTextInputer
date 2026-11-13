@@ -103,7 +103,8 @@ class ConfigWindow(QWidget):
         self._capture_hover = False              # o rato está sobre um botão (atribuir tecla)
         self._hover_real = -1
         self._hover_grid: Optional[MacroGrid] = None
-        self._counter_keys: dict[int, tuple[str, float]] = {}   # tecla Qt -> (id, início)
+        # tecla Qt -> (conjunto, id do contador, início)
+        self._counter_keys: dict[int, tuple[str, str, float]] = {}
         self._dirty_set = False        # o conjunto em edição tem alterações por gravar
         self._dirty_settings = False   # as preferências têm alterações por gravar
         self._save_set_timer = QTimer(self, singleShot=True, interval=450,
@@ -672,11 +673,11 @@ class ConfigWindow(QWidget):
     def reload_from_store(self, notice: str = "", changed=None) -> None:
         """(Re)carrega a vista a partir da configuração gravada.
 
-        Primeiro grava as edições pendentes que sejam válidas. As que não se
-        podem gravar (por ex. com conflitos) mantêm-se, exceto se o próprio
-        ficheiro foi alterado por fora (``changed``: caminhos alterados) — aí
-        vale o ficheiro e avisa-se."""
-        self.flush()
+        Se o próprio ficheiro de uma edição pendente foi alterado por fora
+        (``changed``: caminhos alterados), vale o ficheiro: a edição local é
+        descartada SEM ser gravada (gravá-la apagaria a alteração externa) e
+        avisa-se. As outras edições pendentes válidas são gravadas primeiro; as
+        que não se podem gravar (por ex. com conflitos) mantêm-se."""
         st = self.app.store
         sid = self.app.engine.active_set_id
         changed_names = None if changed is None else {Path(p).resolve() for p in changed}
@@ -684,6 +685,12 @@ class ConfigWindow(QWidget):
         def touched(path) -> bool:
             return changed_names is not None and Path(path).resolve() in changed_names
 
+        # antes de gravar seja o que for: não escrever por cima do ficheiro externo
+        if self.ms is not None and touched(st.set_path(self.ms.id)):
+            self._save_set_timer.stop()
+        if touched(st.config_path):
+            self._save_settings_timer.stop()
+        self.flush()
         replaced = False
         keep_settings = self._dirty_settings and not touched(st.config_path)
         replaced |= self._dirty_settings and not keep_settings
@@ -1357,9 +1364,10 @@ class ConfigWindow(QWidget):
         if e.type() == QEvent.KeyRelease:
             if e.isAutoRepeat() or k not in self._counter_keys:
                 return k in self._counter_keys
-            cid, t0 = self._counter_keys.pop(k)
+            sid, cid, t0 = self._counter_keys.pop(k)
             eng = self.app.engine
-            idx = eng.counter_index(cid)
+            # mudou de conjunto enquanto a tecla estava premida: não conta
+            idx = eng.counter_index(cid) if eng.active_set_id == sid else None
             if idx is not None:
                 m = eng.active_set.macros[idx]
                 ok, why = eng.counter_press(idx, (time.monotonic() - t0) * 1000
@@ -1382,8 +1390,8 @@ class ConfigWindow(QWidget):
         idx = self.app.engine.counter_for(Binding(name, mods_from_event(e)))
         if idx is None:
             return False
-        cid = self.app.engine.active_set.macros[idx].id
-        self._counter_keys[k] = (cid, time.monotonic())
+        ms = self.app.engine.active_set
+        self._counter_keys[k] = (ms.id, ms.macros[idx].id, time.monotonic())
         return True
 
     # ============================================== tecla pelo rato (hover)
@@ -1407,13 +1415,15 @@ class ConfigWindow(QWidget):
         self._sync_capture()
 
     def _hover_target(self) -> int:
+        """Índice real do botão sob o cursor, consultado agora (a grelha pode
+        ter sido reconstruída depois do último movimento do rato)."""
         g = self._hover_grid
-        if g is None or self._hover_real < 0 or not g.isVisible():
+        if g is None or not g.isVisible() or not self.ms:
             return -1
-        # confirma que o rato ainda está sobre esse botão
-        if not g.viewport().rect().contains(g.viewport().mapFromGlobal(QCursor.pos())):
+        real = g.real_at(g.viewport().mapFromGlobal(QCursor.pos()))
+        if not (0 <= real < len(self.ms.macros)) or self.ms.macros[real].is_space:
             return -1
-        return self._hover_real
+        return real
 
     def _hover_assign_key(self, e) -> bool:
         """Atribui a tecla premida ao botão sob o rato. Delete/Backspace, Tab,

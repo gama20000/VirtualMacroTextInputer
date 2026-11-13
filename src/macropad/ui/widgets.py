@@ -7,7 +7,8 @@ import sys
 from typing import Callable, Optional
 
 from PySide6.QtCore import QEvent, QPoint, QRect, QRectF, QSize, Qt, QTimer, Signal
-from PySide6.QtGui import QColor, QFont, QFontMetrics, QKeyEvent, QPainter, QPainterPath, QPen
+from PySide6.QtGui import (QColor, QCursor, QFont, QFontMetrics, QKeyEvent, QPainter,
+                           QPainterPath, QPen)
 from PySide6.QtWidgets import (QAbstractButton, QAbstractItemView, QLineEdit, QListWidget,
                                QListWidgetItem, QStyle, QStyledItemDelegate, QWidget)
 
@@ -420,6 +421,12 @@ class MacroGrid(QListWidget):
                 it.setSelected(True)
                 if sel_row < 0 or t["index"] == current:
                     sel_row = self.count() - 1
+        # os índices mudaram: o hover passa a ser o item agora sob o cursor
+        self.hovered = -1
+        if self.underMouse():
+            real = self.real_at(self.viewport().mapFromGlobal(QCursor.pos()))
+            self.hovered = real
+            QTimer.singleShot(0, self, lambda r=real: self.hover_changed.emit(r))
         if sel_row >= 0:
             from PySide6.QtCore import QItemSelectionModel
             self.selectionModel().setCurrentIndex(self.indexFromItem(self.item(sel_row)),
@@ -429,6 +436,13 @@ class MacroGrid(QListWidget):
             self.setCurrentRow(-1)
         self.blockSignals(False)
         self.fit_size()
+
+    def real_at(self, pos: QPoint) -> int:
+        """Índice real do item na posição (do viewport), ou -1."""
+        if not self.viewport().rect().contains(pos):
+            return -1
+        it = self.itemAt(pos)
+        return it.data(INDEX_ROLE) if it is not None else -1
 
     def real_index(self, row: int) -> int:
         it = self.item(row)

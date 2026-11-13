@@ -168,3 +168,4 @@ Antes de começar: na configuração de teste, a tecla de suspensão anterior
 | 83 | Preferências: marque «Não pedir confirmação…» e elimine uma macro | elimina sem perguntar; desmarcar volta a perguntar (sem reiniciar) | ☐ |
 | 84 | Preferências: desmarque e marque «Arrancar automaticamente com o Windows»; veja Gestor de Tarefas ▸ Aplicações de arranque | aplicado logo; Macropad aparece «Ativado»; desativado no Gestor de Tarefas e voltado a marcar → volta a «Ativado» | 👤 |
 | 85 | Reinicie sessão do Windows com o arranque ativo | o Macropad arranca sozinho com a mesma pasta de configuração | 👤 |
+| 86 | Preferências ▸ Modo de texto «Colar»; copie «antigo» para a área de transferência; no Bloco de Notas prima a tecla de uma macro com `Olá{Enter}mundo` | escreve «Olá», muda de linha e escreve «mundo» (com acentos); a área de transferência fica com o texto da macro; nenhum erro | ☐ |

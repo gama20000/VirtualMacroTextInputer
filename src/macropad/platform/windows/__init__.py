@@ -104,31 +104,52 @@ class WindowsPlatform:
         self._send(seq)
 
     def _set_clipboard(self, text: str) -> None:
+        """Põe ``text`` na área de transferência (CF_UNICODETEXT).
+
+        * Os dados são preparados antes de esvaziar a área: se a memória
+          falhar, o conteúdo anterior fica intacto.
+        * A área é aberta com uma janela própria (só de mensagens) como dona;
+          com ``OpenClipboard(NULL)`` o ``SetClipboardData`` falha.
+        * A janela é criada e destruída nesta thread (a da execução). Os dados
+          já entregues ao sistema ficam disponíveis depois disso.
+        """
         data = (text + "\0").encode("utf-16-le")
-        for _ in range(20):
-            if w.OpenClipboard(None):
-                break
-            time.sleep(0.02)
-        else:
+        h = w.GlobalAlloc(w.GMEM_MOVEABLE, len(data))
+        if not h:
+            raise MemoryError("GlobalAlloc falhou")
+        p = w.GlobalLock(h)
+        if not p:
+            w.GlobalFree(h)
+            raise OSError(tr("win.clipboard_set"))
+        try:
+            ctypes.memmove(p, data, len(data))
+        finally:
+            w.GlobalUnlock(h)
+        owner = w.CreateWindowExW(0, "STATIC", "Macropad clipboard", 0, 0, 0, 0, 0,
+                                  w.HWND_MESSAGE, None, None, None)
+        if not owner:
+            w.GlobalFree(h)
             raise OSError(tr("win.clipboard_open"))
         try:
-            w.EmptyClipboard()
-            h = w.GlobalAlloc(w.GMEM_MOVEABLE, len(data))
-            if not h:
-                raise MemoryError("GlobalAlloc falhou")
-            p = w.GlobalLock(h)
-            if not p:
+            for _ in range(20):
+                if w.OpenClipboard(owner):
+                    break
+                time.sleep(0.02)
+            else:
                 w.GlobalFree(h)
-                raise OSError(tr("win.clipboard_set"))
+                raise OSError(tr("win.clipboard_open"))
             try:
-                ctypes.memmove(p, data, len(data))
+                if not w.EmptyClipboard():
+                    w.GlobalFree(h)
+                    raise OSError(tr("win.clipboard_set"))
+                if not w.SetClipboardData(w.CF_UNICODETEXT, h):
+                    w.GlobalFree(h)
+                    raise OSError(tr("win.clipboard_set"))
+                # a partir daqui a memória pertence ao sistema
             finally:
-                w.GlobalUnlock(h)
-            if not w.SetClipboardData(w.CF_UNICODETEXT, h):
-                w.GlobalFree(h)
-                raise OSError(tr("win.clipboard_set"))
+                w.CloseClipboard()
         finally:
-            w.CloseClipboard()
+            w.DestroyWindow(owner)
 
     def send_text(self, text: str, mode: str) -> None:
         if not text:

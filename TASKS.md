@@ -50,6 +50,15 @@ parte da Fase 3.
   encerramento. Detalhe em `docs/revisao-codex.md`. `pytest`: 154 passam, 1
   ignorado.
 
+## Correções da quarta revisão do Codex (concluídas a 13-11-2026)
+
+- [x] Recarregamento externo vs. edição pendente, modo «colar» com dono da
+  área de transferência, contador ao mudar de conjunto na janela, hover com
+  índice antigo, reconstrução fora do lock. Detalhe em
+  `docs/revisao-codex.md`. `pytest`: 161 passam, 1 ignorado.
+  - Risco residual: o modo «colar» só fica confirmado com o passo manual 86
+    no Windows.
+
 ## Fase atual: Fase 3 — Validação manual no Windows e distribuição (em pausa)
 
 

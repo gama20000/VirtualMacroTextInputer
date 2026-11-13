@@ -153,3 +153,58 @@ def test_barra_de_titulo_cores_colorref(win):
     calls.clear()
     p.style_title_bar(123, True, "#1c2b3a", None, None)
     assert dict(calls)[W.DWMWA_CAPTION_COLOR] == 0x3A2B1C       # 0x00BBGGRR
+
+
+def _clipboard_sim(win, *, alloc_ok=True, set_ok=True):
+    """Simula a área de transferência e regista a ordem das chamadas."""
+    order = []
+    buf = ctypes.create_string_buffer(4096)
+    W = win.w
+
+    def rec(name, result):
+        def f(*a):
+            order.append((name, a))
+            return result(*a) if callable(result) else result
+        return f
+    W.GlobalAlloc.impl = rec("GlobalAlloc", 77 if alloc_ok else 0)
+    W.GlobalLock.impl = rec("GlobalLock", ctypes.addressof(buf))
+    W.GlobalUnlock.impl = rec("GlobalUnlock", 1)
+    W.GlobalFree.impl = rec("GlobalFree", 0)
+    W.CreateWindowExW.impl = rec("CreateWindowExW", 555)
+    W.DestroyWindow.impl = rec("DestroyWindow", 1)
+    W.OpenClipboard.impl = rec("OpenClipboard", 1)
+    W.EmptyClipboard.impl = rec("EmptyClipboard", 1)
+    W.SetClipboardData.impl = rec("SetClipboardData", 77 if set_ok else 0)
+    W.CloseClipboard.impl = rec("CloseClipboard", 1)
+    return order, buf
+
+
+def test_area_de_transferencia_com_dono_e_dados_preparados(win):
+    """Revisão Codex: OpenClipboard(NULL) + EmptyClipboard deixa o dono a NULL
+    e SetClipboardData falha. Abre-se com uma janela própria; os dados são
+    preparados antes de esvaziar a área."""
+    order, buf = _clipboard_sim(win)
+    win.mod.WindowsPlatform()._set_clipboard("Olá")
+    names = [n for n, _ in order]
+    assert names.index("GlobalAlloc") < names.index("EmptyClipboard")
+    opened = [a for n, a in order if n == "OpenClipboard"][0]
+    assert opened[0] == 555                          # a janela dona, não NULL
+    assert names[-1] == "DestroyWindow"
+    assert names.index("CloseClipboard") < names.index("DestroyWindow")
+    assert "GlobalFree" not in names                 # a memória passou para o sistema
+    assert buf.raw[:8] == "Olá\0".encode("utf-16-le")
+
+
+def test_area_de_transferencia_sem_memoria_nao_esvazia(win):
+    order, _ = _clipboard_sim(win, alloc_ok=False)
+    with pytest.raises(MemoryError):
+        win.mod.WindowsPlatform()._set_clipboard("x")
+    assert "EmptyClipboard" not in [n for n, _ in order]
+
+
+def test_area_de_transferencia_falha_ao_definir(win):
+    order, _ = _clipboard_sim(win, set_ok=False)
+    with pytest.raises(OSError):
+        win.mod.WindowsPlatform()._set_clipboard("x")
+    names = [n for n, _ in order]
+    assert "GlobalFree" in names and "CloseClipboard" in names and "DestroyWindow" in names
