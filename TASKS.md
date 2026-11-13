@@ -42,6 +42,14 @@ parte da Fase 3.
   `docs/revisao-codex.md`; passos manuais 80a–80c. `pytest`: 142 passam, 1
   ignorado.
 
+## Correções da terceira revisão do Codex (concluídas a 13-11-2026)
+
+- [x] Nove pontos (2 P1, 7 P2): edições pendentes e tema/recarregamento,
+  corridas no arranque de macros e na suspensão, contadores ao mudar de
+  conjunto, modificadores premidos, falhas de escrita, pré-visualização e
+  encerramento. Detalhe em `docs/revisao-codex.md`. `pytest`: 154 passam, 1
+  ignorado.
+
 ## Fase atual: Fase 3 — Validação manual no Windows e distribuição (em pausa)
 
 

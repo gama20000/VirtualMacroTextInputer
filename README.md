@@ -100,7 +100,7 @@ Para acrescentar um idioma, copie `src/macropad/locales/pt.toml` para `<código>
 - As teclas 1 a 4 da fila superior são diferentes de `Numpad1` a `Numpad4`.
 - Manter a tecla premida não volta a disparar a macro. É preciso largar e premir outra vez.
 - Enquanto uma macro está a ser executada, novos disparos são ignorados (a tecla continua a ser suprimida).
-- Se a macro tiver sido disparada com modificadores premidos, a execução espera que sejam largados (até 1,5 s). Assim, um `{Enter}` não é enviado como `Ctrl+Enter`.
+- Se a macro tiver sido disparada com modificadores premidos, a execução espera que sejam largados (até 1,5 s). Se continuarem premidos, a macro não é executada e aparece um aviso. Assim, um `{Enter}` nunca é enviado como `Ctrl+Enter`.
 - Se mudar de janela durante a execução, os passos pendentes são cancelados.
 - O texto que o Macropad envia nunca dispara macros. As teclas premidas nas janelas do próprio Macropad também não.
 

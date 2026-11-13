@@ -77,3 +77,26 @@ sim.
 | Tecla do contador não conta (utilizador) | **Confirmado** | `test_ui_smoke.py::test_tecla_do_contador_com_a_configuracao_a_frente` | causa: com uma janela do Macropad à frente, o hook deixa passar todas as teclas (regra para não escrever nas próprias janelas). Os contadores não escrevem, por isso a janela de configuração conta-os ela própria quando o foco não está num campo de texto nem o rato sobre um botão |
 
 Validação: `pytest` com 142 testes a passar e 1 ignorado (só Windows).
+
+---
+
+# Terceira revisão do Codex (13-11-2026)
+
+Sem P0. O Codex confirmou que os achados das revisões anteriores estão
+corrigidos. Todos os pontos novos foram confirmados por leitura do código e têm
+agora um teste que reproduz o cenário (as corridas são reproduzidas chamando
+diretamente o passo intermédio).
+
+| Ponto | Correção | Teste |
+|---|---|---|
+| P1 — Mudar o tema apaga edições pendentes | o tema só atualiza o aspeto (`ConfigWindow.set_palette`); `reload_from_store` grava primeiro as edições válidas e mantém as inválidas, exceto se o próprio ficheiro mudou por fora (aí avisa); fechar/recriar a janela (idioma) também grava | `test_mudar_tema_nao_apaga_edicoes_pendentes`, `test_edicao_invalida_sobrevive_a_recarregar_outro_ficheiro`, `test_mudar_idioma_grava_edicoes_pendentes` |
+| P1 — Tecla executa macro de outro conjunto | `_start` recebe o retrato do conjunto usado no evento e recusa se o conjunto ativo mudou | `test_tecla_nao_executa_macro_de_outro_conjunto` |
+| P2 — Macro começa depois da suspensão | `_start` volta a verificar a suspensão sob o lock | `test_suspensao_entre_verificacao_e_arranque` |
+| P2 — Contador do conjunto errado | o keydown guarda o conjunto; se mudou, o keyup não conta; o evento leva `set_id` | `test_contador_premido_ao_mudar_de_conjunto_nao_conta` |
+| P2 — Modificadores ainda premidos após 1,5 s | a execução é cancelada (nada é enviado) e aparece um aviso | `test_modificadores_premidos_alem_do_prazo_cancelam` |
+| P2 — Falha de escrita deixa preferências em memória | `save_settings` grava antes de atualizar a memória; a interface mostra o erro de escrita | `test_falha_de_escrita_nao_altera_preferencias_em_memoria`, `test_falha_ao_gravar_preferencias_mostra_erro` |
+| P2 — Pré-visualização com contadores ativos fora do âmbito | recebe o mesmo estado (suspensão e `counter_allowed`) que o painel real | `test_pre_visualizacao_desativa_contadores_fora_do_ambito` |
+| P2 — Alternâncias simultâneas da suspensão | leitura e inversão sob o mesmo lock | `test_alternancias_simultaneas_da_suspensao` |
+| P2 — `join()` numa thread por iniciar | `shutdown` só espera se a thread já arrancou | `test_encerrar_com_execucao_ainda_nao_iniciada` |
+
+Validação: `pytest` com 154 testes a passar e 1 ignorado (só Windows).

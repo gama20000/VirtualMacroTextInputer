@@ -13,6 +13,7 @@ from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon, QWidget
 
 from .. import i18n
 from ..core.engine import Engine
+from ..core.engine import CANCEL_MODIFIERS
 from ..core.model import MacroSet, PanelSettings
 from ..core.store import ConfigStore
 from ..core.watcher import FileWatcher
@@ -143,11 +144,7 @@ class MacropadApp(QObject):
         if getattr(self, "panel", None) is not None:
             self.panel.rebuild()
         if getattr(self, "config_window", None) is not None:
-            self.config_window.grid.pal = pal
-            self.config_window.archive_grid.pal = pal
-            self.config_window.archive_zone.pal = pal
-            self.config_window.active_zone.pal = pal
-            self.config_window.reload_from_store()
+            self.config_window.set_palette(pal)   # sem recarregar os dados
 
     def _poll_system_theme(self) -> None:
         if self.store.settings.tema == "automatico":
@@ -291,7 +288,8 @@ class MacropadApp(QObject):
             w.on_counts_changed()
 
     def _on_counter(self, p: dict) -> None:
-        ms = self.engine.active_set
+        # o conjunto vem no evento: o ativo pode ter mudado entretanto
+        ms = self.store.sets.get(p.get("set_id", self.engine.active_set_id))
         if ms is None:
             return
         cur = self.counts_for(ms).get(p["id"], p["value"])
@@ -380,7 +378,8 @@ class MacropadApp(QObject):
             log.info("recarregado: %s", ", ".join(res.messages))
             self.apply_config()
             if self.config_window is not None and self.config_window.isVisible():
-                self.config_window.reload_from_store(tr("status.reloaded_from_files"))
+                self.config_window.reload_from_store(tr("status.reloaded_from_files"),
+                                                     changed=paths)
 
     # ------------------------------------------------------------- motor
     def _on_engine_event(self, ev: str, payload) -> None:
@@ -400,6 +399,9 @@ class MacropadApp(QObject):
         elif ev == "finished":
             if payload.get("error"):
                 self.notify(tr("msg.send_error"), payload["error"], error=True)
+            elif payload.get("cancelled") == CANCEL_MODIFIERS:
+                self.notify("Macropad", tr("msg.cancel_modifiers", title=payload["title"]),
+                            error=True)
             self.panel.refresh_status()
         elif ev == "started":
             self.panel.refresh_status()

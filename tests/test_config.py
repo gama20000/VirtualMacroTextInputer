@@ -423,3 +423,19 @@ def test_migracao_falhada_nao_fica_marcada(tmp_path):
     msgs = st.migrate(state)
     assert st.settings.tecla_suspensao == "Shift+Escape"
     assert state.migracoes == [ConfigStore.MIGRATION_HOTKEY]
+
+
+def test_falha_de_escrita_nao_altera_preferencias_em_memoria(tmp_path, monkeypatch):
+    st = ConfigStore(tmp_path)
+    st.ensure_defaults()
+    st.load_all()
+    old = st.settings.tema
+    s = st.settings.clone()
+    s.tema = "noturno" if old != "noturno" else "diurno"
+
+    def boom(*_a, **_k):
+        raise OSError(13, "bloqueado")
+    monkeypatch.setattr(st, "_write", boom)
+    with pytest.raises(OSError):
+        st.save_settings(s)
+    assert st.settings.tema == old

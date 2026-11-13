@@ -104,6 +104,8 @@ class ConfigWindow(QWidget):
         self._hover_real = -1
         self._hover_grid: Optional[MacroGrid] = None
         self._counter_keys: dict[int, tuple[str, float]] = {}   # tecla Qt -> (id, início)
+        self._dirty_set = False        # o conjunto em edição tem alterações por gravar
+        self._dirty_settings = False   # as preferências têm alterações por gravar
         self._save_set_timer = QTimer(self, singleShot=True, interval=450,
                                       timeout=self._save_set_now)
         self._save_settings_timer = QTimer(self, singleShot=True, interval=450,
@@ -658,14 +660,44 @@ class ConfigWindow(QWidget):
         return w
 
     # ============================================================== dados
-    def reload_from_store(self, notice: str = "") -> None:
-        """(Re)carrega a vista a partir da configuração gravada."""
-        self._save_set_timer.stop()
-        self._save_settings_timer.stop()
+    def set_palette(self, pal) -> None:
+        """Mudança de tema: só o aspeto. Não toca na cópia de trabalho, por
+        isso as edições ainda por gravar mantêm-se."""
+        for w in (self.grid, self.archive_grid, self.archive_zone, self.active_zone):
+            w.pal = pal
+        self._refresh_grid()
+        self._refresh_state_buttons()
+        self._update_preview()
+
+    def reload_from_store(self, notice: str = "", changed=None) -> None:
+        """(Re)carrega a vista a partir da configuração gravada.
+
+        Primeiro grava as edições pendentes que sejam válidas. As que não se
+        podem gravar (por ex. com conflitos) mantêm-se, exceto se o próprio
+        ficheiro foi alterado por fora (``changed``: caminhos alterados) — aí
+        vale o ficheiro e avisa-se."""
+        self.flush()
         st = self.app.store
-        self.settings = st.settings.clone()
         sid = self.app.engine.active_set_id
-        self.ms = st.sets[sid].clone() if sid in st.sets else None
+        changed_names = None if changed is None else {Path(p).resolve() for p in changed}
+
+        def touched(path) -> bool:
+            return changed_names is not None and Path(path).resolve() in changed_names
+
+        replaced = False
+        keep_settings = self._dirty_settings and not touched(st.config_path)
+        replaced |= self._dirty_settings and not keep_settings
+        if not keep_settings:
+            self.settings = st.settings.clone()
+            self._dirty_settings = False
+        keep_set = (self._dirty_set and self.ms is not None and self.ms.id == sid
+                    and sid in st.sets and not touched(st.set_path(sid)))
+        replaced |= self._dirty_set and self.ms is not None and not keep_set
+        if not keep_set:
+            self.ms = st.sets[sid].clone() if sid in st.sets else None
+            self._dirty_set = False
+        if replaced:
+            notice = tr("status.unsaved_replaced")
         if self.ms is not None:
             ops.normalize_order(self.ms)
             if not (0 <= self.cur < len(self.ms.macros)):
@@ -688,7 +720,7 @@ class ConfigWindow(QWidget):
         self._load_editor()
         self._refresh_state_buttons()
         if notice:
-            self.show_status(notice)
+            self.show_status(notice, error=replaced)
 
     def _load_prefs(self) -> None:
         s = self.settings
@@ -981,6 +1013,7 @@ class ConfigWindow(QWidget):
         self._changed()
 
     def _changed(self, refresh: bool = True) -> None:
+        self._dirty_set = True
         issues = self._update_preview_and_errors()
         if refresh:
             self._refresh_grid()
@@ -1012,10 +1045,15 @@ class ConfigWindow(QWidget):
     def _save_set_now(self) -> None:
         if not self.ms:
             return
-        issues = self.app.store.save_set(self.ms)
+        try:
+            issues = self.app.store.save_set(self.ms)
+        except OSError as e:
+            self.show_status(tr("status.write_failed", err=e.strerror or e), error=True)
+            return
         if issues:
             self.show_status(str(issues[0]), error=True)
             return
+        self._dirty_set = False
         self.app.apply_config()
         self.show_status(tr("status.saved"))
         self._update_preview()
@@ -1507,6 +1545,7 @@ class ConfigWindow(QWidget):
         self._loading = False
         self._update_preview()
         self.app.preview_panel_settings(p)
+        self._dirty_settings = True
         self._save_settings_timer.start()
 
     def _on_preset(self, idx: int) -> None:
@@ -1520,6 +1559,7 @@ class ConfigWindow(QWidget):
         self._load_panel_prefs()
         self._loading = False
         self.app.preview_panel_settings(self.settings.painel)
+        self._dirty_settings = True
         self._save_settings_timer.start()
 
     def _update_preview(self) -> None:
@@ -1528,7 +1568,10 @@ class ConfigWindow(QWidget):
         ms = self.ms
         status = self.app.engine.status()
         txt = status[1] + (f" · {ms.nome}" if ms and status[0] in ("ativo", "fora") else "")
-        self.preview.update_preview(self.settings.painel, self.pal, ms, (status[0], txt),
+        eng = self.app.engine
+        self.preview.update_preview(self.settings.painel, self.pal, ms,
+                                    (status[0], txt, None, eng.suspended,
+                                     eng.counter_allowed()[0]),
                                     panel_hint(self.settings), self._counts())
         self.preview_scroll.setMinimumHeight(min(self.preview.sizeHint().height() + 4, 340))
 
@@ -1558,13 +1601,22 @@ class ConfigWindow(QWidget):
 
     def _save_settings_now(self) -> None:
         self._read_panel()
-        issues = self.app.store.save_settings(self.settings)
+        self._dirty_settings = True
+        try:
+            issues = self.app.store.save_settings(self.settings)
+        except OSError as e:
+            msg = tr("status.write_failed", err=e.strerror or e)
+            self.g_error.setText(msg)
+            self.p_error.setText(msg)
+            self.show_status(msg, error=True)
+            return
         if issues:
             msg = tr("status.prefs_not_saved") + "\n" + "\n".join(i.message for i in issues[:4])
             self.g_error.setText(msg)
             self.p_error.setText(msg)
             self.show_status(tr("status.prefs_conflict"), error=True)
             return
+        self._dirty_settings = False
         self.g_error.clear()
         self.p_error.clear()
         err = self.app.apply_config()
@@ -1713,5 +1765,6 @@ class ConfigWindow(QWidget):
 
     def dispose(self) -> None:
         QApplication.instance().removeEventFilter(self)
+        self.flush()                 # não perder edições pendentes (ex.: mudança de idioma)
         self._save_set_timer.stop()
         self._save_settings_timer.stop()

@@ -371,3 +371,81 @@ def test_contador_no_painel_respeita_o_ambito(fake):
     assert e.handle_key(down("5")) is False          # o hook deixa a tecla para a janela
     assert e.counter_for(__import__("macropad.core.keys", fromlist=["Binding"])
                          .Binding("5")) == 0
+
+
+# ------------------------------------------------- terceira revisão do Codex
+def _two_sets(*, counter=False):
+    from macropad.core.model import Config, Macro, MacroSet, Scope, Settings
+    if counter:
+        a = [Macro("C", "5", tipo="contador", id="c1")]
+        b = [Macro("C", "5", tipo="contador", id="c1")]
+    else:
+        a = [Macro("A", "1", "aaa")]
+        b = [Macro("B", "", "bbb")]
+    return Config(Settings(), {"a": MacroSet("a", "A", Scope(), a),
+                               "b": MacroSet("b", "B", Scope(), b)})
+
+
+def test_tecla_nao_executa_macro_de_outro_conjunto(fake):
+    e = Engine(fake)
+    e.set_config(_two_sets())
+    e.set_active_set("a")
+    act = e._active
+    e.set_active_set("b")                        # mudou entre a tecla e o arranque
+    assert e._start(act, 0, TARGET, "tecla") is False
+    wait_idle(e)
+    assert fake.log == []
+
+
+def test_suspensao_entre_verificacao_e_arranque(engine, fake):
+    act = engine._active
+    engine.set_suspended(True)
+    assert engine._start(act, 0, TARGET, "tecla") is False
+    assert fake.log == []
+
+
+def test_contador_premido_ao_mudar_de_conjunto_nao_conta(fake):
+    e = Engine(fake)
+    e.set_config(_two_sets(counter=True))
+    e.set_active_set("a")
+    got = _events(e)
+    assert e.handle_key(down("5")) is True
+    e.set_active_set("b")                        # mesmo id de contador no outro conjunto
+    assert e.handle_key(up("5")) is True
+    assert [p for ev, p in got if ev == "counter"] == []
+    e.handle_key(down("5")); e.handle_key(up("5"))
+    c = [p for ev, p in got if ev == "counter"]
+    assert len(c) == 1 and c[0]["set_id"] == "b"
+
+
+def test_modificadores_premidos_alem_do_prazo_cancelam(engine, fake, monkeypatch):
+    from macropad.core.engine import CANCEL_MODIFIERS, Execution
+    monkeypatch.setattr(Execution, "MOD_WAIT", 0.1)
+    got = _events(engine)
+    fake.mods = frozenset({"Ctrl"})
+    assert engine.trigger(1)[0] is True
+    wait_idle(engine)
+    assert fake.log == []                        # nada enviado com Ctrl premido
+    fin = [p for ev, p in got if ev == "finished"]
+    assert fin and fin[0]["cancelled"] == CANCEL_MODIFIERS
+
+
+def test_alternancias_simultaneas_da_suspensao(engine):
+    def flip():
+        for _ in range(2000):
+            engine.toggle_suspended()
+    ts = [threading.Thread(target=flip) for _ in range(2)]
+    for t in ts:
+        t.start()
+    for t in ts:
+        t.join()
+    assert engine.suspended is False             # 4000 inversões: volta ao início
+
+
+def test_encerrar_com_execucao_ainda_nao_iniciada(engine, fake):
+    from macropad.core.engine import Execution
+    act = engine._active
+    exe = Execution(act.plans[0], TARGET, fake, engine._finished)
+    engine._running = exe                        # publicada, thread por arrancar
+    engine.shutdown()                            # não pode lançar RuntimeError
+    assert exe.cancel_reason

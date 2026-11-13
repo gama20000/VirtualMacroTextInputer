@@ -327,6 +327,8 @@ export_title = "Exportar conjunto"
 toml_filter = "Conjuntos Macropad (*.toml)"
 
 [status]
+write_failed = "Não foi possível gravar: {err}"
+unsaved_replaced = "Havia alterações por gravar (com erros) e o ficheiro foi alterado por fora: vale a versão do ficheiro."
 group_key_conflict = "{n} macro(s) ficaram no Arquivo: têm a mesma tecla que outra macro restaurada no mesmo grupo."
 space_not_archived = "Os espaços vazios não vão para o Arquivo."
 key_assigned = "Tecla {key} atribuída a «{title}»."
@@ -365,6 +367,7 @@ tooltip = "Macropad — {state}\nConjunto: {set}"
 no_set = "(nenhum)"
 
 [msg]
+cancel_modifiers = "«{title}» não foi executada: Ctrl/Alt/Shift/Win continuavam premidas. Largue-as logo a seguir à tecla de disparo."
 autostart_off_failed = "Não foi possível desativar o arranque com o Windows: {err}"
 autostart_on_failed = "Não foi possível ativar o arranque com o Windows: {err}"
 autostart_blocked = "o Windows não aceitou a alteração (verifique Gestor de Tarefas ▸ Aplicações de arranque)"

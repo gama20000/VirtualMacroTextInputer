@@ -326,6 +326,8 @@ export_title = "Export set"
 toml_filter = "Macropad sets (*.toml)"
 
 [status]
+write_failed = "Could not save: {err}"
+unsaved_replaced = "There were unsaved changes (with errors) and the file was changed externally: the file's version wins."
 group_key_conflict = "{n} macro(s) stayed in the Archive: they have the same key as another macro restored in the same group."
 space_not_archived = "Empty spaces don't go to the Archive."
 key_assigned = "Key {key} assigned to «{title}»."
@@ -364,6 +366,7 @@ tooltip = "Macropad — {state}\nSet: {set}"
 no_set = "(none)"
 
 [msg]
+cancel_modifiers = "«{title}» was not run: Ctrl/Alt/Shift/Win were still held. Release them right after the trigger key."
 autostart_off_failed = "Could not disable starting with Windows: {err}"
 autostart_on_failed = "Could not enable starting with Windows: {err}"
 autostart_blocked = "Windows did not accept the change (check Task Manager ▸ Startup apps)"

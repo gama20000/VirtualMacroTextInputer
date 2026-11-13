@@ -69,6 +69,7 @@ class MacroPlan:
 CANCEL_SUSPEND = "suspensão"
 CANCEL_WINDOW = "mudança de janela"
 CANCEL_SHUTDOWN = "saída"
+CANCEL_MODIFIERS = "modificadores premidos"
 
 
 class Execution:
@@ -127,8 +128,13 @@ class Execution:
                 return False
 
     def _wait_modifiers(self) -> bool:
+        """Espera que os modificadores sejam largados (até MOD_WAIT). Se
+        continuarem premidos, cancela: um {Enter} sairia como Ctrl+Enter."""
         end = time.monotonic() + self.MOD_WAIT
-        while self.platform.modifiers_down() and time.monotonic() < end:
+        while self.platform.modifiers_down():
+            if time.monotonic() >= end:
+                self.cancel(CANCEL_MODIFIERS)
+                return False
             if self._cancel.wait(0.015):
                 return False
         return not self._cancel.is_set()
@@ -191,7 +197,8 @@ class Engine:
         self._suspended = False
         self._hotkey: Optional[Binding] = None
         self._panel_key: Optional[Binding] = None
-        self._counter_down: dict[str, tuple[str, float]] = {}   # tecla -> (id, início)
+        # tecla -> (conjunto, id do contador, início)
+        self._counter_down: dict[str, tuple[str, str, float]] = {}
         self._running: Optional[Execution] = None
         self._held: set[str] = set()        # teclas cujo keydown foi suprimido
         self._passed: set[str] = set()      # teclas premidas que passaram normalmente
@@ -291,7 +298,16 @@ class Engine:
         return self._suspended
 
     def set_suspended(self, value: bool) -> None:
+        self._change_suspended(lambda _cur: value)
+
+    def toggle_suspended(self) -> None:
+        # ler e inverter sob o mesmo lock: duas alternâncias simultâneas
+        # (tecla e interface) dão duas inversões, não uma
+        self._change_suspended(lambda cur: not cur)
+
+    def _change_suspended(self, new_value: Callable[[bool], bool]) -> None:
         with self._lock:
+            value = new_value(self._suspended)
             changed = value != self._suspended
             self._suspended = value
             run = self._running
@@ -299,9 +315,6 @@ class Engine:
             run.cancel(CANCEL_SUSPEND)
         if changed:
             self._emit("suspended", suspended=value)
-
-    def toggle_suspended(self) -> None:
-        self.set_suspended(not self._suspended)
 
     # ------------------------------------------------------------- execução
     @property
@@ -339,12 +352,16 @@ class Engine:
             return "ativo", tr("eng.status_active")
         return "fora", why[0].upper() + why[1:]
 
-    def _start(self, index: int, target: WindowInfo, source: str) -> bool:
+    def _start(self, act: "_ActiveSet", index: int, target: WindowInfo, source: str) -> bool:
+        """Inicia a macro ``index`` do retrato ``act`` do conjunto, obtido no
+        início do evento. Sob o lock confirma que não houve entretanto
+        suspensão, mudança de conjunto/configuração ou outra execução."""
         with self._lock:
-            if self._running is not None:
+            if self._running is not None or self._suspended:
                 return False         # ignora disparos durante uma execução
-            act = self._active
-            if act is None or not (0 <= index < len(act.plans)) or act.plans[index] is None:
+            if act is None or self._active is not act:
+                return False         # o conjunto mudou entre a tecla e o arranque
+            if not (0 <= index < len(act.plans)) or act.plans[index] is None:
                 return False
             plan = act.plans[index]
             exe = Execution(plan, target, self.platform, self._finished)
@@ -379,7 +396,7 @@ class Engine:
         if self._running is not None:
             return False, tr("eng.busy")
         assert fg is not None
-        return (True, "") if self._start(index, fg, source) else (False, tr("eng.not_run"))
+        return (True, "") if self._start(act, index, fg, source) else (False, tr("eng.not_run"))
 
     # ------------------------------------------------------------ contadores
     def counter_index(self, counter_id: str) -> Optional[int]:
@@ -438,7 +455,8 @@ class Engine:
         m = act.ms.macros[index]
         if not m.is_counter or m.arquivada:
             return False, tr("eng.not_run")
-        self._emit("counter", id=m.id, index=index, action="reset" if long_press else "inc",
+        self._emit("counter", set_id=act.ms.id, id=m.id, index=index,
+                   action="reset" if long_press else "inc",
                    step=m.incremento, value=m.reposicao)
         return True, ""
 
@@ -446,7 +464,10 @@ class Engine:
         run = self._running
         if run:
             run.cancel(CANCEL_SHUTDOWN)
-            run.join(1.0)
+            # a thread pode ainda não ter arrancado (publicada em _running
+            # antes de start()); aí o cancelamento basta
+            if run.thread.ident is not None:
+                run.join(1.0)
 
     # ------------------------------------------------------- hook de teclado
     def handle_key(self, ev: KeyEvent) -> bool:
@@ -456,9 +477,10 @@ class Engine:
         key = ev.key
         if not ev.down:
             if key in self._counter_down:
-                cid, t0 = self._counter_down.pop(key)
+                sid, cid, t0 = self._counter_down.pop(key)
                 self._held.discard(key)
-                self._counter_released(cid, time.monotonic() - t0)
+                if sid == self._active_id:   # mudou de conjunto entretanto: ignora
+                    self._counter_released(cid, time.monotonic() - t0)
                 return True
             if key in self._held:
                 self._held.discard(key)
@@ -504,7 +526,8 @@ class Engine:
             if cidx is not None and self._target_ok(self.platform.foreground())[0]:
                 # contador: decide no keyup (toque soma, manter premida repõe)
                 self._held.add(key)
-                self._counter_down[key] = (act.ms.macros[cidx].id, time.monotonic())
+                self._counter_down[key] = (act.ms.id, act.ms.macros[cidx].id,
+                                           time.monotonic())
                 return True
             self._passed.add(key)
             return False
@@ -517,5 +540,5 @@ class Engine:
 
         self._held.add(key)
         assert fg is not None
-        self._start(idx, fg, "tecla")   # ignorado se já houver uma execução
+        self._start(act, idx, fg, "tecla")   # ignorado se já houver uma execução
         return True

@@ -635,3 +635,73 @@ def test_contador_do_painel_fora_do_ambito_desativado(app, qapp):
     app.platform.fg = WindowInfo(1, 999_998, "C:\\Office\\WORD.EXE")
     app.panel.refresh_status()
     assert b.isEnabled()
+
+
+# ------------------------------------------------- terceira revisão do Codex
+def test_mudar_tema_nao_apaga_edicoes_pendentes(app, qapp):
+    w = app.config_window
+    w._select(0)
+    w.f_title.setText("Editado agora")
+    w._on_edit()                                   # como ao escrever no campo
+    assert w._save_set_timer.isActive()            # auto-gravação ainda pendente
+    w.tabs.setCurrentIndex(3)
+    w.p_theme.setCurrentIndex(w.p_theme.findData("noturno"))
+    assert app.store.settings.tema == "noturno"
+    assert w.ms.macros[0].titulo == "Editado agora"
+    w.flush()                                       # a gravação pendente continua válida
+    assert app.store.sets["predefinido"].macros[0].titulo == "Editado agora"
+
+
+def test_edicao_invalida_sobrevive_a_recarregar_outro_ficheiro(app, qapp):
+    w = app.config_window
+    w._select(0)
+    w.ms.macros[0].tecla = "2"                       # conflito: não se grava
+    w._changed()
+    w.flush()
+    assert app.store.sets["predefinido"].macros[0].tecla == "1"
+    # recarregamento de outro ficheiro (config.toml): a edição mantém-se
+    w.reload_from_store("x", changed=[app.store.config_path])
+    assert w.ms.macros[0].tecla == "2"
+    # o próprio ficheiro do conjunto mudou por fora: vale o ficheiro, com aviso
+    w.reload_from_store("x", changed=[app.store.set_path("predefinido")])
+    assert w.ms.macros[0].tecla == "1"
+    assert "ficheiro" in w.status.text()
+
+
+def test_falha_ao_gravar_preferencias_mostra_erro(app, qapp, monkeypatch):
+    w = app.config_window
+    def boom(*_a, **_k):
+        raise OSError(13, "Acesso negado")
+    monkeypatch.setattr(app.store, "_write", boom)
+    old = app.store.settings.confirmar_eliminacao
+    w.p_no_confirm.setChecked(old)                   # inverte a preferência
+    assert app.store.settings.confirmar_eliminacao == old
+    assert "Acesso negado" in w.g_error.text()
+
+
+def test_pre_visualizacao_desativa_contadores_fora_do_ambito(app, qapp):
+    w = app.config_window
+    w._last_add = 0
+    w._add_item("contador")
+    w.flush()
+    ms = app.store.sets["predefinido"].clone()
+    ms.ambito.modo = "aplicacoes"
+    ms.ambito.aplicacoes = ["word.exe"]
+    assert app.store.save_set(ms) == []
+    app.apply_config()
+    w.reload_from_store()
+    app.platform.fg = WindowInfo(1, 999_999, "C:\\Windows\\notepad.exe")
+    w._update_preview()
+    b = next(iter(w.preview.view.counter_buttons.values()))
+    assert not b.isEnabled()
+
+
+def test_mudar_idioma_grava_edicoes_pendentes(app, qapp):
+    w = app.config_window
+    w._select(0)
+    w.f_title.setText("Antes do idioma")
+    w._on_edit()
+    w.tabs.setCurrentIndex(3)
+    w.p_lang.setCurrentIndex(w.p_lang.findData("en"))
+    qapp.processEvents()
+    assert app.store.sets["predefinido"].macros[0].titulo == "Antes do idioma"

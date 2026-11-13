@@ -258,8 +258,10 @@ class ConfigStore:
                 issues += validate_macros(ms.clone(), s, self.rel(self.set_path(ms.id)))
             if issues:
                 return issues
-            self.settings = s.clone()
+            # grava primeiro: se a escrita falhar (OSError), a memória fica igual
+            # ao disco e quem chamou mostra o erro
             self._write(self.config_path, dump_settings(s))
+            self.settings = s.clone()
             return []
 
     def save_set(self, ms: MacroSet) -> list[Issue]:

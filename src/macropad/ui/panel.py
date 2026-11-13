@@ -484,7 +484,7 @@ class PanelPreview(QWidget):
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
 
     def update_preview(self, style: PanelSettings, pal: theme.Palette, ms: Optional[MacroSet],
-                       status: tuple[str, str], hint: str = "",
+                       status: tuple, hint: str = "",
                        counts: Optional[dict[str, int]] = None) -> None:
         self.window_frame.setStyleSheet(f"#previewframe {{ background: {pal.border}; }}")
         self.titlebar.caption, self.titlebar.text = pal.caption, pal.caption_text
