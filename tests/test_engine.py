@@ -542,3 +542,25 @@ def test_contador_por_id_so_no_mesmo_conjunto(fake):
     assert e.counter_press_id("b", "c1", long_press=False)[0] is False
     assert e.counter_press_id("a", "c1", long_press=False)[0] is True
     assert [p["set_id"] for ev, p in got if ev == "counter"] == ["a"]
+
+
+def test_backends_seguem_o_contrato_da_plataforma():
+    """Revisão Codex: o Protocol declara todos os parâmetros que o motor usa
+    (``still_ok``), e cada backend aceita a mesma assinatura."""
+    import inspect
+    from macropad.core.engine import PlatformAPI
+    from macropad.platform.dummy import DummyPlatform
+    from tests.conftest import FakePlatform
+    proto = inspect.signature(PlatformAPI.send_text)
+    assert "still_ok" in proto.parameters
+    assert proto.parameters["still_ok"].default is None
+    backends = [DummyPlatform, FakePlatform]
+    try:
+        from macropad.platform.windows import WindowsPlatform
+        backends.append(WindowsPlatform)
+    except Exception:            # noqa: BLE001 - só existe no Windows
+        pass
+    for cls in backends:
+        sig = inspect.signature(cls.send_text)
+        assert list(sig.parameters) == list(proto.parameters), cls
+        assert sig.parameters["still_ok"].default is None, cls

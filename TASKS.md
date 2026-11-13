@@ -66,6 +66,11 @@ parte da Fase 3.
   «Não voltar a perguntar». Detalhe em `docs/revisao-codex.md`. `pytest`: 167
   passam, 1 ignorado.
 
+## Correção da sexta revisão do Codex (concluída a 13-11-2026)
+
+- [x] `PlatformAPI.send_text` declara `still_ok`; teste compara a assinatura
+  de todos os backends. `pytest`: 168 passam, 1 ignorado.
+
 ## Fase atual: Fase 3 — Validação manual no Windows e distribuição (em pausa)
 
 

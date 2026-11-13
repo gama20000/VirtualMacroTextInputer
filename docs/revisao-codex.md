@@ -129,3 +129,15 @@ O Codex confirmou as correções da quarta revisão e reportou três problemas.
 | P2 — Falhas de escrita não tratadas | migração (o arranque continua com a tecla antiga e avisa), transparência do painel (aviso no ícone), «Não voltar a perguntar» (elimina, avisa e não marca a preferência como gravada) | `test_migracao_com_falha_de_escrita_nao_interrompe`, `test_falhas_ao_gravar_opacidade_e_nao_perguntar` |
 
 Validação: `pytest` com 167 testes a passar e 1 ignorado (só Windows).
+
+---
+
+# Sexta revisão do Codex (13-11-2026)
+
+O Codex confirmou as correções da quinta revisão e reportou um ponto.
+
+| Ponto | Correção | Teste |
+|---|---|---|
+| P2 — `PlatformAPI` sem o parâmetro `still_ok` | o `Protocol` declara `still_ok: Optional[Callable[[], bool]] = None`, com a descrição do contrato | `test_backends_seguem_o_contrato_da_plataforma` (compara a assinatura do `Protocol` com a de cada backend: simulado, de testes e, no Windows, o real) |
+
+Validação: `pytest` com 168 testes a passar e 1 ignorado (só Windows).
