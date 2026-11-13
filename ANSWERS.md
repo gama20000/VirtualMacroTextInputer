@@ -254,8 +254,8 @@ conversa de 11-11-2026 e nos commits `6da0f2f`, `5d330ce` e `936fe38`.
 
 - **Resolvido:** 2026-11-13
 - **Resposta:** O utilizador instalou o Forgejo no seu próprio servidor e criou
-  o repositório privado `Macropad`. É acessível pela rede Tailscale em
-  `http://(endereço privado):3333/Macropad.git` (HTTP). O histórico foi
+  o repositório privado `VirtualMacroTextInputer`. É acessível pela rede Tailscale em
+  `http://(endereço privado):3333/VirtualMacroTextInputer.git` (HTTP). O histórico foi
   enviado pelo utilizador a partir do PC.
 - **Justificação:** O utilizador tratou da instalação; o agente não administra
   o servidor.
@@ -267,6 +267,9 @@ conversa de 11-11-2026 e nos commits `6da0f2f`, `5d330ce` e `936fe38`.
   servidor a partir do seu ambiente (rede privada), por isso os envios são
   feitos pelo utilizador com `git push`. O acesso é só pela rede Tailscale, que
   já cifra o tráfego; HTTPS no próprio Forgejo fica por decidir (`Q-025`).
+- **Atualização (2026-11-13):** a pedido do utilizador, o repositório passou a
+  chamar-se «Virtual Macro Text Inputer» (`VirtualMacroTextInputer`);
+  o anterior era `Macropad`. O programa continua a chamar-se Macropad.
 - **Rever quando:** O servidor ou o endereço mudar, ou for preciso acesso fora
   do Tailscale.
 

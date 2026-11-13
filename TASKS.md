@@ -73,7 +73,7 @@ parte da Fase 3.
 
 ## Fase 4 — Forgejo (parte concluída a 13-11-2026)
 
-- [x] Repositório privado `Macropad` no Forgejo do utilizador
+- [x] Repositório privado `VirtualMacroTextInputer` no Forgejo do utilizador
   (`Q-012`), histórico enviado pelo utilizador; `origin` configurado e `main`
   a seguir `origin/main`.
   - Validação: envio feito pelo utilizador com sucesso. O agente não chega ao

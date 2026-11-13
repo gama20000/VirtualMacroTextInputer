@@ -63,7 +63,7 @@ falta o GitHub (Fase 4).
 - [x] [Funcionamento do contador](ANSWERS.md#q-021-funcionamento-do-contador) (`Q-021`): painel e tecla, só mostra; manter premido repõe.
 - [x] [Atribuição de tecla por cima do botão e atalhos existentes](ANSWERS.md#q-022-atribuição-de-tecla-por-cima-do-botão-e-atalhos-existentes) (`Q-022`): Delete, Backspace, Tab, Ctrl+C e Ctrl+V mantêm-se.
 - [x] [Barra de título do painel](ANSWERS.md#q-023-barra-de-título-do-painel) (`Q-023`): o painel desenha a sua própria barra.
-- [x] [Servidor para o Forgejo](ANSWERS.md#q-012-servidor-para-o-forgejo) (`Q-012`): instalado pelo utilizador; `Macropad` pelo Tailscale. Torna `Q-014`, `Q-015` e `Q-016` desnecessárias.
+- [x] [Servidor para o Forgejo](ANSWERS.md#q-012-servidor-para-o-forgejo) (`Q-012`): instalado pelo utilizador; `VirtualMacroTextInputer` pelo Tailscale. Torna `Q-014`, `Q-015` e `Q-016` desnecessárias.
 - [x] [Tratamento dos resultados da revisão](ANSWERS.md#q-017-tratamento-dos-resultados-da-revisão) (`Q-017`): P1 e P2 confirmados e corrigidos.
 
 ## Fase 1: Revisão independente e correções — concluída (12-11-2026)
@@ -195,7 +195,7 @@ no Forgejo e no GitHub com um único `git push`.
 ### Dependências e riscos
 
 - Forgejo feito pelo utilizador a 13-11-2026 (`Q-012`): repositório privado
-  `Macropad`, acessível pelo Tailscale em HTTP; o `origin` aponta
+  `VirtualMacroTextInputer`, acessível pelo Tailscale em HTTP; o `origin` aponta
   para lá e `main` segue `origin/main`.
 - Falta o GitHub: bloqueado por `Q-010` e `Q-011`. Depois, acrescentar o
   GitHub como segundo endereço de envio do `origin`.
