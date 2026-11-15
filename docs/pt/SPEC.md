@@ -151,8 +151,8 @@ no ecrã, sem hardware adicional.
   texto, tecla); arquivar por botão ou arrastando para essa área; arquivadas
   ficam fora das teclas e do painel; restaurar com tecla ocupada pede
   confirmação e troca as duas (cancelar não altera nada).
-- Temas Diurno (predefinição, barra de título preta), Noturno e Automático
-  (segue o Windows), aplicados a todas as janelas.
+- Temas Diurno (barra de título preta), Noturno e Automático (segue o
+  Windows; predefinição), aplicados a todas as janelas.
 - Idiomas Português e Inglês para toda a interface, mensagens, menus e
   confirmações; títulos e conteúdos das macros nunca são traduzidos.
 

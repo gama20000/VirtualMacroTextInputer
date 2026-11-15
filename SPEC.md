@@ -150,8 +150,8 @@ has and an on-screen panel, with no extra hardware.
   text, key); archive with a button or by dragging into that area; archived
   macros are out of the keys and the panel; restoring with the key in use asks
   for confirmation and swaps the two (cancel changes nothing).
-- Day (default, black title bar), Night and Automatic (follows Windows) themes,
-  applied to every window.
+- Day (black title bar), Night and Automatic (follows Windows; the default)
+  themes, applied to every window.
 - Portuguese and English for the whole interface, messages, menus and
   confirmations; macro titles and contents are never translated.
 

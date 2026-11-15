@@ -120,9 +120,9 @@ With the focus in a text field, these shortcuts copy, paste, delete and undo tex
 - If the wheel does not react while the panel is not focused, turn on the Windows setting «Scroll inactive windows when hovering over them».
 
 **Theme.** Three options:
-- **Day** (default): light interface with a black title bar.
+- **Day**: light interface with a black title bar.
 - **Night**: dark interface and title bar.
-- **Automatic**: follows the Windows setting (Settings ▸ Personalisation ▸ Colours ▸ app mode).
+- **Automatic** (default): follows the Windows setting (Settings ▸ Personalisation ▸ Colours ▸ app mode).
 
 The choice applies to every window, including the panel and dialogs. The title bar colour can only be set on Windows 11. On Windows 10 the bar is black, or dark with the system dark mode.
 
@@ -176,7 +176,7 @@ A commented example is in [examples/conjunto-exemplo.toml](examples/conjunto-exe
 
 ```toml
 [geral]
-tema = "diurno"              # "diurno" (day) | "noturno" (night) | "automatico"
+tema = "automatico"          # "automatico" (default) | "diurno" (day) | "noturno" (night)
 idioma = "pt"                # "pt" | "en" | another file in locales/
 confirmar_eliminacao = true
 tecla_suspensao = "Shift+Escape"
@@ -242,7 +242,7 @@ The `mostrar_icone` field from earlier versions is accepted and ignored.
 - When saving from the interface, the file is rewritten in the standard format, with the help comments. Hand-written comments are lost.
 - Unknown fields are errors, so that a typo such as `repeticao` is not silently ignored.
 
-**Import/export.** Use the ⋯ menu in the settings. Export saves the set to a `.toml` of your choice. Import validates the file before copying it to `conjuntos\` and creates unique names on collisions. You can also copy files straight into the `conjuntos\` folder; they are picked up automatically.
+**Import/export.** Use the ⋯ menu in the settings. Export saves the set to a `.toml` of your choice; the suggested file name and the name inside the file are the set's current name (after any rename), and an existing file is only replaced after you confirm. Import validates the file before copying it to `conjuntos\` and creates unique names on collisions. You can also copy files straight into the `conjuntos\` folder; they are picked up automatically.
 
 **Key names.** `0`–`9`, `A`–`Z`, `F1`–`F24`, `Numpad0`–`Numpad9`, `NumpadAdd`, `NumpadSubtract`, `NumpadMultiply`, `NumpadDivide`, `NumpadDecimal`, `Space`, `Tab`, `Enter`, `Backspace`, `Escape`, `Insert`, `Delete`, `Home`, `End`, `PageUp`, `PageDown`, `Up`, `Down`, `Left`, `Right`, `Pause`, `ScrollLock`, `CapsLock`, `NumLock`, `PrintScreen`, `Apps`, the punctuation keys `OEM1`…`OEM8`, `OEM102`, `OEMPlus`, `OEMComma`, `OEMMinus`, `OEMPeriod` (the character depends on the layout; it is easier to record them in the **Key** field) and the media keys. Modifiers are `Ctrl`, `Alt`, `Shift` and `Win`, for example `Ctrl+Alt+F1`.
 

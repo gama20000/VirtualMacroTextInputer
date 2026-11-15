@@ -172,7 +172,7 @@ class Settings:
     modificadores: str = "exatos"
     tecla_suspensao: str = "Shift+Escape"
     tecla_painel: str = "Shift+F12"     # "" = sem tecla
-    tema: str = "diurno"
+    tema: str = "automatico"         # segue o Windows (claro/escuro)
     idioma: str = "pt"
     confirmar_eliminacao: bool = True
     avisar_conflito_tecla: bool = True

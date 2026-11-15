@@ -287,7 +287,7 @@ opacidade = 0.92
 colunas = 4
 """
     s = parse_settings(old)
-    assert s.tema == "diurno" and s.idioma == "pt" and s.confirmar_eliminacao
+    assert s.tema == "automatico" and s.idioma == "pt" and s.confirmar_eliminacao
     assert s.painel.tamanho_botao == 78 and s.painel.cor_fundo == ""
 
 

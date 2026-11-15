@@ -1022,3 +1022,48 @@ def test_ctrl_z_nos_campos_de_texto_e_nao_na_grelha(app, qapp):
     from macropad.ui.config_window import _is_undo_redo
     assert _is_undo_redo(_ctrl(Qt.Key_Z)) == "undo"
     assert _is_undo_redo(_ctrl(Qt.Key_Y)) == "redo"
+
+
+def test_exportar_conjunto_usa_o_nome_atual_e_confirma_substituir(app, qapp, tmp_path,
+                                                                    monkeypatch):
+    """O nome sugerido e o nome dentro do ficheiro são o nome atual do conjunto
+    (depois de lhe mudar o nome); um ficheiro existente só é substituído com
+    confirmação."""
+    import tomllib
+    from pathlib import Path
+    import macropad.ui.config_window as cw
+    w = app.config_window
+    out = tmp_path / "exportados"
+    out.mkdir()
+    w.ms.nome = "Trabalho: cliente A"            # mudado sem gravar ainda
+    w._changed()
+    suggested = []
+
+    def fake_save(parent, title, start, filt, options=None):
+        suggested.append(Path(start).name)
+        return str(out / "escolhido"), filt          # sem extensão: acrescenta .toml
+    monkeypatch.setattr(cw.QFileDialog, "getSaveFileName", staticmethod(fake_save))
+    w._export_set()
+    assert suggested == ["Trabalho- cliente A.toml"]
+    f = out / "escolhido.toml"
+    data = tomllib.loads(f.read_text(encoding="utf-8"))
+    assert data["nome"] == "Trabalho: cliente A"
+    before = f.read_bytes()
+    w.ms.nome = "Outro nome"
+    w._changed()
+    app.answers.append((False, False))              # não substituir
+    w._export_set()
+    assert f.read_bytes() == before
+    assert Path(suggested[-1]).name == "Outro nome.toml"
+    app.answers.append((True, False))               # substituir
+    w._export_set()
+    assert tomllib.loads(f.read_text(encoding="utf-8"))["nome"] == "Outro nome"
+    assert w._export_dir == out
+
+
+def test_nome_de_ficheiro_para_exportar():
+    from macropad.core.store import export_filename
+    assert export_filename("Olá mundo") == "Olá mundo.toml"
+    assert export_filename("a/b:c?") == "a-b-c-.toml"
+    assert export_filename("CON") == "CON_.toml"
+    assert export_filename(" nome. ") == "nome.toml"

@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (QAbstractSpinBox, QApplication, QButtonGroup, QCh
 
 from ..branding import APP_NAME
 from ..core import macro_ops as ops
+from ..core.store import export_filename
 from ..core.commands import CommandError, describe_steps, parse_action
 from ..core.configio import (ConfigError, Issue, macro_label, macros_from_clipboard,
                              macros_to_clipboard, validate_macros)
@@ -112,6 +113,7 @@ class ConfigWindow(QWidget):
         # cada entrada: [(posição, cópia da macro), ...]
         self._undo_del: dict[str, list] = {}
         self._redo_del: dict[str, list] = {}
+        self._export_dir: Optional[Path] = None  # última pasta usada ao exportar
         self.selected: list[int] = []            # índices reais selecionados
         self._loading = False
         self._last_add = 0.0
@@ -1865,18 +1867,35 @@ class ConfigWindow(QWidget):
         self.reload_from_store(tr("status.imported", name=ms.nome))
 
     def _export_set(self) -> None:
+        """Exporta o conjunto com o nome atual (também o nome sugerido para o
+        ficheiro). Não substitui um ficheiro existente sem confirmação."""
         if not self.ms:
             return
         self.flush()
-        path, _ = QFileDialog.getSaveFileName(self, tr("sets.export_title"),
-                                              str(Path.home() / f"{self.ms.id}.toml"),
-                                              tr("sets.toml_filter"))
-        if path:
-            try:
-                self.app.store.export_set(self.ms.id, Path(path))
-                self.show_status(tr("status.exported", path=path))
-            except OSError as e:
-                info(self, tr("sets.export_title"), str(e), warning=True)
+        folder = self._export_dir or Path.home()
+        path, _ = QFileDialog.getSaveFileName(
+            self, tr("sets.export_title"), str(folder / export_filename(self.ms.nome)),
+            tr("sets.toml_filter"),
+            # a confirmação é feita abaixo, depois de acrescentar .toml ao nome
+            options=QFileDialog.DontConfirmOverwrite)
+        if not path:
+            return
+        dest = Path(path)
+        if dest.suffix.lower() != ".toml":
+            dest = dest.with_name(dest.name + ".toml")
+        if dest.exists():
+            ok, _ = ask(self, tr("sets.export_title"),
+                        tr("sets.export_overwrite", file=dest.name),
+                        yes=tr("sets.export_replace"), danger=True)
+            if not ok:
+                return
+        try:
+            self.app.store.export_set(self.ms.id, dest, self.ms.clone())
+        except OSError as e:
+            info(self, tr("sets.export_title"), str(e), warning=True)
+            return
+        self._export_dir = dest.parent
+        self.show_status(tr("status.exported", path=str(dest)))
 
     def _open_folder(self) -> None:
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(self.app.store.root)))

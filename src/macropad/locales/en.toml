@@ -334,6 +334,8 @@ need_one = "There must be at least one set."
 import_title = "Import set"
 import_invalid = "The file is not valid:"
 export_title = "Export set"
+export_overwrite = "A file «{file}» already exists in this folder. Replace it?"
+export_replace = "Replace"
 toml_filter = "Virtual Macro Text Inputer sets (*.toml)"
 
 [status]

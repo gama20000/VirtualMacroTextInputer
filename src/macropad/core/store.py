@@ -71,6 +71,24 @@ def slugify(name: str) -> str:
     return s or "conjunto"
 
 
+_WIN_RESERVED = {"CON", "PRN", "AUX", "NUL", *(f"COM{i}" for i in range(1, 10)),
+                 *(f"LPT{i}" for i in range(1, 10))}
+
+
+def export_filename(name: str) -> str:
+    """Nome de ficheiro (``.toml``) para exportar um conjunto chamado ``name``.
+
+    Mantém o nome tal como o utilizador o vê (acentos e espaços incluídos);
+    só troca os caracteres que o Windows não aceita, retira pontos e espaços
+    no fim e evita os nomes reservados (CON, NUL, COM1...)."""
+    s = unicodedata.normalize("NFC", name)
+    s = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "-", s)
+    s = re.sub(r"\s+", " ", s).strip().rstrip(". ")
+    if s.split(".")[0].upper() in _WIN_RESERVED:
+        s = f"{s}_"
+    return f"{s or slugify(name)}.toml"
+
+
 def default_set() -> MacroSet:
     return MacroSet(
         id="predefinido",
@@ -335,9 +353,11 @@ class ConfigStore:
             self.sets[ms.id] = ms
             return ms.clone()
 
-    def export_set(self, set_id: str, dest: Path) -> None:
+    def export_set(self, set_id: str, dest: Path, ms: Optional[MacroSet] = None) -> None:
+        """Escreve o conjunto em ``dest``. ``ms`` é a versão a exportar (a que
+        está aberta na janela, com o nome atual); sem ela, a guardada."""
         with self._lock:
-            atomic_write(Path(dest), dump_set(self.sets[set_id]))
+            atomic_write(Path(dest), dump_set(ms if ms is not None else self.sets[set_id]))
 
     # ---------------------------------------------------------------- estado
     def load_state(self) -> State:

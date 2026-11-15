@@ -120,9 +120,9 @@ Com o foco num campo de texto, estes atalhos copiam, colam, apagam e desfazem te
 - Se a roda não reagir enquanto o painel não está em foco, ative a definição do Windows «Deslocar janelas inativas ao pairar sobre elas».
 
 **Tema.** Há três opções:
-- **Diurno** (por omissão): interface clara com a barra de título preta.
+- **Diurno**: interface clara com a barra de título preta.
 - **Noturno**: interface e barra de título escuras.
-- **Automático**: acompanha a definição do Windows (Definições ▸ Personalização ▸ Cores ▸ modo das aplicações).
+- **Automático** (por omissão): acompanha a definição do Windows (Definições ▸ Personalização ▸ Cores ▸ modo das aplicações).
 
 A escolha aplica-se a todas as janelas, incluindo o painel e as caixas de diálogo. A cor da barra de título só pode ser definida no Windows 11. No Windows 10, a barra fica preta ou escura com o modo escuro do sistema.
 
@@ -176,7 +176,7 @@ O exemplo comentado está em [examples/conjunto-exemplo.toml](../../examples/con
 
 ```toml
 [geral]
-tema = "diurno"              # "diurno" | "noturno" | "automatico"
+tema = "automatico"          # "automatico" (por omissão) | "diurno" | "noturno"
 idioma = "pt"                # "pt" | "en" | outro ficheiro em locales/
 confirmar_eliminacao = true
 tecla_suspensao = "Shift+Escape"
@@ -242,7 +242,7 @@ O campo `mostrar_icone` das versões anteriores é aceite e ignorado.
 - Ao gravar a partir da interface, o ficheiro é reescrito no formato padrão, com os comentários de ajuda. Os comentários escritos à mão perdem-se.
 - Campos desconhecidos são erros, para que um erro de escrita como `repeticao` não seja ignorado sem aviso.
 
-**Importar/exportar.** Use o menu ⋯ da configuração. Exportar grava o conjunto num `.toml` à sua escolha. Importar valida o ficheiro antes de o copiar para `conjuntos\` e cria nomes únicos se houver colisões. Também pode copiar ficheiros diretamente para a pasta `conjuntos\`, que são detetados automaticamente.
+**Importar/exportar.** Use o menu ⋯ da configuração. Exportar grava o conjunto num `.toml` à sua escolha; o nome sugerido para o ficheiro e o nome dentro do ficheiro são o nome atual do conjunto (depois de qualquer mudança de nome), e um ficheiro existente só é substituído depois de confirmar. Importar valida o ficheiro antes de o copiar para `conjuntos\` e cria nomes únicos se houver colisões. Também pode copiar ficheiros diretamente para a pasta `conjuntos\`, que são detetados automaticamente.
 
 **Nomes de teclas.** `0`–`9`, `A`–`Z`, `F1`–`F24`, `Numpad0`–`Numpad9`, `NumpadAdd`, `NumpadSubtract`, `NumpadMultiply`, `NumpadDivide`, `NumpadDecimal`, `Space`, `Tab`, `Enter`, `Backspace`, `Escape`, `Insert`, `Delete`, `Home`, `End`, `PageUp`, `PageDown`, `Up`, `Down`, `Left`, `Right`, `Pause`, `ScrollLock`, `CapsLock`, `NumLock`, `PrintScreen`, `Apps`, as teclas de pontuação `OEM1`…`OEM8`, `OEM102`, `OEMPlus`, `OEMComma`, `OEMMinus`, `OEMPeriod` (o carácter depende do layout; é mais fácil gravá-las no campo **Tecla**) e as teclas multimédia. Os modificadores são `Ctrl`, `Alt`, `Shift` e `Win`, por exemplo `Ctrl+Alt+F1`.
 

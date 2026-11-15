@@ -335,6 +335,8 @@ need_one = "Tem de existir pelo menos um conjunto."
 import_title = "Importar conjunto"
 import_invalid = "O ficheiro não é válido:"
 export_title = "Exportar conjunto"
+export_overwrite = "Já existe um ficheiro «{file}» nesta pasta. Substituí-lo?"
+export_replace = "Substituir"
 toml_filter = "Conjuntos Virtual Macro Text Inputer (*.toml)"
 
 [status]
