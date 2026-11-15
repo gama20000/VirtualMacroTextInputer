@@ -1,17 +1,19 @@
 # Verificação manual no Windows
 
-Estes pontos não podem ser testados automaticamente: dependem do hook de teclado real, do foco das janelas e da área de notificação. Faça a verificação com `.\run-dev.ps1` (a consola mostra erros) e repita com `dist\Macropad\Macropad.exe`.
+*English version: [MANUAL-CHECKLIST.md](../MANUAL-CHECKLIST.md). Os resultados registam-se aqui.*
+
+Estes pontos não podem ser testados automaticamente: dependem do hook de teclado real, do foco das janelas e da área de notificação. Faça a verificação com `.\run-dev.ps1` (a consola mostra erros) e repita com `dist\VirtualMacroTextInputer\VirtualMacroTextInputer.exe`.
 
 Legenda da coluna OK: ✅ verificado · ◐ parcial · ❌ falhou · ☐ por verificar ·
 👤 tem de ser feito pelo utilizador. Verificação de 12-11-2026 feita pelo agente
 (controlo do ecrã) com `tools\macropad-teste.cmd`, que usa uma configuração
 separada em `%TEMP%\MacropadTeste`.
 
-Como começar (versão 0.4):
+Como começar:
 
-1. Feche a instância de teste que ficou aberta (ícone junto ao relógio ▸ Sair):
-   ainda é a versão 0.3.
-2. Faça duplo clique em `tools\macropad-teste.cmd`. Abre o Macropad com a
+1. Feche qualquer instância aberta (ícone junto ao relógio ▸ Sair), incluindo
+   o «Macropad» antigo.
+2. Faça duplo clique em `tools\macropad-teste.cmd`. Abre o programa com a
    configuração de teste, sem mexer nas suas macros reais.
 3. Os passos marcados ✅ foram verificados na versão 0.3; pode repeti-los na
    0.4, se quiser. Os passos 36 e 58 (barra de título do painel) devem ser
@@ -94,17 +96,17 @@ Preparação: abra o Bloco de Notas e use o conjunto **Predefinido**, em que 1 �
 | # | Ação | Esperado | OK |
 |---|---|---|---|
 | 32 | Abra o Bloco de Notas "como administrador" e prima `1` | escreve `1` (o Windows impede a interceção) | ☐ 👤 UAC |
-| 33 | Execute o Macropad como administrador e repita | `3E03305` | ☐ 👤 UAC |
+| 33 | Execute o programa como administrador e repita | `3E03305` | ☐ 👤 UAC |
 
 ## Versão 0.2 — interface
 
 | # | Ação | Esperado | OK |
 |---|---|---|---|
 | 34 | Ícone junto ao relógio com macros ativas / suspensas | contorno ciano / cinzento com ponto vermelho | ✅ |
-| 35 | Ícone das janelas, da barra de tarefas e do `Macropad.exe` | logótipo (tecla «1» → cursor) | ☐ |
-| 36 | Preferências ▸ Tema ▸ Diurno | interface clara; barra de título preta com texto e botões legíveis (configuração, painel e caixas de diálogo) | ◐ janela de configuração preta; **painel não** (ver ROADMAP) |
+| 35 | Ícone das janelas, da barra de tarefas e do `.exe` | logótipo (tecla «1» → cursor) | ☐ |
+| 36 | Preferências ▸ Tema ▸ Diurno | interface clara; barra de título preta com texto e botões legíveis (configuração, painel e caixas de diálogo) | ◐ janela de configuração preta; **painel não** (corrigido na 0.4, repetir) |
 | 37 | Tema ▸ Noturno | interface e barra de título escuras | ☐ |
-| 38 | Tema ▸ Automático; mude o modo das aplicações no Windows (claro/escuro) | o Macropad acompanha em poucos segundos | ☐ |
+| 38 | Tema ▸ Automático; mude o modo das aplicações no Windows (claro/escuro) | o programa acompanha em poucos segundos | ☐ |
 | 39 | Separadores | Macros · Painel · Âmbito · Preferências | ✅ |
 | 40 | Botões **Ativo**/**Suspenso**: clique e use Tab + Espaço | mudam o estado; foco visível; cores distintas | ◐ clique OK; teclado (Tab + Espaço) por testar |
 | 41 | Preferências do painel: mude colunas, tamanho, cores, estilos | a pré-visualização muda logo; o painel real (se aberto) também | ☐ |
@@ -129,7 +131,7 @@ Preparação: abra o Bloco de Notas e use o conjunto **Predefinido**, em que 1 �
 | 55 | Ctrl+clique em 3 macros, depois Shift+clique noutra | seleção individual / intervalo; editor indica «n macros selecionadas» | ☐ |
 | 56 | Com várias selecionadas: arrastar para «Arquivo» | todas arquivadas | ☐ |
 | 57 | Com várias selecionadas: Delete | confirmação com a quantidade; Cancelar não apaga | ☐ |
-| 58 | Separador «Painel» com a janela maximizada | pré-visualização centrada e igual ao painel real | ◐ centrada OK; barra de título do painel real difere |
+| 58 | Separador «Painel» com a janela maximizada | pré-visualização centrada e igual ao painel real | ◐ centrada OK; barra de título do painel real diferia (corrigido na 0.4, repetir) |
 | 59 | Botões Ativo/Suspenso no painel (com o cursor no Bloco de Notas) | mudam o estado; o Bloco de Notas mantém o foco; configuração e ícone acompanham | ✅ |
 | 60 | Roda do rato sobre o painel | para cima mais opaco, para baixo mais transparente; mostra «Opacidade n %»; outras janelas inalteradas | ✅ |
 | 61 | Caixas de verificação e setas dos campos numéricos (pasta com acentos/espaços) | visíveis e com o estado correto | ✅ |
@@ -166,8 +168,8 @@ Antes de começar: na configuração de teste, a tecla de suspensão anterior
 | 81 | Feche e reabra o programa | a contagem e a configuração do contador mantêm-se | ☐ |
 | 82 | Separador Painel: posição do título/tecla em todas as combinações | pré-visualização e painel real iguais; título e tecla nunca se sobrepõem | ☐ |
 | 83 | Preferências: marque «Não pedir confirmação…» e elimine uma macro | elimina sem perguntar; desmarcar volta a perguntar (sem reiniciar) | ☐ |
-| 84 | Preferências: desmarque e marque «Arrancar automaticamente com o Windows»; veja Gestor de Tarefas ▸ Aplicações de arranque | aplicado logo; Macropad aparece «Ativado»; desativado no Gestor de Tarefas e voltado a marcar → volta a «Ativado» | 👤 |
-| 85 | Reinicie sessão do Windows com o arranque ativo | o Macropad arranca sozinho com a mesma pasta de configuração | 👤 |
+| 84 | Preferências: desmarque e marque «Arrancar automaticamente com o Windows»; veja Gestor de Tarefas ▸ Aplicações de arranque | aplicado logo; o programa aparece «Ativado»; desativado no Gestor de Tarefas e voltado a marcar → volta a «Ativado» | 👤 |
+| 85 | Reinicie sessão do Windows com o arranque ativo | o programa arranca sozinho com a mesma pasta de configuração | 👤 |
 | 86 | Preferências ▸ Modo de texto «Colar»; copie «antigo» para a área de transferência; no Bloco de Notas prima a tecla de uma macro com `Olá{Enter}mundo` | escreve «Olá», muda de linha e escreve «mundo» (com acentos); a área de transferência fica com o texto da macro; nenhum erro | ☐ |
 
 ## Novo nome — Virtual Macro Text Inputer

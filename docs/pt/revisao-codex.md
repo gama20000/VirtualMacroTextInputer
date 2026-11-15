@@ -1,7 +1,9 @@
 # Revisão independente — Codex (12-11-2026)
 
+*English version: [CODEX-REVIEW.md](../CODEX-REVIEW.md).*
+
 Revisão feita pelo Codex em modo só de leitura, segundo as «Review guidelines»
-do `AGENTS.md`, sobre o commit `936fe38`. O Codex não alterou ficheiros nem
+do `AGENTS.md`, sobre o código da versão 0.3. O Codex não alterou ficheiros nem
 correu os testes.
 
 ## Relatório (resumo)
@@ -74,7 +76,7 @@ sim.
 | Contadores do painel fora do âmbito | **Confirmado** | `test_engine.py::test_contador_no_painel_respeita_o_ambito`, `test_ui_smoke.py::test_contador_do_painel_fora_do_ambito_desativado` | `Engine.counter_allowed` (suspensão + âmbito) em `counter_press`; os botões de contador do painel ficam desativados fora do âmbito |
 | Tecla de contador conta depois de suspender | **Confirmado** | `test_engine.py::test_contador_revalida_ao_largar_a_tecla` | ao largar, revalida suspensão e âmbito; guarda o `id` do contador em vez do índice |
 | Falha de `GlobalLock` não tratada (suspeita) | **Confirmado por leitura** (não reproduzível sem provocar a falha no Windows) | `platform/windows/__init__.py::_set_clipboard` | verifica o ponteiro; se for nulo liberta o bloco e dá erro; `GlobalUnlock` num `finally` |
-| Tecla do contador não conta (utilizador) | **Confirmado** | `test_ui_smoke.py::test_tecla_do_contador_com_a_configuracao_a_frente` | causa: com uma janela do Macropad à frente, o hook deixa passar todas as teclas (regra para não escrever nas próprias janelas). Os contadores não escrevem, por isso a janela de configuração conta-os ela própria quando o foco não está num campo de texto nem o rato sobre um botão |
+| Tecla do contador não conta (utilizador) | **Confirmado** | `test_ui_smoke.py::test_tecla_do_contador_com_a_configuracao_a_frente` | causa: com uma janela do programa à frente, o hook deixa passar todas as teclas (regra para não escrever nas próprias janelas). Os contadores não escrevem, por isso a janela de configuração conta-os ela própria quando o foco não está num campo de texto nem o rato sobre um botão |
 
 Validação: `pytest` com 142 testes a passar e 1 ignorado (só Windows).
 

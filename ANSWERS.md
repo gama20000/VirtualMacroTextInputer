@@ -1,314 +1,363 @@
-# Respostas
+# Answers
 
-Decisões já tomadas. Os pedidos originais do utilizador estão no histórico da
-conversa de 11-11-2026 e nos commits `6da0f2f`, `5d330ce` e `936fe38`.
+*Portuguese original: [docs/pt/ANSWERS.md](docs/pt/ANSWERS.md).*
 
-## Q-001: Stack tecnológica
+Decisions already made. The user's original requests are in the conversation
+of 11-11-2026 and in the first commits of the git history.
 
-- **Resolvido:** 2026-11-11
-- **Resposta:** Python 3.11+ com PySide6 (Qt 6), Win32 via `ctypes` e
-  distribuição com PyInstaller.
-- **Justificação:** Permite um núcleo em Python puro, testável sem Windows. O Qt
-  funciona também em Linux (versão futura). O `ctypes` dá acesso direto ao hook
-  `WH_KEYBOARD_LL`, a `SendInput` e a `WS_EX_NOACTIVATE`.
-- **Evidência:** Proposta apresentada antes da implementação e aceite pelo
-  utilizador ao continuar; `README.md`, secção Arquitetura.
-- **Consequências:** O callback do hook tem de ser mínimo por causa do GIL e do
-  LowLevelHooksTimeout. Não houve validação no Windows real durante o
-  desenvolvimento (ver **Validação manual no Windows**).
-- **Rever quando:** O hook em Python se mostrar pouco fiável no Windows real.
+## Q-001: Technology stack
 
-## Q-002: Valores predefinidos não fixados no pedido
+- **Resolved:** 2026-11-11
+- **Answer:** Python 3.11+ with PySide6 (Qt 6), Win32 through `ctypes`, and
+  distribution with PyInstaller.
+- **Rationale:** Allows a pure-Python core, testable without Windows. Qt also
+  works on Linux (future version). `ctypes` gives direct access to the
+  `WH_KEYBOARD_LL` hook, `SendInput` and `WS_EX_NOACTIVATE`.
+- **Evidence:** Proposal presented before implementation and accepted by the
+  user by continuing; `README.md`, Architecture section.
+- **Consequences:** The hook callback must be minimal because of the GIL and
+  LowLevelHooksTimeout. There was no validation on real Windows during
+  development (see **Manual validation method**).
+- **Revisit when:** The Python hook proves unreliable on real Windows.
 
-- **Resolvido:** 2026-11-11
-- **Resposta:**
-  - Tecla de suspensão `Ctrl+Alt+P`.
-  - Macros podem não ter tecla (ficam só no painel).
-  - Uma quebra de linha no texto equivale a `{Enter}` e uma tabulação a `{Tab}`.
-  - As teclas premidas nas janelas do próprio Macropad nunca disparam macros.
-  - A gravação pela interface reescreve o TOML no formato padrão; os
-    comentários escritos à mão perdem-se.
-- **Justificação:** São escolhas técnicas de rotina que o pedido delegava.
-- **Evidência:** Resumo da entrega 0.1 ao utilizador; `README.md`.
-- **Consequências:** Estão documentadas no README.
-- **Rever quando:** O utilizador pedir outro comportamento.
+## Q-002: Defaults not fixed in the request
 
-## Q-003: Comportamento de «Nova macro» e macros sem texto
+- **Resolved:** 2026-11-11
+- **Answer:**
+  - Suspend hotkey `Ctrl+Alt+P` (later changed, see `Q-020`).
+  - Macros may have no key (panel only).
+  - A line break in the text equals `{Enter}` and a tab equals `{Tab}`.
+  - Keys pressed in the program's own windows never trigger macros.
+  - Saving from the interface rewrites the TOML in the standard format;
+    hand-written comments are lost.
+- **Rationale:** Routine technical choices that the request delegated.
+- **Evidence:** Summary of the 0.1 delivery to the user; `README.md`.
+- **Consequences:** Documented in the README.
+- **Revisit when:** The user asks for different behaviour.
 
-- **Resolvido:** 2026-11-11
-- **Resposta:** «Nova macro» cria uma única macro, sem tecla e com texto vazio.
-  Uma macro com texto vazio não é um erro: não faz nada até ter texto.
-- **Justificação:** O utilizador pediu uma única macro, sem campos gerados a
-  partir do número de macros existentes (a versão 0.1 atribuía uma tecla
-  automaticamente). Permitir texto vazio deixa a nova macro gravar de imediato.
-- **Evidência:** Pedido da ronda 0.2, ponto 6; `core/macro_ops.py::new_macro`;
+## Q-003: «New macro» behaviour and macros without text
+
+- **Resolved:** 2026-11-11
+- **Answer:** «New macro» creates a single macro, with no key and empty text.
+  A macro with empty text is not an error: it does nothing until it has text.
+- **Rationale:** The user asked for a single macro, with no fields generated
+  from the number of existing macros (version 0.1 assigned a key
+  automatically). Allowing empty text lets the new macro save immediately.
+- **Evidence:** Request of round 0.2, point 6; `core/macro_ops.py::new_macro`;
   `tests/test_macro_ops.py`.
-- **Consequências:** As macros com texto vazio não entram na deteção de
-  duplicados.
-- **Rever quando:** Nunca.
+- **Consequences:** Macros with empty text are not included in duplicate
+  detection.
+- **Revisit when:** Never.
 
-## Q-004: Confirmação ao eliminar várias macros
+## Q-004: Confirmation when deleting several macros
 
-- **Resolvido:** 2026-11-11
-- **Resposta:** Eliminar várias macros pede sempre confirmação com a
-  quantidade, mesmo com «Não voltar a perguntar» ativo. Essa opção só se aplica
-  a eliminações individuais.
-- **Justificação:** É uma ação destrutiva em massa, e o pedido exige confirmação
-  com a quantidade.
-- **Evidência:** Pedido da ronda 0.3, ponto 3; `ui/config_window.py::_delete_macro`.
-- **Consequências:** Nenhuma.
-- **Rever quando:** O utilizador quiser que a opção se aplique a ambos os casos.
+- **Resolved:** 2026-11-11
+- **Answer:** Deleting several macros always asks for confirmation with the
+  count, even with «Don't ask again» on. That option only applies to single
+  deletions.
+- **Rationale:** It is a bulk destructive action, and the request requires a
+  confirmation with the count.
+- **Evidence:** Request of round 0.3, point 3; `ui/config_window.py::_delete_macro`.
+- **Consequences:** None.
+- **Revisit when:** The user wants the option to apply to both cases.
 
-## Q-005: Cópia colada com tecla em uso
+## Q-005: Pasted copy with a key already in use
 
-- **Resolvido:** 2026-11-11
-- **Resposta:** A cópia colada fica sem tecla quando a tecla original já está
-  atribuída a uma macro ativa.
-- **Justificação:** Evita criar um conflito de tecla que bloquearia a gravação.
-- **Evidência:** `core/macro_ops.py::insert_copy`; `tests/test_macro_ops.py`.
-- **Consequências:** Nenhuma.
-- **Rever quando:** Nunca.
+- **Resolved:** 2026-11-11
+- **Answer:** A pasted copy gets no key when the original key is already
+  assigned to an active macro.
+- **Rationale:** Avoids creating a key conflict that would block saving.
+- **Evidence:** `core/macro_ops.py::insert_copy`; `tests/test_macro_ops.py`.
+- **Consequences:** None.
+- **Revisit when:** Never.
 
-## Q-006: Organização dos remotos git
+## Q-006: Git remote layout
 
-- **Resolvido:** 2026-11-11
-- **Resposta:** O repositório local terá um único remoto `origin` com dois
-  endereços de envio (Forgejo e GitHub), em vez de o Forgejo espelhar
-  automaticamente para o GitHub.
-- **Justificação:** O utilizador perguntou qual das opções é mais resiliente.
-  Com dois endereços de envio não há ponto único de falha: se um servidor
-  falhar, o outro recebe na mesma e o git mostra o erro. Um espelho depende do
-  servidor Forgejo e pode deixar de funcionar sem ninguém dar por isso.
-- **Evidência:** Resposta do utilizador («Qual destas é mais resiliente?») e a
-  recomendação dada.
-- **Consequências:** Cada `git push` envia para os dois; é preciso ter
-  credenciais válidas em ambos.
-- **Rever quando:** Houver mais contribuidores ou CI a depender de um dos
-  remotos.
+- **Resolved:** 2026-11-11
+- **Answer:** The local repository has a single `origin` remote with two push
+  URLs (Forgejo and GitHub), instead of Forgejo mirroring automatically to
+  GitHub.
+- **Rationale:** The user asked which option is more resilient. With two push
+  URLs there is no single point of failure: if one server fails, the other
+  still receives and git shows the error. A mirror depends on the Forgejo
+  server and can stop working without anyone noticing.
+- **Evidence:** The user's answer («Which of these is more resilient?») and the
+  recommendation given.
+- **Consequences:** Each `git push` sends to both; valid credentials are needed
+  for both.
+- **Revisit when:** There are more contributors, or CI depends on one of the
+  remotes.
 
-## Q-007: Nome do repositório no GitHub
+## Q-007: GitHub repository name
 
-- **Resolvido:** 2026-11-11
-- **Resposta:** Nome proposto `virtual-visual-vext`, com «Virtual & Visual Vext»
-  na descrição.
-- **Justificação:** O utilizador indicou «Virtual & Visual Vext», mas o GitHub
-  não aceita espaços nem «&» em nomes de repositório.
-- **Evidência:** Resposta do utilizador; regras de nomes do GitHub.
-- **Consequências:** O nome do projeto (Macropad) e o nome do repositório são
-  diferentes. A visibilidade continua por decidir (ver ROADMAP).
-- **Rever quando:** O utilizador preferir outro nome.
+- **Resolved:** 2026-11-11 (updated 2026-11-15)
+- **Answer:** `VirtualMacroTextInputer`, the same name as the Forgejo
+  repository and the program. The first proposal, `virtual-visual-vext`
+  («Virtual & Visual Vext»), was replaced when the program was renamed
+  (`Q-026`).
+- **Rationale:** One name everywhere avoids confusion between the program, the
+  Forgejo repository and the GitHub repository.
+- **Evidence:** The user's answers of 11-11-2026 and 13-11-2026.
+- **Consequences:** GitHub redirects the old URL if the repository is renamed
+  later.
+- **Revisit when:** The user prefers another name.
 
-## Q-008: Local do Forgejo
+## Q-008: Where Forgejo runs
 
-- **Resolvido:** 2026-11-11
-- **Resposta:** O Forgejo será instalado num servidor, não no PC nem num
-  serviço público como o Codeberg.
-- **Justificação:** Escolha do utilizador.
-- **Evidência:** Resposta do utilizador («Instalar num servidor»).
-- **Consequências:** Faltam o servidor, a forma de acesso, o domínio e o modo de
-  instalação (ver ROADMAP).
-- **Rever quando:** Não houver servidor disponível.
+- **Resolved:** 2026-11-11
+- **Answer:** Forgejo is installed on a server, not on the PC nor on a public
+  service such as Codeberg.
+- **Rationale:** The user's choice.
+- **Evidence:** The user's answer («Install on a server»).
+- **Consequences:** See `Q-012`.
+- **Revisit when:** No server is available.
 
-## Q-009: Ferramenta de revisão independente
+## Q-009: Independent review tool
 
-- **Resolvido:** 2026-11-11
-- **Resposta:** A revisão é feita pelo Codex CLI em modo só de leitura, guiado
-  pelas «Review guidelines» do `AGENTS.md`. Os resultados são confirmados no
-  código antes de qualquer correção.
-- **Justificação:** É uma revisão por um agente que não escreveu o código. As
-  revisões automáticas trazem falsos positivos, daí a confirmação.
-- **Evidência:** `AGENTS.md` (commit `936fe38`). O Codex CLI ainda não estava
-  instalado no PC do utilizador (o comando `codex` não foi encontrado).
-- **Consequências:** A fase de revisão depende de o Codex estar instalado e com
-  sessão iniciada.
-- **Rever quando:** Não for possível instalar ou usar o Codex.
+- **Resolved:** 2026-11-11
+- **Answer:** The review is done by Codex CLI in read-only mode, guided by the
+  «Review guidelines» in `AGENTS.md`. Findings are confirmed in the code before
+  any fix.
+- **Rationale:** A review by an agent that did not write the code. Automatic
+  reviews bring false positives, hence the confirmation.
+- **Evidence:** `AGENTS.md`. Codex CLI was not yet installed on the user's PC
+  at the time (the `codex` command was not found).
+- **Consequences:** The review phase depends on Codex being installed and
+  signed in.
+- **Revisit when:** Codex cannot be installed or used.
 
-## Q-013: Instalação do Codex CLI
+## Q-010: GitHub repository visibility
 
-- **Resolvido:** 2026-11-12
-- **Resposta:** O utilizador correu a revisão com o Codex no seu PC.
-- **Justificação:** É o necessário para a revisão independente da Fase 1.
-- **Evidência:** Relatório colado pelo utilizador a 12-11-2026, guardado em
-  `docs/revisao-codex.md`.
-- **Consequências:** As próximas revisões (por exemplo `/review` sobre um
-  commit) podem usar a mesma instalação.
-- **Rever quando:** Nunca.
+- **Resolved:** 2026-11-15
+- **Answer:** Public.
+- **Rationale:** The user's choice.
+- **Evidence:** The user's answer of 15-11-2026.
+- **Consequences:** Personal data is removed from the published files and
+  history before the first push: the Forgejo address and username, local
+  paths with the Windows user name, and the personal e-mail in commits
+  (`Q-029`). A licence is still to be chosen (see ROADMAP, fog).
+- **Revisit when:** The code should no longer be public.
 
-## Q-017: Tratamento dos resultados da revisão
+## Q-011: Agent access to GitHub
 
-- **Resolvido:** 2026-11-12
-- **Resposta:** Os dois pontos (P1 e P2) foram confirmados com testes que
-  falhavam e depois corrigidos. Não há pontos aceites sem correção nem falsos
-  positivos.
-- **Justificação:** O P1 causava perda de dados (macros arquivadas apagadas do
-  TOML). O P2 tinha impacto baixo, mas a correção é defensiva e trivial.
-- **Evidência:** `docs/revisao-codex.md`; os testes de regressão lá indicados;
-  `pytest` com 110 testes a passar.
-- **Consequências:** A Fase 1 cumpre os critérios de saída. A seguir vem a
-  Fase 2 (validação manual no Windows).
-- **Rever quando:** Uma nova revisão ou a validação manual encontrar problemas
-  relacionados.
+- **Resolved:** 2026-11-15
+- **Answer:** The user connects their GitHub account to Claude, and the agent
+  creates the repository and pushes the history.
+- **Rationale:** The user's choice.
+- **Evidence:** The user's answer of 15-11-2026.
+- **Consequences:** Later pushes from the PC go through the `origin` remote
+  with both push URLs (`Q-006`) and need GitHub credentials on the PC (Git
+  Credential Manager asks once).
+- **Revisit when:** The GitHub connection is removed.
 
-## Q-018: Método da validação manual
+## Q-012: Forgejo server
 
-- **Resolvido:** 2026-11-12
-- **Resposta:** O agente executa a lista de verificação no PC por controlo do
-  ecrã. Usa o lançador `tools\macropad-teste.cmd`, que arranca a aplicação com
-  `python.exe` (com consola) e com uma configuração separada em
-  `%TEMP%\MacropadTeste`. O utilizador faz os passos que o agente não consegue
-  fazer (👤 em `docs/VERIFICACAO-MANUAL.md`).
-- **Justificação:** O utilizador pediu que o agente fizesse os passos. Uma
-  configuração separada protege as macros reais. O terminal só aceita cliques
-  do agente, por isso a aplicação arranca a partir de um `.cmd` aberto no
-  Explorador.
-- **Evidência:** Pedido do utilizador de 12-11-2026; resultados registados em
-  `docs/VERIFICACAO-MANUAL.md`.
-- **Consequências:**
-  - O agente não consegue usar o botão direito na barra de tarefas (menu do
-    ícone), premir a tecla 1 do teclado numérico, reiniciar a sessão nem
-    responder ao UAC: esses passos ficam para o utilizador.
-  - O mutex de instância única é partilhado: se uma instância já estiver a
-    correr (real ou de teste), o lançador limita-se a abrir a configuração
-    dela.
-  - As janelas do Macropad pertencem ao `pythonw`/`python` do Python 3.12
-    da Microsoft Store e só ficam visíveis ao agente depois de esse processo
-    ser autorizado.
-- **Rever quando:** For preciso testar o `.exe` gerado pelo PyInstaller
-  (processo diferente, exige nova autorização).
+- **Resolved:** 2026-11-13
+- **Answer:** The user installed Forgejo on their own server and created the
+  private repository `VirtualMacroTextInputer` there (first called
+  `Macropad`). It is only reachable through the user's Tailscale network, over
+  HTTP. The address is in the local git configuration, not in the repository.
+  The user pushed the history from the PC.
+- **Rationale:** The user handled the installation; the agent does not
+  administer the server.
+- **Evidence:** The user's messages of 13-11-2026 and the repository address.
+- **Consequences:** `Q-014`, `Q-015` and `Q-016` (access method, address and
+  installation method) are no longer project decisions. The agent cannot reach
+  the server from its environment (private network), so pushes to Forgejo are
+  done by the user with `git push`. Tailscale already encrypts the traffic;
+  HTTPS on Forgejo itself is still open (`Q-025`).
+- **Revisit when:** The server or address changes, or access outside
+  Tailscale is needed.
 
-## Q-019: Ícone dos botões e posição do título e da tecla
+## Q-013: Codex CLI installation
 
-- **Resolvido:** 2026-11-12
-- **Resposta:** Os botões deixam de ter o ícone «[T]», e a opção «Mostrar ícone»
-  desaparece. O título e a tecla podem ficar, cada um, em cima, ao centro ou em
-  baixo do botão.
-- **Justificação:** O pedido 0.4 remove os ícones «para já» (ponto 10) e pede
-  posições para o título e a tecla (ponto 7). Sem ícone, as posições passam a
-  ser relativas ao botão.
-- **Evidência:** Resposta do utilizador a 12-11-2026.
-- **Consequências:** A opção `mostrar_icone` dos ficheiros antigos continua a
-  ser aceite, mas é ignorada. Os estilos predefinidos deixam de a usar.
-- **Rever quando:** Voltarem a ser pedidos ícones nos botões.
+- **Resolved:** 2026-11-12
+- **Answer:** The user ran the review with Codex on their PC.
+- **Rationale:** What the independent review of Phase 1 needed.
+- **Evidence:** Report pasted by the user on 12-11-2026, stored in
+  `docs/CODEX-REVIEW.md`.
+- **Consequences:** Later reviews (for example `/review` on a commit) can use
+  the same installation.
+- **Revisit when:** Never.
 
-## Q-020: Teclas globais predefinidas
+## Q-017: Handling the review findings
 
-- **Resolvido:** 2026-11-12
-- **Resposta:** Suspender/reativar com **Shift+Escape**; mostrar/ocultar o
-  painel com **Shift+F12**. As configurações que ainda tenham o antigo
-  `Ctrl+Alt+P` são migradas para Shift+Escape uma única vez (registado em
-  `estado.toml`).
-- **Justificação:** O utilizador pediu Shift+Escape para as duas funções. Como
-  uma combinação só pode ter uma função, escolheu esta distribuição e pediu a
-  migração da configuração atual.
-- **Evidência:** Respostas do utilizador a 12-11-2026.
-- **Consequências:** As macros não podem usar nenhuma das duas teclas globais,
-  e as duas têm de ser diferentes entre si.
-- **Rever quando:** O utilizador mudar as teclas nas Preferências (fica a
-  escolha dele).
+- **Resolved:** 2026-11-12
+- **Answer:** Both points (P1 and P2) were confirmed with failing tests and
+  then fixed. There are no points accepted without a fix and no false
+  positives.
+- **Rationale:** The P1 caused data loss (archived macros deleted from the
+  TOML). The P2 had low impact, but the fix is defensive and trivial.
+- **Evidence:** `docs/CODEX-REVIEW.md`; the regression tests listed there;
+  `pytest` with 110 tests passing.
+- **Consequences:** Phase 1 meets its exit criteria.
+- **Revisit when:** A new review or the manual validation finds related
+  problems.
 
-## Q-021: Funcionamento do contador
+## Q-018: Manual validation method
 
-- **Resolvido:** 2026-11-12
-- **Resposta:** O contador funciona no painel e com uma tecla associada, e só
-  mostra o valor (não escreve texto). Um toque soma; manter premido repõe. O
-  âmbito e a suspensão aplicam-se à tecla como às macros. A contagem é gravada
-  em `estado.toml` e a configuração no ficheiro do conjunto.
-- **Justificação:** Resposta do utilizador. Gravar a contagem fora do TOML do
-  conjunto evita reescrever esse ficheiro, e recarregá-lo, a cada clique.
-- **Evidência:** Resposta do utilizador a 12-11-2026.
-- **Consequências:** Cada contador tem um `id` estável. A pressão longa decide-se
-  pela duração entre premir e largar e nunca soma.
-- **Rever quando:** For pedido que o contador escreva o valor.
+- **Resolved:** 2026-11-12
+- **Answer:** The agent runs the checklist on the PC through screen control. It
+  uses the `tools\macropad-teste.cmd` launcher, which starts the application
+  with `python.exe` (with a console) and a separate configuration in
+  `%TEMP%\MacropadTeste`. The user does the steps the agent cannot do (👤 in
+  `docs/MANUAL-CHECKLIST.md`). The user may also run the whole checklist.
+- **Rationale:** The user asked the agent to do the steps. A separate
+  configuration protects the real macros. The terminal only accepts clicks
+  from the agent, so the application starts from a `.cmd` opened in Explorer.
+- **Evidence:** The user's request of 12-11-2026; results recorded in
+  `docs/MANUAL-CHECKLIST.md`.
+- **Consequences:**
+  - The agent cannot right-click in the taskbar (icon menu), press keypad 1,
+    restart the session or answer UAC: those steps are left to the user.
+  - The single-instance mutex is shared: if an instance is already running
+    (real or test), the launcher only opens its settings.
+  - The program's windows belong to the Microsoft Store Python 3.12
+    `pythonw`/`python` and are only visible to the agent after that process is
+    authorised.
+- **Revisit when:** The `.exe` built by PyInstaller has to be tested (a
+  different process, which needs a new authorisation).
 
-## Q-022: Atribuição de tecla por cima do botão e atalhos existentes
+## Q-019: Button icon and title/key position
 
-- **Resolvido:** 2026-11-12
-- **Resposta:** Com o ponteiro sobre um botão, Delete, Backspace, Tab, Ctrl+C e
-  Ctrl+V mantêm as suas funções (eliminar, navegar, copiar, colar). As
-  restantes teclas e combinações são atribuídas. Enquanto o ponteiro está sobre
-  um botão, as teclas globais deixam de ser intercetadas, para que o conflito
-  possa ser explicado. A atribuição só acontece com o foco fora de campos de
-  edição.
-- **Justificação:** Evita apagar ou atribuir teclas por engano ao escrever num
-  campo com o rato parado sobre um botão, e mantém os atalhos já pedidos.
-- **Evidência:** Pontos 6 (versão 0.2) e 9 (versão 0.4) dos pedidos.
-- **Consequências:** Para atribuir Delete ou Backspace a uma macro usa-se o
-  campo «Tecla» do editor.
-- **Rever quando:** O utilizador quiser atribuir essas teclas por cima do botão.
+- **Resolved:** 2026-11-12
+- **Answer:** Buttons no longer have the «[T]» icon, and the «Show icon»
+  option is gone. The title and the key can each be at the top, centre or
+  bottom of the button.
+- **Rationale:** The 0.4 request removes icons «for now» (point 10) and asks
+  for title and key positions (point 7). Without an icon, positions are
+  relative to the button.
+- **Evidence:** The user's answer of 12-11-2026.
+- **Consequences:** The `mostrar_icone` option in old files is still accepted
+  but ignored. Preset styles no longer use it.
+- **Revisit when:** Icons on the buttons are requested again.
 
-## Q-023: Barra de título do painel
+## Q-020: Default global keys
 
-- **Resolvido:** 2026-11-12
-- **Resposta:** O painel passa a não ter moldura do Windows. Desenha a sua
-  própria barra de título (a mesma da pré-visualização), com as cores do tema,
-  arrasto para mover e botão de fechar.
-- **Justificação:** No Windows real, a barra de título nativa do painel (janela
-  de ferramenta sem foco) não seguia o tema, e o pedido exige que o painel seja
-  igual à pré-visualização. Uma barra própria é idêntica nas duas.
-- **Evidência:** Passos 36 e 58 de `docs/VERIFICACAO-MANUAL.md` (parciais).
-- **Consequências:** Mover o painel faz-se pela barra própria. A posição do
-  painel passa a ser gravada.
-- **Rever quando:** A barra própria der problemas de arrasto ou de foco.
+- **Resolved:** 2026-11-12
+- **Answer:** Suspend/resume with **Shift+Escape**; show/hide the panel with
+  **Shift+F12**. Configurations that still have the old `Ctrl+Alt+P` are
+  migrated to Shift+Escape once (recorded in `estado.toml`). If the migration
+  cannot be saved (conflict or write error), it is retried at the next start.
+- **Rationale:** The user asked for Shift+Escape for both functions. Since a
+  combination can only have one function, they chose this split and asked for
+  the current configuration to be migrated.
+- **Evidence:** The user's answers of 12-11-2026.
+- **Consequences:** Macros cannot use either global key, and the two must
+  differ.
+- **Revisit when:** The user changes the keys in Preferences (their choice).
 
-## Q-012: Servidor para o Forgejo
+## Q-021: How the counter works
 
-- **Resolvido:** 2026-11-13
-- **Resposta:** O utilizador instalou o Forgejo no seu próprio servidor e criou
-  o repositório privado `VirtualMacroTextInputer`. É acessível pela rede Tailscale em
-  `http://(endereço privado):3333/VirtualMacroTextInputer.git` (HTTP). O histórico foi
-  enviado pelo utilizador a partir do PC.
-- **Justificação:** O utilizador tratou da instalação; o agente não administra
-  o servidor.
-- **Evidência:** Mensagens do utilizador de 13-11-2026 («já criei o
-  repositório privado do Forgejo», «Já consegui») e o endereço do repositório.
-- **Consequências:** `Q-014`, `Q-015` e `Q-016` (forma de acesso, endereço e
-  modo de instalação) deixam de ser decisões do projeto. O `origin` local
-  aponta para este endereço e `main` segue `origin/main`. O agente não chega ao
-  servidor a partir do seu ambiente (rede privada), por isso os envios são
-  feitos pelo utilizador com `git push`. O acesso é só pela rede Tailscale, que
-  já cifra o tráfego; HTTPS no próprio Forgejo fica por decidir (`Q-025`).
-- **Atualização (2026-11-13):** a pedido do utilizador, o repositório passou a
-  chamar-se «Virtual Macro Text Inputer» (`VirtualMacroTextInputer`);
-  o anterior era `Macropad`. O programa continua a chamar-se Macropad.
-- **Rever quando:** O servidor ou o endereço mudar, ou for preciso acesso fora
-  do Tailscale.
+- **Resolved:** 2026-11-12
+- **Answer:** The counter works on the panel and with an assigned key, and only
+  shows the value (it types no text). A tap adds; holding resets. Scope and
+  suspend apply to the key as they do to macros. The count is saved in
+  `estado.toml` (per set and counter) and the configuration in the set file.
+- **Rationale:** The user's answer. Saving the count outside the set's TOML
+  avoids rewriting that file, and reloading it, on every click.
+- **Evidence:** The user's answer of 12-11-2026.
+- **Consequences:** Each counter has a stable `id`. A long press is decided by
+  the time between press and release and never adds. A counter key pressed
+  with the settings window in front is counted by that window.
+- **Revisit when:** The counter is asked to type its value.
 
-## Q-026: Novo nome do programa
+## Q-022: Assigning a key over a button and existing shortcuts
 
-- **Resolvido:** 2026-11-13
-- **Resposta:** O programa passa a chamar-se **Virtual Macro Text Inputer**
-  (janelas, ícone junto ao relógio, executável `VirtualMacroTextInputer.exe`,
-  pasta de dados `%APPDATA%\VirtualMacroTextInputer`, entrada de arranque
-  `VirtualMacroTextInputer`). O pacote Python e os ficheiros do código
-  continuam `macropad`.
-- **Justificação:** Pedido do utilizador, a seguir à mudança de nome do
-  repositório. Mudar também o pacote Python obrigaria a renomear todo o código
-  e os testes sem ganho visível.
-- **Evidência:** Mensagem do utilizador de 13-11-2026 («Quero o programa com o
-  novo nome (janelas, ícone junto ao relógio, `Macropad.exe`)»).
-- **Consequências:** No primeiro arranque, a pasta `%APPDATA%\Macropad` é
-  copiada para a nova (a antiga fica como cópia de segurança). A entrada de
-  arranque «Macropad» é apagada quando a nova é escrita. Se a versão antiga
-  estiver a correr, o programa novo avisa e não arranca (dois hooks
-  escreveriam as macros duas vezes). Nome visível centralizado em
-  `src/macropad/branding.py`. Passos manuais 87–89.
-- **Rever quando:** O nome mudar outra vez, ou se quiser renomear também o
-  pacote Python.
+- **Resolved:** 2026-11-12
+- **Answer:** With the pointer over a button, Delete, Backspace, Tab, Ctrl+C
+  and Ctrl+V keep their functions (delete, navigate, copy, paste). Other keys
+  and combinations are assigned. While the pointer is over a button (with the
+  settings window active), global keys are not intercepted, so that the
+  conflict can be explained. Assignment only happens with the focus outside
+  edit fields.
+- **Rationale:** Avoids deleting or assigning keys by mistake while typing in a
+  field with the mouse resting on a button, and keeps the shortcuts already
+  requested.
+- **Evidence:** Points 6 (version 0.2) and 9 (version 0.4) of the requests.
+- **Consequences:** To assign Delete or Backspace to a macro, use the «Key»
+  field in the editor.
+- **Revisit when:** The user wants to assign those keys over a button.
 
-## Q-027: Localização do repositório no PC
+## Q-023: Panel title bar
 
-- **Resolvido:** 2026-11-15
-- **Resposta:** O repositório passa a estar em
-  `%USERPROFILE%\source\VirtualMacroTextInputer`, fora do Google Drive. Foi
-  criado com `git clone` local a partir da pasta antiga (todo o histórico), com
-  o `origin` a apontar para o Forgejo e as mesmas definições de autor.
-- **Justificação:** O utilizador não quer o repositório dentro da pasta
-  sincronizada pelo Google Drive. `Documents` foi posto de parte porque mostra
-  sinais de também ser sincronizada (`.tmp.drivedownload`).
-- **Evidência:** Mensagens do utilizador de 15-11-2026 e a escolha «Pasta
-  source».
-- **Consequências:** O ambiente `.venv` não é copiado (não é portável):
-  recria-se com `run-dev.ps1`. A pasta antiga no Google Drive fica até o
-  utilizador decidir apagá-la.
-- **Rever quando:** O repositório mudar outra vez de sítio.
+- **Resolved:** 2026-11-12
+- **Answer:** The panel no longer has a Windows frame. It draws its own title
+  bar (the same as the preview), in the theme colours, with drag-to-move and a
+  close button.
+- **Rationale:** On real Windows, the panel's native title bar (a tool window
+  without focus) did not follow the theme, and the request requires the panel
+  to match the preview. A custom bar is identical in both.
+- **Evidence:** Steps 36 and 58 of `docs/MANUAL-CHECKLIST.md` (partial).
+- **Consequences:** The panel is moved with its own bar. Its position is now
+  saved.
+- **Revisit when:** The custom bar has drag or focus problems.
 
+## Q-026: New program name
+
+- **Resolved:** 2026-11-13
+- **Answer:** The program is now called **Virtual Macro Text Inputer** (windows,
+  icon next to the clock, `VirtualMacroTextInputer.exe`, data folder
+  `%APPDATA%\VirtualMacroTextInputer`, startup entry `VirtualMacroTextInputer`).
+  The Python package and source files are still `macropad`.
+- **Rationale:** The user's request, after renaming the repository. Renaming
+  the Python package too would mean renaming all the code and tests with no
+  visible benefit.
+- **Evidence:** The user's message of 13-11-2026.
+- **Consequences:** On the first start, `%APPDATA%\Macropad` is copied to the
+  new folder (the old one stays as a backup). The «Macropad» startup entry is
+  deleted when the new one is written. If the old version is running, the new
+  program warns and does not start (two hooks would type macros twice). The
+  visible name lives in `src/macropad/branding.py`. Manual steps 87–89.
+- **Revisit when:** The name changes again, or the Python package should be
+  renamed too.
+
+## Q-027: Repository location on the PC
+
+- **Resolved:** 2026-11-15
+- **Answer:** The repository now lives in
+  `%USERPROFILE%\source\VirtualMacroTextInputer`, outside Google Drive. It was
+  created with a local `git clone` of the old folder (full history), with
+  `origin` pointing to Forgejo and the same author settings.
+- **Rationale:** The user does not want the repository inside the folder
+  synchronised by Google Drive. `Documents` was ruled out because it shows
+  signs of being synchronised too (`.tmp.drivedownload`).
+- **Evidence:** The user's messages of 15-11-2026 and the choice «source
+  folder».
+- **Consequences:** The `.venv` environment is not copied (it is not
+  portable): it is recreated with `run-dev.ps1`. The old folder in Google
+  Drive stays until the user decides to delete it.
+- **Revisit when:** The repository moves again.
+
+## Q-028: Documentation language
+
+- **Resolved:** 2026-11-15
+- **Answer:** English at the repository root and in `docs/` (README, SPEC,
+  ROADMAP, TASKS, ANSWERS, AGENTS, `docs/MANUAL-CHECKLIST.md`,
+  `docs/CODEX-REVIEW.md`); the Portuguese versions in `docs/pt/`. The English
+  files are the reference; both are updated together. `AGENTS.md` asks agents
+  to answer the maintainer in European Portuguese. Code comments, TOML field
+  names and the Portuguese UI strings are unchanged.
+- **Rationale:** The user's choice when publishing on GitHub: an English front
+  page for a public repository, while keeping the documentation in
+  Portuguese.
+- **Evidence:** The user's answer of 15-11-2026 («English at the root, PT in a
+  folder»).
+- **Consequences:** Two copies of each document to keep in sync; links in
+  `docs/pt/` are relative to that folder.
+- **Revisit when:** Keeping both languages becomes a burden.
+
+## Q-029: E-mail in the commits
+
+- **Resolved:** 2026-11-15
+- **Answer:** Before the first public push, the history is rewritten so that
+  author and committer use the GitHub private e-mail
+  (`<id>+<user>@users.noreply.github.com`) instead of the personal e-mail. The
+  local `user.email` is changed to the same address.
+- **Rationale:** In a public repository the commit e-mail is visible to
+  anyone. The user chose the GitHub private address.
+- **Evidence:** The user's answer of 15-11-2026.
+- **Consequences:** Commit identifiers change; Forgejo has to receive the
+  rewritten history with `git push --force` (done by the user). Clones of the
+  old history must be discarded.
+- **Revisit when:** Never.

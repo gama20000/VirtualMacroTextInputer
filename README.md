@@ -1,171 +1,173 @@
 # Virtual Macro Text Inputer
 
-Até à versão 0.4 chamava-se **Macropad** (o pacote Python continua a chamar-se `macropad`, por isso os comandos `python -m macropad` mantêm-se).
+*Documentação em português: [docs/pt/README.md](docs/pt/README.md).*
 
-Macro pad para Windows. Usa teclas normais do teclado (por omissão, 1, 2, 3 e 4 da fila superior) e um painel flutuante opcional para escrever texto pré-definido na aplicação que está em primeiro plano. Quando uma macro dispara, a tecla original é suprimida. Premir **1** escreve `3E03305` e o 1 não aparece.
+Until version 0.4 it was called **Macropad**. The Python package is still called `macropad`, so the `python -m macropad` commands are unchanged.
 
-- Corre em segundo plano, com um ícone na área de notificação (junto ao relógio) e sem janelas visíveis.
-- Fechar a configuração ou o painel não termina a aplicação. Para sair, use o menu do ícone ▸ **Sair**.
-- Arranca com o Windows por omissão (pode desativar nas Preferências). Não cria atalhos no ambiente de trabalho.
-- Só pode haver uma instância. Abrir o programa outra vez apenas mostra a configuração.
-- **Mudança de nome.** No primeiro arranque com o nome novo, as macros e preferências de `%APPDATA%\Macropad` são copiadas para `%APPDATA%\VirtualMacroTextInputer` (a pasta antiga fica intacta, como cópia de segurança). A entrada antiga de arranque com o Windows («Macropad») é substituída pela nova. Se a versão antiga ainda estiver a correr, o programa pede para a fechar, para as macros não serem escritas duas vezes.
+A macro pad for Windows. It uses ordinary keyboard keys (by default 1, 2, 3 and 4 on the top row) and an optional floating panel to type predefined text into the application in the foreground. When a macro fires, the original key is suppressed: pressing **1** types `3E03305` and the 1 does not appear.
 
-## Executar
+- Runs in the background, with an icon in the notification area (next to the clock) and no visible windows.
+- Closing the settings window or the panel does not quit the application. To quit, use the icon menu ▸ **Quit**.
+- Starts with Windows by default (can be turned off in Preferences). It does not create desktop shortcuts.
+- Only one instance can run. Opening the program again just shows the settings.
+- **Name change.** On the first start under the new name, macros and preferences in `%APPDATA%\Macropad` are copied to `%APPDATA%\VirtualMacroTextInputer` (the old folder is left untouched as a backup). The old Windows startup entry («Macropad») is replaced by the new one. If the old version is still running, the program asks you to close it so that macros are not typed twice.
 
-Requisitos: Windows 10/11 e Python 3.11 ou superior. O Python é necessário apenas para executar a partir do código ou para gerar a distribuição.
+## Running
+
+Requirements: Windows 10/11 and Python 3.11 or later. Python is only needed to run from source or to build the distribution.
 
 ```powershell
-# a partir do código (com consola, útil para ver erros)
+# from source (with a console, useful to see errors)
 .\run-dev.ps1
 
-# ou manualmente
+# or manually
 python -m venv .venv
 .\.venv\Scripts\pip install -e ".[dev]"
-.\.venv\Scripts\pythonw -m macropad          # sem consola
+.\.venv\Scripts\pythonw -m macropad          # no console
 ```
 
-### Gerar a distribuição Windows
+### Building the Windows distribution
 
 ```powershell
-.\build.ps1        # cria .venv, corre os testes e gera dist\VirtualMacroTextInputer\VirtualMacroTextInputer.exe
+.\build.ps1        # creates .venv, runs the tests and builds dist\VirtualMacroTextInputer\VirtualMacroTextInputer.exe
 ```
 
-Copie a pasta `dist\VirtualMacroTextInputer` para onde quiser (por exemplo `%LOCALAPPDATA%\Programs\VirtualMacroTextInputer`) e execute `VirtualMacroTextInputer.exe`. O registo de arranque automático (`HKCU\...\Run`) aponta para o executável que estiver a correr. Se mudar a pasta de sítio, abra o programa uma vez a partir da nova localização e volte a ativar "Arrancar com o Windows".
+Copy the `dist\VirtualMacroTextInputer` folder wherever you like (for example `%LOCALAPPDATA%\Programs\VirtualMacroTextInputer`) and run `VirtualMacroTextInputer.exe`. The autostart registry entry (`HKCU\...\Run`) points to the executable that is running. If you move the folder, open the program once from the new location and turn "Start automatically with Windows" on again.
 
-### Testes
+### Tests
 
 ```powershell
 .\.venv\Scripts\python -m pytest -q
 ```
 
-Os testes cobrem a interpretação de comandos, as teclas e os modificadores, as repetições, o cancelamento (suspensão durante `{Delay}` e mudança de janela), o âmbito por aplicação, a validação e o recarregamento dos TOML (incluindo ficheiros inválidos, substituição atómica, agrupamento de eventos e ausência de ciclos), a camada Win32 simulada e um teste de fumo da interface. A supressão real de teclas e o foco do painel têm de ser verificados à mão: veja [docs/VERIFICACAO-MANUAL.md](docs/VERIFICACAO-MANUAL.md).
+The tests cover command parsing, keys and modifiers, repetitions, cancellation (suspending during `{Delay}` and switching windows), per-application scope, TOML validation and reloading (including invalid files, atomic replacement, event coalescing and no reload loops), the simulated Win32 layer and a UI smoke test. Real key suppression and panel focus have to be checked by hand: see [docs/MANUAL-CHECKLIST.md](docs/MANUAL-CHECKLIST.md).
 
-## Utilização
+## Usage
 
-**Ícone junto ao relógio.** Clique para abrir a configuração. O botão direito dá acesso a: abrir a configuração, mostrar/ocultar o painel, escolher o conjunto ativo, suspender/reativar macros e sair. O ícone tem contorno ciano quando as macros estão **ativas** e fica cinzento com um ponto vermelho quando estão **suspensas**.
+**Icon next to the clock.** Click it to open the settings. The right-click menu lets you open the settings, show/hide the panel, choose the active set, suspend/resume macros and quit. The icon has a cyan outline when macros are **active** and turns grey with a red dot when they are **suspended**.
 
-**Suspensão global.** A tecla de suspensão (por omissão `Shift+Escape`; quem tinha `Ctrl+Alt+P`, a predefinição anterior, passa automaticamente para `Shift+Escape` uma única vez, com um aviso) alterna entre ativo e suspenso. Funciona mesmo a meio de uma macro, incluindo durante um `{Delay}`, e cancela logo os passos e as repetições pendentes. Com as macros suspensas, todas as teclas têm o comportamento normal. O estado e o conjunto selecionado são recuperados no arranque seguinte.
+**Global suspend.** The suspend hotkey (`Shift+Escape` by default; anyone who had `Ctrl+Alt+P`, the previous default, is moved to `Shift+Escape` once, with a notice) toggles between active and suspended. It works even in the middle of a macro, including during a `{Delay}`, and immediately cancels the pending steps and repetitions. While macros are suspended, every key behaves normally. The state and the selected set are restored at the next start.
 
-**Mostrar/ocultar o painel.** A tecla do painel (por omissão `Shift+F12`) mostra ou oculta o painel em qualquer aplicação, também com as macros suspensas. A tecla aparece na barra de título do painel e no menu do ícone. Pode mudá-la, ou deixá-la sem tecla, em Preferências ▸ «Tecla do painel».
+**Show/hide the panel.** The panel key (`Shift+F12` by default) shows or hides the panel from any application, also while macros are suspended. The key is shown in the panel's title bar and in the icon menu. You can change it, or leave it without a key, in Preferences ▸ «Panel key».
 
-**Ativo / Suspenso.** No topo da configuração há dois botões, **Ativo** (verde quando selecionado) e **Suspenso** (vermelho quando selecionado). Fazem o mesmo que a tecla de suspensão e podem ser usados com o rato ou com o teclado (Tab até ao botão e Espaço). O botão com foco tem um contorno de foco visível.
+**Active / Suspended.** The top of the settings window has two buttons, **Active** (green when selected) and **Suspended** (red when selected). They do the same as the suspend hotkey and can be used with the mouse or the keyboard (Tab to the button and Space). The focused button has a visible focus outline.
 
-**Configuração.** Tem quatro separadores, por esta ordem:
-- *Macros*: duas áreas, **Ativo** e **Arquivo**, e o editor do botão selecionado. A área **Ativo** está centrada e tem o mesmo aspeto do painel real (tamanho, cores, espaçamento, colunas, posição do título e da tecla); se for grande, a janela desloca-se. As alterações válidas são gravadas automaticamente.
-  - **Arrastar**: largue um botão antes ou depois de outro para o pôr nessa posição (uma linha azul mostra onde fica), dentro da mesma área ou entre **Ativo** e **Arquivo**, nos dois sentidos. Largar sobre um espaço vazio troca os dois de lugar. Largar no título da área, ou numa zona vazia, põe o botão no fim. Tudo fica gravado logo. A tecla atribuída não muda. ◀ ▶ também mudam a ordem.
-  - **Tecla**: clique no campo **Tecla** e prima a tecla ou combinação; ou, mais rápido, ponha o rato sobre um botão (a etiqueta da tecla fica amarela, «Tecla…») e prima a tecla. Só é atribuída se não estiver em uso por outra macro ativa nem for a tecla de suspensão ou do painel; caso contrário aparece um aviso, com a opção **Não voltar a mostrar** (reative em Preferências ▸ «Avisar quando a tecla atribuída com o rato já está em uso»). Por cima de um botão, Delete/Backspace, Tab, Ctrl+C e Ctrl+V mantêm as suas funções e Esc cancela. **Sem tecla** deixa a macro disponível só no painel.
-  - **Nova macro** acrescenta uma única macro, sem tecla e com o texto vazio, e põe o cursor no campo **Texto**.
-  - **Contador** acrescenta um botão que conta: um clique curto no painel (ou a sua tecla) soma o **incremento** (por omissão 1); manter premido durante a **pressão longa** (por omissão 800 ms) repõe o **valor de reposição** (por omissão 0), sem somar. O contador só mostra a contagem: não escreve nada. A contagem fica guardada em `estado.toml` e mantém-se entre sessões; **Repor agora** no editor repõe-na.
-  - **Espaço vazio** ocupa uma posição da grelha sem botão. Na configuração aparece tracejado e pode ser arrastado; no painel é invisível e não faz nada, mas ocupa o lugar. Os espaços não vão para o Arquivo.
-  - **Vermelho** (selo «!») indica um erro, incluindo um *conflito de tecla*, quando duas macros ativas têm a mesma tecla. Os erros não são gravados.
-  - **Amarelo** (selo «=») indica *conteúdo duplicado*: macros com a mesma sequência de texto e comandos, mesmo que tenham títulos ou teclas diferentes (`{enter}`, `{Enter}` e uma quebra de linha contam como iguais). Passe o rato por cima do botão, ou veja a linha amarela no editor, para saber com que macros coincide. Os duplicados são apenas um aviso e são gravados.
-- *Painel*: estilo, colunas, tamanho dos botões, espaçamento, arredondamento, borda, tamanho do texto, cores (botão, texto, borda, fundo), posição do título e posição da tecla (em cima, ao centro, em baixo, independentes e sem se sobreporem), elementos visíveis (tecla, barra de estado, botões Ativo/Suspenso), «sempre por cima» e opacidade. A **pré-visualização**, centrada, usa o mesmo desenho do painel real (incluindo os botões Ativo/Suspenso) e atualiza-se a cada alteração, sem abrir o painel. Há estilos predefinidos (Predefinido, Compacto, Grande, Claro, Néon, Redondo, Minimalista, Título em cima). **Repor predefinição** volta ao aspeto original sem mexer nas colunas, na opacidade nem em «sempre por cima».
-- *Âmbito*: o conjunto funciona em todas as aplicações ou só nas aplicações indicadas, identificadas pelo executável, por exemplo `notepad.exe`. Fora delas, as teclas funcionam normalmente e o painel não envia texto.
-- *Preferências*: tema, idioma, arranque com o Windows, «Não pedir confirmação antes de eliminar macros», aviso de tecla em uso, tecla de suspensão, tecla do painel, modificadores e modo de texto. Cada alteração aplica-se logo. O arranque com o Windows é confirmado depois de aplicado (incluindo a aprovação em Gestor de Tarefas ▸ Aplicações de arranque); se não for possível, aparece um erro por baixo da opção.
-- Menu **⋯**: novo, duplicar, mudar o nome, eliminar, importar e exportar conjuntos, e abrir a pasta de configuração.
+**Settings.** Four tabs, in this order:
+- *Macros*: two areas, **Active** and **Archive**, and the editor for the selected button. The **Active** area is centred and looks exactly like the real panel (size, colours, spacing, columns, title and key position); if it is large, the window scrolls. Valid changes are saved automatically.
+  - **Drag**: drop a button before or after another to put it there (a blue line shows where it goes), within the same area or between **Active** and **Archive**, in both directions. Dropping on an empty space swaps the two. Dropping on the area title, or on an empty part of the area, puts the button at the end. Everything is saved immediately. The assigned key does not change. ◀ ▶ also change the order.
+  - **Key**: click the **Key** field and press the key or combination; or, faster, hover the mouse over a button (the key label turns yellow, «Key…») and press the key. It is only assigned if no other active macro uses it and it is not the suspend or panel key; otherwise a warning appears, with a **Don't show again** option (turn it back on in Preferences ▸ «Warn when a key assigned with the mouse is already in use»). Over a button, Delete/Backspace, Tab, Ctrl+C and Ctrl+V keep their functions and Esc cancels. **No key** leaves the macro available only on the panel.
+  - **New macro** adds a single macro, with no key and empty text, and puts the cursor in the **Text** field.
+  - **Counter** adds a button that counts: a short click on the panel (or its key) adds the **step** (1 by default); holding it for the **long press** time (800 ms by default) resets it to the **reset value** (0 by default) without adding. A counter only shows the count; it types nothing. The count is stored in `estado.toml` and kept between sessions; **Reset now** in the editor resets it.
+  - **Empty space** takes a grid position without a button. In the settings it is drawn dashed and can be dragged; on the panel it is invisible and does nothing, but keeps its place. Empty spaces do not go to the Archive.
+  - **Red** (a «!» badge) marks an error, including a *key conflict* when two active macros have the same key. Errors are not saved.
+  - **Yellow** (a «=» badge) marks *duplicate content*: macros with the same sequence of text and commands, even with different titles or keys (`{enter}`, `{Enter}` and a line break count as equal). Hover the button, or look at the yellow line in the editor, to see which macros it matches. Duplicates are only a warning and are saved.
+- *Panel*: style, columns, button size, spacing, corner rounding, border, text size, colours (button, text, border, background), title position and key position (top, centre, bottom; independent and never overlapping), visible elements (key, status bar, Active/Suspended buttons), «always on top» and opacity. The centred **preview** uses the same drawing as the real panel (including the Active/Suspended buttons) and updates on every change, without opening the panel. There are preset styles (Default, Compact, Large, Light, Neon, Round, Minimal, Title on top). **Restore default** goes back to the original look without touching columns, opacity or «always on top».
+- *Scope*: the set works in all applications or only in the listed ones, identified by their executable, for example `notepad.exe`. Outside them, keys work normally and the panel does not send text.
+- *Preferences*: theme, language, start with Windows, «Don't ask for confirmation before deleting macros», key-in-use warning, suspend hotkey, panel key, modifiers and text mode. Every change applies immediately. Starting with Windows is checked after it is applied (including the approval in Task Manager ▸ Startup apps); if it cannot be applied, an error appears below the option.
+- **⋯** menu: new, duplicate, rename, delete, import and export sets, and open the configuration folder.
 
-**Seleção de várias macros.** Ctrl+clique acrescenta ou retira macros da seleção, e Shift+clique seleciona um intervalo. Com várias selecionadas, os botões **Arquivar (n)**/**Restaurar (n)** e 🗑 atuam em todas. Antes de eliminar várias, o programa pede sempre confirmação e indica a quantidade.
+**Selecting several macros.** Ctrl+click adds or removes macros from the selection and Shift+click selects a range. With several selected, the **Archive (n)**/**Restore (n)** and 🗑 buttons act on all of them. Before deleting several, the program always asks for confirmation and shows how many.
 
-**Atalhos na grelha.** Com uma ou mais macros selecionadas e o foco fora de um campo de edição:
+**Grid shortcuts.** With one or more macros selected and the focus outside an edit field:
 
-| Tecla | Ação |
+| Key | Action |
 |---|---|
-| Delete ou Backspace | elimina a(s) macro(s) (pede confirmação) |
-| Ctrl+C | copia a(s) macro(s) |
-| Ctrl+V | cola cópias a seguir à seleção, na mesma área: a cópia de uma macro arquivada fica no Arquivo, logo a seguir à original. Se a tecla já estiver em uso, uma cópia ativa fica sem tecla |
+| Delete or Backspace | deletes the macro(s) (asks for confirmation) |
+| Ctrl+C | copies the macro(s) |
+| Ctrl+V | pastes copies after the selection, in the same area: a copy of an archived macro stays in the Archive, right after the original. If the key is already in use, an active copy gets no key |
 
-Com o foco num campo de texto, estes atalhos copiam, colam e apagam texto como habitualmente. A caixa de confirmação de eliminação tem a opção **Não voltar a perguntar**. Para voltar a ativar as confirmações, desmarque Preferências ▸ «Não pedir confirmação antes de eliminar macros».
+With the focus in a text field, these shortcuts copy, paste and delete text as usual. The delete confirmation has a **Don't ask again** option. To turn confirmations back on, untick Preferences ▸ «Don't ask for confirmation before deleting macros».
 
-**Arquivo.** Por baixo das macros ativas, a divisória **Arquivo** mostra as macros arquivadas, com uma caixa de pesquisa por título, texto ou tecla.
-- **Arquivar** retira a macro das teclas e do painel sem a apagar. Fica no ficheiro do conjunto com `arquivada = true`. Também pode arrastar uma macro ativa, ou a seleção inteira, para a área **Arquivo**: fica arquivada imediatamente, na posição largada.
-- **Restaurar** (ou arrastá-la para **Ativo**) volta a ativá-la. Se a tecla dela já estiver atribuída a uma macro ativa, o programa pede confirmação. Ao confirmar, a macro restaurada fica no lugar da ativa e essa passa para o arquivo. Ao cancelar, nada muda.
-- Arquivar e restaurar não alteram ficheiros exportados anteriormente.
+**Archive.** Below the active macros, the **Archive** area shows the archived macros, with a search box for title, text or key.
+- **Archive** removes the macro from the keys and the panel without deleting it. It stays in the set file with `arquivada = true`. You can also drag an active macro, or the whole selection, into the **Archive** area: it is archived immediately, at the position where you drop it.
+- **Restore** (or dragging it to **Active**) makes it active again. If its key is already assigned to an active macro, the program asks for confirmation. If you confirm, the restored macro takes the active one's place and that one moves to the archive. If you cancel, nothing changes. Archived macros with the same key restored together: only the first is restored and the others stay in the Archive.
+- Archiving and restoring do not change previously exported files.
 
-**Painel.** O painel mostra as macros ativas em grelha, com título e tecla, e um indicador de estado (ativo / suspenso / fora do âmbito / a executar). Tem uma barra de título própria, com as cores do tema, o nome do conjunto, a tecla do painel e ✕ para o ocultar; arraste-a para mover o painel (a posição fica gravada). Clicar num botão não tira o foco à aplicação onde está a escrever, e o texto vai para lá. Fica sempre por cima por omissão. A aparência configura-se no separador *Painel*.
-- Os botões **Ativo**/**Suspenso** do painel têm o mesmo estado e efeito dos da configuração e não tiram o foco à aplicação de destino.
-- Com o ponteiro sobre o painel, a **roda do rato** ajusta a transparência em passos de 5 % (para cima fica mais opaco, para baixo mais transparente, entre 20 % e 100 %). O nível aparece brevemente no centro do painel e fica gravado. Só o painel é afetado.
-- Se a roda não reagir enquanto o painel não está em foco, ative a definição do Windows «Deslocar janelas inativas ao pairar sobre elas».
+**Panel.** The panel shows the active macros in a grid, with title and key, and a status indicator (active / suspended / out of scope / running). It has its own title bar, in the theme colours, with the set name, the panel key and ✕ to hide it; drag it to move the panel (the position is saved). Clicking a button does not take the focus away from the application you are typing in, and the text goes there. It stays on top by default. Its look is configured in the *Panel* tab.
+- The panel's **Active**/**Suspended** buttons share state and effect with the ones in the settings and do not take the focus away from the target application.
+- With the pointer over the panel, the **mouse wheel** changes the transparency in 5 % steps (up is more opaque, down more transparent, between 20 % and 100 %). The level is shown briefly in the centre of the panel and saved. Only the panel is affected.
+- If the wheel does not react while the panel is not focused, turn on the Windows setting «Scroll inactive windows when hovering over them».
 
-**Tema.** Há três opções:
-- **Diurno** (por omissão): interface clara com a barra de título preta.
-- **Noturno**: interface e barra de título escuras.
-- **Automático**: acompanha a definição do Windows (Definições ▸ Personalização ▸ Cores ▸ modo das aplicações).
+**Theme.** Three options:
+- **Day** (default): light interface with a black title bar.
+- **Night**: dark interface and title bar.
+- **Automatic**: follows the Windows setting (Settings ▸ Personalisation ▸ Colours ▸ app mode).
 
-A escolha aplica-se a todas as janelas, incluindo o painel e as caixas de diálogo. A cor da barra de título só pode ser definida no Windows 11. No Windows 10, a barra fica preta ou escura com o modo escuro do sistema.
+The choice applies to every window, including the panel and dialogs. The title bar colour can only be set on Windows 11. On Windows 10 the bar is black, or dark with the system dark mode.
 
-**Idioma.** Português ou English (Preferências ▸ Idioma). A escolha aplica-se a toda a interface, mensagens, menus e caixas de confirmação. Os títulos e conteúdos das macros, os nomes dos conjuntos e os nomes dos campos nos ficheiros TOML não são traduzidos.
+**Language.** Português or English (Preferences ▸ Language). The choice applies to the whole interface, messages, menus and confirmations. Macro titles and contents, set names and field names in the TOML files are not translated.
 
-Para acrescentar um idioma, copie `src/macropad/locales/pt.toml` para `<código>.toml` (por exemplo `es.toml`), mude `nome` e traduza os valores. O novo idioma aparece logo na lista, e as chaves em falta usam o português. Os nomes entre chavetas (`{title}`) são preenchidos pelo programa. As chavetas literais escrevem-se `{{` e `}}`.
+To add a language, copy `src/macropad/locales/pt.toml` to `<code>.toml` (for example `es.toml`), change `nome` and translate the values. The new language appears in the list right away, and missing keys fall back to Portuguese. Names in braces (`{title}`) are filled in by the program. Literal braces are written `{{` and `}}`.
 
-### Regras de disparo
+### Trigger rules
 
-- Por omissão (`modificadores = "exatos"`), só a tecla isolada dispara. `Ctrl+1`, `Alt+1` e `Shift+1` mantêm o comportamento normal. Também pode associar uma combinação a uma macro, por exemplo `Ctrl+F1`, que só dispara exatamente com essa combinação. Com `"ignorar"`, as teclas sem modificadores disparam também com Ctrl/Alt/Shift/Win premidos.
-- As teclas 1 a 4 da fila superior são diferentes de `Numpad1` a `Numpad4`.
-- Manter a tecla premida não volta a disparar a macro. É preciso largar e premir outra vez.
-- Enquanto uma macro está a ser executada, novos disparos são ignorados (a tecla continua a ser suprimida).
-- Se a macro tiver sido disparada com modificadores premidos, a execução espera que sejam largados (até 1,5 s). Se continuarem premidos, a macro não é executada e aparece um aviso. Assim, um `{Enter}` nunca é enviado como `Ctrl+Enter`.
-- Se mudar de janela durante a execução, os passos pendentes são cancelados.
-- O texto que o programa envia nunca dispara macros. As teclas premidas nas janelas do próprio programa também não.
+- By default (`modificadores = "exatos"`), only the bare key triggers. `Ctrl+1`, `Alt+1` and `Shift+1` keep their normal behaviour. You can also bind a combination to a macro, for example `Ctrl+F1`, which only triggers with exactly that combination. With `"ignorar"`, keys without modifiers also trigger with Ctrl/Alt/Shift/Win held.
+- Keys 1 to 4 on the top row are different from `Numpad1` to `Numpad4`.
+- Holding the key does not fire the macro again. You have to release it and press it again.
+- While a macro is running, new triggers are ignored (the key is still suppressed).
+- If the macro was triggered with modifiers held, execution waits for them to be released (up to 1.5 s). If they are still held, the macro is not run and a warning appears. This way an `{Enter}` is never sent as `Ctrl+Enter`.
+- If you switch windows during execution, the pending steps are cancelled. In *Paste* mode the target window is checked again right before Ctrl+V.
+- Text sent by the program never triggers macros. Keys pressed in the program's own windows do not either (except counter keys, which only count).
 
-## Comandos no texto
+## Commands in the text
 
-| Comando | Efeito |
+| Command | Effect |
 |---|---|
-| `{Enter}` | pressiona Enter |
-| `{Tab}` | pressiona Tab |
-| `{Delay:500}` | espera 500 ms (0 a 600000) |
+| `{Enter}` | presses Enter |
+| `{Tab}` | presses Tab |
+| `{Delay:500}` | waits 500 ms (0 to 600000) |
 
-Os comandos são executados pela ordem e na posição em que aparecem. Por exemplo, `ABC{Tab}DEF{Delay:500}{Enter}` escreve ABC, prime Tab, escreve DEF, espera 500 ms e prime Enter.
+Commands run in order, at the position where they appear. For example, `ABC{Tab}DEF{Delay:500}{Enter}` types ABC, presses Tab, types DEF, waits 500 ms and presses Enter.
 
-- Os nomes não distinguem maiúsculas de minúsculas (`{enter}` é igual a `{Enter}`). `{Enter}` e `{Tab}` são sempre comandos.
-- Uma quebra de linha no texto equivale a `{Enter}` e uma tabulação equivale a `{Tab}`.
-- Comandos mal formados (`{Entr}`, `{Delay:abc}`, `{Enter` sem fecho) são erros, com a indicação da posição. Outras chavetas que não formam um comando, como `{}` ou `{1}`, são texto literal.
-- O texto pode ter qualquer carácter Unicode (acentos, €, emojis).
+- Names are case-insensitive (`{enter}` is the same as `{Enter}`). `{Enter}` and `{Tab}` are always commands.
+- A line break in the text equals `{Enter}` and a tab character equals `{Tab}`.
+- Malformed commands (`{Entr}`, `{Delay:abc}`, an unclosed `{Enter`) are errors, with their position. Other braces that do not form a command, such as `{}` or `{1}`, are literal text.
+- The text can contain any Unicode character (accents, €, emoji).
 
-**Modo de texto** (Preferências):
-- *Simular escrita* (por omissão) envia os caracteres como Unicode e não depende do layout do teclado.
-- *Colar* copia o texto para a área de transferência e envia Ctrl+V. É útil em aplicações que não aceitam escrita simulada. O conteúdo anterior da área de transferência não é preservado.
+**Text mode** (Preferences):
+- *Simulate typing* (default) sends the characters as Unicode and does not depend on the keyboard layout.
+- *Paste* copies the text to the clipboard and sends Ctrl+V. Useful in applications that do not accept simulated typing. The previous clipboard content is not preserved.
 
-## Ficheiros de configuração (TOML)
+## Configuration files (TOML)
 
-Ficam em `%APPDATA%\VirtualMacroTextInputer\`:
+They live in `%APPDATA%\VirtualMacroTextInputer\`. Field names are in Portuguese and are not translated:
 
-| Ficheiro | Conteúdo |
+| File | Content |
 |---|---|
-| `config.toml` | preferências gerais e do painel |
-| `conjuntos\<id>.toml` | um ficheiro por conjunto. O nome do ficheiro é o identificador do conjunto |
-| `estado.toml` | estado da sessão (ativo/suspenso, conjunto, painel visível e posição, contagens dos contadores, migrações feitas). Gerido pelo programa e não é observado |
-| `macropad.log` | registo de erros |
+| `config.toml` | general and panel preferences |
+| `conjuntos\<id>.toml` | one file per set. The file name is the set identifier |
+| `estado.toml` | session state (active/suspended, set, panel visibility and position, counter counts, migrations done). Managed by the program and not watched |
+| `macropad.log` | error log |
 
-O exemplo comentado está em [examples/conjunto-exemplo.toml](examples/conjunto-exemplo.toml) e inclui a macro 1 → `3E03305`. Todos os ficheiros têm `versao_esquema = 1`. Os campos novos desta versão são opcionais, por isso os ficheiros antigos continuam válidos e mantêm o aspeto original.
+A commented example is in [examples/conjunto-exemplo.toml](examples/conjunto-exemplo.toml) and includes macro 1 → `3E03305`. Every file has `versao_esquema = 1`. Fields added in this version are optional, so older files remain valid and keep their original look.
 
-`config.toml` (excerto):
+`config.toml` (excerpt):
 
 ```toml
 [geral]
-tema = "diurno"              # "diurno" | "noturno" | "automatico"
-idioma = "pt"                # "pt" | "en" | outro ficheiro em locales/
+tema = "diurno"              # "diurno" (day) | "noturno" (night) | "automatico"
+idioma = "pt"                # "pt" | "en" | another file in locales/
 confirmar_eliminacao = true
 tecla_suspensao = "Shift+Escape"
-tecla_painel = "Shift+F12"   # "" = sem tecla
+tecla_painel = "Shift+F12"   # "" = no key
 avisar_conflito_tecla = true
 
 [painel]
 colunas = 4
 tamanho_botao = 78           # 40–160 px
 espacamento = 6              # 0–30 px
-arredondamento = 17          # 0 (quadrado) – 50 (redondo), % do lado
+arredondamento = 17          # 0 (square) – 50 (round), % of the side
 borda = 2                    # 0–8 px
 escala_texto = 100           # 60–180 %
-cor_fundo = ""               # "" segue o tema; ou "#RRGGBB"
+cor_fundo = ""               # "" follows the theme; or "#RRGGBB"
 cor_botao = "#000000"
 cor_texto = "#ffffff"
 cor_borda = "#5a5a5a"
-posicao_titulo = "centro"    # "cima" | "centro" | "baixo"
+posicao_titulo = "centro"    # "cima" (top) | "centro" | "baixo" (bottom)
 posicao_tecla = "baixo"
 mostrar_tecla = true
 mostrar_estado = true
-mostrar_controlos = true     # botões Ativo/Suspenso no painel
+mostrar_controlos = true     # Active/Suspended buttons on the panel
 ```
 
 ```toml
@@ -173,7 +175,7 @@ versao_esquema = 1
 nome = "Codificação"
 
 [ambito]
-modo = "global"            # ou "aplicacoes"
+modo = "global"            # or "aplicacoes"
 aplicacoes = ["notepad.exe"]
 
 [[macros]]
@@ -184,11 +186,11 @@ repeticoes = 1
 intervalo_ms = 0
 
 [[macros]]
-tipo = "espaco"            # espaço vazio (sem outros campos)
+tipo = "espaco"            # empty space (no other fields)
 
 [[macros]]
 tipo = "contador"
-id = "pecas"               # identifica a contagem em estado.toml
+id = "pecas"               # identifies the count in estado.toml
 titulo = "Peças"
 tecla = "F9"
 incremento = 1
@@ -196,50 +198,56 @@ reposicao = 0
 pressao_longa_ms = 800
 ```
 
-O campo `mostrar_icone` das versões anteriores é aceite e ignorado.
+The `mostrar_icone` field from earlier versions is accepted and ignored.
 
-**Recarregamento automático.** Ao guardar um destes ficheiros num editor, o programa deteta a alteração, espera que o ficheiro fique estável (o que agrupa gravações seguidas e evita ler ficheiros a meio da escrita), valida-o e aplica-o. Funciona também com editores que gravam substituindo o ficheiro.
-- Se o ficheiro for **inválido**, mantém-se a última configuração válida e aparece um aviso com o ficheiro, a linha e a coluna, por exemplo `conjuntos/predefinido.toml, linha 12, coluna 9: macro 2: comando desconhecido {Entr}`.
-- As alterações aplicam-se às execuções seguintes. Uma execução em curso termina com a configuração com que começou, a menos que seja suspensa ou que a janela mude.
-- Um recarregamento nunca reativa macros suspensas.
-- As gravações da interface são atómicas (ficheiro temporário + substituição) e não provocam recarregamentos em ciclo.
-- Ao gravar a partir da interface, o ficheiro é reescrito no formato padrão, com os comentários de ajuda. Os comentários escritos à mão perdem-se.
-- Campos desconhecidos são erros, para que um erro de escrita como `repeticao` não seja ignorado sem aviso.
+**Automatic reload.** When you save one of these files in an editor, the program detects the change, waits for the file to be stable (which coalesces quick successive saves and avoids reading half-written files), validates it and applies it. It also works with editors that save by replacing the file.
+- If the file is **invalid**, the last valid configuration is kept and a warning shows the file, line and column, for example `conjuntos/predefinido.toml, line 12, column 9: macro 2: unknown command {Entr}`.
+- If the file you were editing in the settings is changed externally before your edit was saved, the external version wins and you are told.
+- Changes apply to the following executions. A running execution finishes with the configuration it started with, unless it is suspended or the window changes.
+- A reload never reactivates suspended macros.
+- Saves from the interface are atomic (temporary file + replace) and do not cause reload loops.
+- When saving from the interface, the file is rewritten in the standard format, with the help comments. Hand-written comments are lost.
+- Unknown fields are errors, so that a typo such as `repeticao` is not silently ignored.
 
-**Importar/exportar.** Use o menu ⋯ da configuração. Exportar grava o conjunto num `.toml` à sua escolha. Importar valida o ficheiro antes de o copiar para `conjuntos\` e cria nomes únicos se houver colisões. Também pode copiar ficheiros diretamente para a pasta `conjuntos\`, que são detetados automaticamente.
+**Import/export.** Use the ⋯ menu in the settings. Export saves the set to a `.toml` of your choice. Import validates the file before copying it to `conjuntos\` and creates unique names on collisions. You can also copy files straight into the `conjuntos\` folder; they are picked up automatically.
 
-**Nomes de teclas.** `0`–`9`, `A`–`Z`, `F1`–`F24`, `Numpad0`–`Numpad9`, `NumpadAdd`, `NumpadSubtract`, `NumpadMultiply`, `NumpadDivide`, `NumpadDecimal`, `Space`, `Tab`, `Enter`, `Backspace`, `Escape`, `Insert`, `Delete`, `Home`, `End`, `PageUp`, `PageDown`, `Up`, `Down`, `Left`, `Right`, `Pause`, `ScrollLock`, `CapsLock`, `NumLock`, `PrintScreen`, `Apps`, as teclas de pontuação `OEM1`…`OEM8`, `OEM102`, `OEMPlus`, `OEMComma`, `OEMMinus`, `OEMPeriod` (o carácter depende do layout; é mais fácil gravá-las no campo **Tecla**) e as teclas multimédia. Os modificadores são `Ctrl`, `Alt`, `Shift` e `Win`, por exemplo `Ctrl+Alt+F1`.
+**Key names.** `0`–`9`, `A`–`Z`, `F1`–`F24`, `Numpad0`–`Numpad9`, `NumpadAdd`, `NumpadSubtract`, `NumpadMultiply`, `NumpadDivide`, `NumpadDecimal`, `Space`, `Tab`, `Enter`, `Backspace`, `Escape`, `Insert`, `Delete`, `Home`, `End`, `PageUp`, `PageDown`, `Up`, `Down`, `Left`, `Right`, `Pause`, `ScrollLock`, `CapsLock`, `NumLock`, `PrintScreen`, `Apps`, the punctuation keys `OEM1`…`OEM8`, `OEM102`, `OEMPlus`, `OEMComma`, `OEMMinus`, `OEMPeriod` (the character depends on the layout; it is easier to record them in the **Key** field) and the media keys. Modifiers are `Ctrl`, `Alt`, `Shift` and `Win`, for example `Ctrl+Alt+F1`.
 
-## Limitações
+## Limitations
 
-- **Aplicações executadas como administrador.** O Windows (UIPI) impede que um processo sem privilégios intercete teclas ou envie texto para janelas elevadas. Com uma dessas janelas em primeiro plano, as teclas funcionam normalmente e o painel não consegue escrever. Para usar macros nelas, execute o programa como administrador. Nesse caso, o arranque automático pelo registo `Run` não eleva o programa e terá de usar o Agendador de Tarefas com "Executar com privilégios mais elevados".
-- O ecrã de UAC, o ecrã de bloqueio, o Ctrl+Alt+Del e alguns jogos com anti-cheat ou entrada "raw" não recebem nem deixam intercetar estes eventos.
-- O Windows remove hooks de teclado que respondem devagar (LowLevelHooksTimeout). O callback do programa só consulta dados em memória, mas uma máquina muito sobrecarregada pode fazê-lo perder o hook. Nesse caso, reinicie o programa.
-- No modo *Colar*, aplicações que leiam a área de transferência de forma muito lenta podem colar o texto anterior. O programa espera 80 ms depois de cada Ctrl+V.
-- `AltGr` é tratado pelo Windows como `Ctrl+Alt`.
-- As teclas de suspensão e do painel são globais e intercetadas mesmo nas janelas do programa, exceto enquanto um campo **Tecla** está a gravar ou o rato está sobre um botão da configuração (com a janela ativa).
-- O contador decide entre toque e pressão longa quando a tecla é largada. O Windows repete a tecla enquanto está premida; essas repetições são ignoradas.
+- **Applications running as administrator.** Windows (UIPI) prevents an unprivileged process from intercepting keys or sending text to elevated windows. With such a window in the foreground, keys work normally and the panel cannot type. To use macros there, run the program as administrator. In that case, autostart through the `Run` registry key does not elevate the program, and you have to use Task Scheduler with "Run with highest privileges".
+- The UAC prompt, the lock screen, Ctrl+Alt+Del and some games with anti-cheat or raw input neither receive these events nor let them be intercepted.
+- Windows removes keyboard hooks that respond slowly (LowLevelHooksTimeout). The program's callback only looks up in-memory data, but a heavily loaded machine can still make it lose the hook. If that happens, restart the program.
+- In *Paste* mode, applications that read the clipboard very slowly may paste the previous text. The program waits 80 ms after each Ctrl+V.
+- `AltGr` is treated by Windows as `Ctrl+Alt`.
+- The suspend and panel keys are global and are intercepted even in the program's windows, except while a **Key** field is recording or the mouse is over a button in the settings (with that window active).
+- A counter decides between a tap and a long press when the key is released. Windows repeats the key while it is held; those repeats are ignored.
 
-## Arquitetura
+## Architecture
 
 ```
 src/macropad/
-  core/                 # Python puro, sem Qt nem Win32 (testável em qualquer SO)
-    commands.py         #   interpretação de {Enter} {Tab} {Delay:ms}
-    keys.py             #   nomes de teclas e associações (Ctrl+Alt+P)
-    model.py            #   modelo de dados, âmbito por executável
-    configio.py         #   leitura/validação/escrita TOML com linha e coluna dos erros
-    store.py            #   ficheiros, última versão válida, gravação atómica, hashes anti-ciclo
-    watcher.py          #   observador por polling com agrupamento de eventos
-    engine.py           #   decisão de supressão, execução numa thread, cancelamento
-    macro_ops.py        #   arquivo/restauro, duplicados, copiar/colar, reordenação
-  i18n.py, locales/     # traduções (pt, en) — também usadas pelas mensagens do núcleo
+  branding.py           # visible program name (and the previous one, for migration)
+  core/                 # pure Python, no Qt or Win32 (testable on any OS)
+    commands.py         #   parsing of {Enter} {Tab} {Delay:ms}
+    keys.py             #   key names and bindings (Ctrl+Alt+P)
+    model.py            #   data model, per-executable scope
+    configio.py         #   TOML read/validate/write with line and column of errors
+    store.py            #   files, last valid version, atomic writes, anti-loop hashes
+    watcher.py          #   polling watcher with event coalescing
+    engine.py           #   suppression decision, execution thread, cancellation
+    macro_ops.py        #   archive/restore, duplicates, copy/paste, reordering
+  i18n.py, locales/     # translations (pt, en), also used by core messages
   platform/
-    windows/            # hook WH_KEYBOARD_LL, SendInput Unicode, área de transferência,
-                        # WS_EX_NOACTIVATE, cores da barra de título (DWM), tema do
-                        # Windows, registo Run, mutex de instância única
-    dummy.py            # plataforma simulada (desenvolvimento noutros SO)
-  ui/                   # PySide6: ícone, configuração, painel, temas (assets/ = ícones)
+    windows/            # WH_KEYBOARD_LL hook, Unicode SendInput, clipboard,
+                        # WS_EX_NOACTIVATE, title bar colours (DWM), Windows theme,
+                        # Run registry key, single-instance mutex
+    dummy.py            # simulated platform (development on other OSes)
+  ui/                   # PySide6: tray icon, settings, panel, themes (assets/ = icons)
 ```
 
-Para uma versão Linux, basta criar `platform/linux` com a mesma interface (por exemplo evdev/uinput para intercetar e injetar, `_NET_ACTIVE_WINDOW` ou o compositor para a janela ativa) e escolhê-la em `platform/__init__.py`. O núcleo e a interface Qt não mudam.
+For a Linux version, it is enough to create `platform/linux` with the same interface (for example evdev/uinput to intercept and inject, `_NET_ACTIVE_WINDOW` or the compositor for the active window) and select it in `platform/__init__.py`. The core and the Qt interface do not change.
+
+## Project documents
+
+Planning and review documents (in English): [SPEC.md](SPEC.md), [ROADMAP.md](ROADMAP.md), [TASKS.md](TASKS.md), [ANSWERS.md](ANSWERS.md), [docs/MANUAL-CHECKLIST.md](docs/MANUAL-CHECKLIST.md) and [docs/CODEX-REVIEW.md](docs/CODEX-REVIEW.md). The Portuguese originals are in [docs/pt/](docs/pt/).

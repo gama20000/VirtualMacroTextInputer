@@ -1,130 +1,143 @@
 # AGENTS.md — Virtual Macro Text Inputer
 
-Instruções para agentes de código (Codex, Claude Code, etc.) que trabalhem
-neste repositório. Responde e escreve comentários em **português europeu**.
+Instructions for coding agents (Codex, Claude Code, etc.) working in this
+repository. **Answer the maintainer, and write code comments, in European
+Portuguese.** Documentation is kept in English (root and `docs/`) with
+Portuguese translations in `docs/pt/` (see «Documentation» below).
 
-## O projeto
+## The project
 
-Macro pad para Windows (inspirado no Virtual Stream Deck). Chamava-se
-Macropad até à versão 0.4; o nome visível vem de `src/macropad/branding.py` e o
-pacote Python continua a ser `macropad`. As teclas
-configuráveis do teclado (por omissão 1–4 da fila superior) e um painel
-flutuante enviam texto com os comandos `{Enter}`, `{Tab}` e `{Delay:ms}` para
-a aplicação em primeiro plano, e a tecla original é suprimida.
+A macro pad for Windows (inspired by Virtual Stream Deck). It was called
+Macropad until version 0.4; the visible name comes from
+`src/macropad/branding.py` and the Python package is still `macropad`.
+Configurable keyboard keys (by default 1–4 on the top row) and a floating
+panel send text with the `{Enter}`, `{Tab}` and `{Delay:ms}` commands to the
+application in the foreground, and the original key is suppressed.
 
-- Python 3.11+, PySide6 (Qt 6), Win32 via `ctypes`; distribuição com PyInstaller.
-- Configuração em TOML em `%APPDATA%\VirtualMacroTextInputer\` (`config.toml`,
-  `conjuntos\*.toml`, `estado.toml`). Os nomes dos campos TOML são em
-  português e fazem parte do formato: não os traduzas nem os renomeies sem
-  aumentar `versao_esquema` e manter compatibilidade.
-- Documentação de utilização: `README.md`. Verificação manual no Windows:
-  `docs/VERIFICACAO-MANUAL.md`.
+- Python 3.11+, PySide6 (Qt 6), Win32 through `ctypes`; distribution with
+  PyInstaller.
+- TOML configuration in `%APPDATA%\VirtualMacroTextInputer\` (`config.toml`,
+  `conjuntos\*.toml`, `estado.toml`). TOML field names are in Portuguese and
+  are part of the format: do not translate or rename them without raising
+  `versao_esquema` and keeping compatibility.
+- User documentation: `README.md`. Manual check on Windows:
+  `docs/MANUAL-CHECKLIST.md` (results recorded in
+  `docs/pt/VERIFICACAO-MANUAL.md`).
 
-## Planeamento
+## Planning
 
-O trabalho é planeado com quatro documentos na raiz (skill wayfinder):
-`SPEC.md` (destino e critérios de aceitação), `ROADMAP.md` (decisões em aberto
-e fases), `TASKS.md` (tarefas da fase atual) e `ANSWERS.md` (registo de
-decisões). Lê-os antes de começar. Não implementes uma fase sem autorização e
-não marques tarefas como concluídas sem a validação exigida.
+Work is planned with four documents at the root (wayfinder skill): `SPEC.md`
+(destination and acceptance criteria), `ROADMAP.md` (open decisions and
+phases), `TASKS.md` (current phase tasks) and `ANSWERS.md` (decision record).
+Read them before starting. Do not implement a phase without authorisation and
+do not mark tasks as done without the required validation.
 
-## Estrutura
+## Documentation
+
+- English at the root and in `docs/` is the reference; `docs/pt/` holds the
+  Portuguese versions (`README.md`, `SPEC.md`, `ROADMAP.md`, `TASKS.md`,
+  `ANSWERS.md`, `VERIFICACAO-MANUAL.md`, `revisao-codex.md`).
+- When a document changes, update both languages in the same commit.
+- Links inside `docs/pt/` are relative to that folder.
+- Do not put personal data in the repository (it is public on GitHub): no
+  e-mails, private server addresses or local paths with user names.
+
+## Structure
 
 ```
 src/macropad/
-  core/        # Python puro, sem Qt nem Win32 — tem de continuar portável
-    commands.py    interpretação de {Enter} {Tab} {Delay:ms}
-    keys.py        nomes de teclas e associações (Ctrl+Alt+P)
-    model.py       modelo de dados, predefinições do painel
-    configio.py    leitura/validação/escrita TOML (erros com linha e coluna)
-    store.py       ficheiros, última versão válida, gravação atómica, hashes anti-ciclo
-    watcher.py     observador de ficheiros por polling com agrupamento
-    engine.py      decisão de supressão, execução numa thread, cancelamento
-    macro_ops.py   arquivo/restauro, duplicados, copiar/colar, reordenação
-  i18n.py, locales/*.toml   traduções (pt = base, en)
+  branding.py  # visible program name (and the previous one, for migration)
+  core/        # pure Python, no Qt or Win32 — must stay portable
+    commands.py    parsing of {Enter} {Tab} {Delay:ms}
+    keys.py        key names and bindings (Ctrl+Alt+P)
+    model.py       data model, panel defaults
+    configio.py    TOML read/validate/write (errors with line and column)
+    store.py       files, last valid version, atomic writes, anti-loop hashes
+    watcher.py     polling file watcher with coalescing
+    engine.py      suppression decision, execution thread, cancellation
+    macro_ops.py   archive/restore, duplicates, copy/paste, reordering
+  i18n.py, locales/*.toml   translations (pt = base, en)
   platform/
-    windows/   hook WH_KEYBOARD_LL, SendInput, área de transferência, DWM, registo Run
-    winkeys.py tabela VK -> nome (sem ctypes)
-    dummy.py   plataforma simulada (testes e desenvolvimento noutros SO)
-  ui/          PySide6: app (tray/tema/idioma), config_window, panel, widgets, theme
-tests/         pytest (inclui testes de UI em Qt offscreen e Win32 simulado)
+    windows/   WH_KEYBOARD_LL hook, SendInput, clipboard, DWM, Run registry key
+    winkeys.py VK -> name table (no ctypes)
+    dummy.py   simulated platform (tests and development on other OSes)
+  ui/          PySide6: app (tray/theme/language), config_window, panel, widgets, theme
+tests/         pytest (includes UI tests on Qt offscreen and simulated Win32)
 ```
 
-Regras de arquitetura:
-- `core/` não pode importar Qt nem `ctypes.windll`. O código específico do
-  sistema operativo fica em `platform/`.
-- Todas as mensagens visíveis ao utilizador passam por `i18n.tr("chave")`.
-  Uma chave nova tem de existir em **todos** os `locales/*.toml` (há um teste
-  que o verifica). Chavetas literais escrevem-se `{{` e `}}`.
-- Os títulos e conteúdos das macros nunca são traduzidos nem alterados.
+Architecture rules:
+- `core/` must not import Qt or `ctypes.windll`. OS-specific code lives in
+  `platform/`.
+- Every user-visible message goes through `i18n.tr("key")`. A new key must
+  exist in **every** `locales/*.toml` (a test checks this). Literal braces are
+  written `{{` and `}}`.
+- Macro titles and contents are never translated or changed.
 
-## Comandos
+## Commands
 
 ```powershell
-# ambiente (uma vez)
+# environment (once)
 python -m venv .venv
 .\.venv\Scripts\pip install -e ".[dev]"
 
-# testes
+# tests
 .\.venv\Scripts\python -m pytest -q
 
-# testes sem escrever no disco (modo só de leitura / sandbox)
+# tests without writing to disk (read-only mode / sandbox)
 $env:PYTHONDONTWRITEBYTECODE=1; .\.venv\Scripts\python -m pytest -q -p no:cacheprovider
 
-# executar a partir do código
+# run from source
 .\run-dev.ps1
 
-# gerar a distribuição (dist\VirtualMacroTextInputer\VirtualMacroTextInputer.exe)
+# build the distribution (dist\VirtualMacroTextInputer\VirtualMacroTextInputer.exe)
 .\build.ps1
 ```
 
-Em Linux/macOS os testes também correm: o Qt usa `QT_QPA_PLATFORM=offscreen`
-e a plataforma é simulada (`DummyPlatform`).
+On Linux/macOS the tests also run: Qt uses `QT_QPA_PLATFORM=offscreen` and the
+platform is simulated (`DummyPlatform`).
 
-Antes de dar uma tarefa por concluída: os testes passam, e as alterações de
-comportamento estão refletidas no `README.md` e, se aplicável, em
-`docs/VERIFICACAO-MANUAL.md`.
+Before calling a task done: the tests pass, and behaviour changes are
+reflected in `README.md` (both languages) and, where relevant, in the manual
+checklist.
 
 ## Review guidelines
 
-Numa revisão, **não alteres ficheiros**: analisa e reporta. Para cada problema
-indica a severidade (**P0** crítico / **P1** importante / **P2** menor), o
-`ficheiro:linha`, o que acontece, como reproduzir e a correção sugerida.
-Distingue bugs confirmados de suspeitas e termina com uma tabela-resumo
-ordenada por severidade.
+In a review, **do not change files**: analyse and report. For each problem
+give the severity (**P0** critical / **P1** important / **P2** minor), the
+`file:line`, what happens, how to reproduce it and the suggested fix.
+Distinguish confirmed bugs from suspicions and end with a summary table
+ordered by severity.
 
-Zonas de maior risco, por prioridade:
+Highest-risk areas, by priority:
 
-1. **Concorrência.** `Engine.handle_key` é chamado pela thread do hook de
-   teclado, a execução de macros corre noutra thread e a UI recebe eventos
-   por sinais Qt (`_Bridge`). Procura condições de corrida, estado partilhado
-   sem lock, deadlocks e chamadas a widgets Qt fora da thread principal. O
-   callback do hook tem de ser rápido: se exceder o LowLevelHooksTimeout
-   (cerca de 1 s), o Windows remove o hook sem aviso.
-2. **Win32/ctypes** (`platform/windows/`). Tamanhos e tipos das estruturas
-   (`INPUT` = 40 bytes em x64, `KBDLLHOOKSTRUCT`), `argtypes`/`restype`,
-   handles de 64 bits, área de transferência (`GlobalAlloc`/`SetClipboardData`),
-   DWM e registo. São erros que só aparecem no Windows real.
-3. **Supressão de teclas.** keydown/keyup desemparelhados, auto-repetição,
-   modificadores (`exatos`/`ignorar`, AltGr = Ctrl+Alt), tecla de suspensão
-   (também durante `{Delay}`), eventos injetados pelo próprio programa
-   (`MAGIC_EXTRA_INFO`), teclas nas janelas do próprio programa e mudança de
-   janela durante a execução.
-4. **Configuração** (`core/store.py`, `core/watcher.py`, `core/configio.py`).
-   Um ficheiro inválido nunca pode substituir a última configuração válida.
-   Verifica também a gravação atómica, os ciclos UI↔ficheiro, os editores que
-   gravam por substituição, a compatibilidade com ficheiros antigos (campos
-   novos opcionais) e que um recarregamento nunca reative macros suspensas.
-5. **Interface** (`ui/config_window.py`, `ui/widgets.py`, `ui/panel.py`).
-   Índices reais das macros depois de reordenar, arquivar, restaurar
-   (incluindo a substituição em caso de conflito de tecla) ou eliminar com
-   seleção múltipla; arrastar para o Arquivo; atalhos Delete/Backspace,
-   Ctrl+C e Ctrl+V, que só atuam fora de campos de edição; o painel nunca
-   pode receber foco (`WS_EX_NOACTIVATE`); a pré-visualização tem de ser
-   igual ao painel real.
-6. **i18n.** Chaves em falta, `str.format` com chavetas, textos visíveis que
-   não passam por `tr()`.
+1. **Concurrency.** `Engine.handle_key` is called by the keyboard hook thread,
+   macros run in another thread and the UI receives events through Qt signals
+   (`_Bridge`). Look for race conditions, shared state without a lock,
+   deadlocks and calls to Qt widgets outside the main thread. The hook
+   callback must be fast: if it exceeds LowLevelHooksTimeout (about 1 s),
+   Windows removes the hook silently.
+2. **Win32/ctypes** (`platform/windows/`). Structure sizes and types (`INPUT` =
+   40 bytes on x64, `KBDLLHOOKSTRUCT`), `argtypes`/`restype`, 64-bit handles,
+   clipboard (`GlobalAlloc`/`SetClipboardData`), DWM and registry. These are
+   errors that only show on real Windows.
+3. **Key suppression.** Unpaired keydown/keyup, auto-repeat, modifiers
+   (`exatos`/`ignorar`, AltGr = Ctrl+Alt), the suspend hotkey (also during
+   `{Delay}`), events injected by the program itself (`MAGIC_EXTRA_INFO`), keys
+   in the program's own windows and window changes during execution.
+4. **Configuration** (`core/store.py`, `core/watcher.py`, `core/configio.py`).
+   An invalid file must never replace the last valid configuration. Also check
+   atomic writes, UI↔file loops, editors that save by replacing, compatibility
+   with old files (new fields optional) and that a reload never reactivates
+   suspended macros.
+5. **Interface** (`ui/config_window.py`, `ui/widgets.py`, `ui/panel.py`). Real
+   macro indices after reordering, archiving, restoring (including replacement
+   on a key conflict) or deleting with multiple selection; dragging to the
+   Archive; Delete/Backspace, Ctrl+C and Ctrl+V shortcuts, which only act
+   outside edit fields; the panel must never receive focus
+   (`WS_EX_NOACTIVATE`); the preview must match the real panel.
+6. **i18n.** Missing keys, `str.format` with braces, visible text that does not
+   go through `tr()`.
 
-Não reportes como bugs: o estilo do código, os nomes em português, as
-limitações já documentadas no README (aplicações executadas como
-administrador, UIPI, cor da barra de título no Windows 10).
+Do not report as bugs: code style, Portuguese names, limitations already
+documented in the README (applications run as administrator, UIPI, title bar
+colour on Windows 10).

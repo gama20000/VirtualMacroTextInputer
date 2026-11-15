@@ -1,219 +1,221 @@
-# Roteiro
+# Roadmap
 
-## Destino
+*Portuguese version: [docs/pt/ROADMAP.md](docs/pt/ROADMAP.md).*
 
-Ver [SPEC.md](SPEC.md#destino).
+## Destination
 
-## Estado atual
+See [SPEC.md](SPEC.md#destination).
 
-O código está na versão 0.4. A Fase 1 (revisão independente) e a Fase 2
-(versão 0.4, incluindo a barra de título própria do painel) estão concluídas.
-Depois disso, seis revisões do Codex foram corrigidas; 168 testes automáticos
-passam. Falta a validação manual no Windows (Fase 3, em pausa desde
-12-11-2026, com 16 passos verificados e 3 parciais; os passos 62–86 cobrem a
-0.4). O repositório está no Forgejo do utilizador (privado, pelo Tailscale);
-falta o GitHub (Fase 4).
+## Current state
 
-## Decisões em aberto
+The code is at version 0.4 and the program is now called Virtual Macro Text
+Inputer. Phase 1 (independent review) and Phase 2 (version 0.4, including the
+panel's own title bar) are complete. Since then, six Codex reviews have been
+addressed; 171 automated tests pass. Manual validation on Windows is still
+missing (Phase 3, paused since 12-11-2026, with 16 steps checked and 3
+partial; steps 62–89 cover 0.4 and the rename). The repository is on the
+user's Forgejo (private, through Tailscale); publishing on GitHub (public) is
+in progress (Phase 4).
 
-### Fronteira
+## Open decisions
 
-- [ ] **Visibilidade do repositório no GitHub** (`Q-010`): privado ou público.
-  Define quem vê o código e se o README pode referir caminhos pessoais.
-- [ ] **Acesso do agente ao GitHub** (`Q-011`): ligar a conta GitHub nas
-  definições do claude.ai, ou o utilizador cria o repositório
-  `virtual-visual-vext` vazio e envia ele próprio. Sem isto não é possível criar
-  o repositório nem enviar.
+### Frontier
 
-- [ ] **Reescrita em Rust** (`Q-024`): vale a pena reescrever o Macropad em
-  Rust para ter um executável mais leve e com arranque mais rápido? A decisão
-  deve esperar pela validação da versão Python (Fase 3), que fixa o
-  comportamento a reproduzir. Nada da Fase 2 depende disto.
+- [ ] **Rewrite in Rust** (`Q-024`): is it worth rewriting the program in Rust
+  for a lighter executable with faster start-up? The decision should wait for
+  the validation of the Python version (Phase 3), which fixes the behaviour to
+  reproduce.
+- [ ] **Licence for the public repository** (`Q-030`): without a licence, the
+  public code is «all rights reserved» (others can read it but not reuse it).
+  Options include MIT, Apache-2.0 or GPL-3.0.
 
-### Bloqueado
+### Blocked
 
-- (nenhuma)
+- (none)
 
-### Nevoeiro
+### Fog
 
-- Cópias de segurança do Forgejo (o que guardar, onde, com que frequência).
-- HTTPS no Forgejo (`Q-025`): hoje o acesso é só pela rede Tailscale (já
-  cifrada), em HTTP. Só é preciso se o Forgejo tiver de ser acessível fora do
-  Tailscale.
-- Dar versões ao executável distribuído (etiquetas git, nome do zip, notas de
-  versão).
-- Arranque automático com privilégios de administrador (Agendador de Tarefas)
-  para quem precisar de macros em aplicações elevadas.
+- Forgejo backups (what to keep, where, how often).
+- HTTPS on Forgejo (`Q-025`): today access is only through the Tailscale
+  network (already encrypted), over HTTP. Only needed if Forgejo must be
+  reachable outside Tailscale.
+- Versioning the distributed executable (git tags, zip name, release notes).
+- Autostart with administrator privileges (Task Scheduler) for anyone who
+  needs macros in elevated applications.
 
-### Concluídas
+### Completed
 
-- [x] [Stack tecnológica](ANSWERS.md#q-001-stack-tecnológica) (`Q-001`): Python + PySide6 + ctypes + PyInstaller.
-- [x] [Valores predefinidos não fixados no pedido](ANSWERS.md#q-002-valores-predefinidos-não-fixados-no-pedido) (`Q-002`): Ctrl+Alt+P, macros sem tecla, quebra de linha = `{Enter}`.
-- [x] [Comportamento de «Nova macro» e macros sem texto](ANSWERS.md#q-003-comportamento-de-nova-macro-e-macros-sem-texto) (`Q-003`): uma macro, sem tecla, texto vazio permitido.
-- [x] [Confirmação ao eliminar várias macros](ANSWERS.md#q-004-confirmação-ao-eliminar-várias-macros) (`Q-004`): sempre, com a quantidade.
-- [x] [Cópia colada com tecla em uso](ANSWERS.md#q-005-cópia-colada-com-tecla-em-uso) (`Q-005`): a cópia fica sem tecla.
-- [x] [Organização dos remotos git](ANSWERS.md#q-006-organização-dos-remotos-git) (`Q-006`): um `origin` com dois endereços de envio.
-- [x] [Nome do repositório no GitHub](ANSWERS.md#q-007-nome-do-repositório-no-github) (`Q-007`): `virtual-visual-vext`.
-- [x] [Local do Forgejo](ANSWERS.md#q-008-local-do-forgejo) (`Q-008`): num servidor.
-- [x] [Ferramenta de revisão independente](ANSWERS.md#q-009-ferramenta-de-revisão-independente) (`Q-009`): Codex CLI só de leitura com o `AGENTS.md`.
-- [x] [Instalação do Codex CLI](ANSWERS.md#q-013-instalação-do-codex-cli) (`Q-013`): o utilizador correu a revisão no PC.
-- [x] [Método da validação manual](ANSWERS.md#q-018-método-da-validação-manual) (`Q-018`): o agente controla o ecrã, com uma configuração separada; o utilizador faz os passos 👤.
-- [x] [Ícone dos botões e posição do título e da tecla](ANSWERS.md#q-019-ícone-dos-botões-e-posição-do-título-e-da-tecla) (`Q-019`): sem ícone; título e tecla em cima, ao centro ou em baixo.
-- [x] [Teclas globais predefinidas](ANSWERS.md#q-020-teclas-globais-predefinidas) (`Q-020`): Shift+Escape suspende; Shift+F12 mostra/oculta o painel.
-- [x] [Funcionamento do contador](ANSWERS.md#q-021-funcionamento-do-contador) (`Q-021`): painel e tecla, só mostra; manter premido repõe.
-- [x] [Atribuição de tecla por cima do botão e atalhos existentes](ANSWERS.md#q-022-atribuição-de-tecla-por-cima-do-botão-e-atalhos-existentes) (`Q-022`): Delete, Backspace, Tab, Ctrl+C e Ctrl+V mantêm-se.
-- [x] [Barra de título do painel](ANSWERS.md#q-023-barra-de-título-do-painel) (`Q-023`): o painel desenha a sua própria barra.
-- [x] [Servidor para o Forgejo](ANSWERS.md#q-012-servidor-para-o-forgejo) (`Q-012`): instalado pelo utilizador; `VirtualMacroTextInputer` pelo Tailscale. Torna `Q-014`, `Q-015` e `Q-016` desnecessárias.
-- [x] [Localização do repositório no PC](ANSWERS.md#q-027-localizacao-do-repositorio-no-pc) (`Q-027`): `%USERPROFILE%\source\VirtualMacroTextInputer`, fora do Google Drive.
-- [x] [Novo nome do programa](ANSWERS.md#q-026-novo-nome-do-programa) (`Q-026`): Virtual Macro Text Inputer; dados copiados da pasta antiga.
-- [x] [Tratamento dos resultados da revisão](ANSWERS.md#q-017-tratamento-dos-resultados-da-revisão) (`Q-017`): P1 e P2 confirmados e corrigidos.
+- [x] [Technology stack](ANSWERS.md#q-001-technology-stack) (`Q-001`): Python + PySide6 + ctypes + PyInstaller.
+- [x] [Defaults not fixed in the request](ANSWERS.md#q-002-defaults-not-fixed-in-the-request) (`Q-002`): macros without a key, line break = `{Enter}`.
+- [x] [«New macro» behaviour and macros without text](ANSWERS.md#q-003-new-macro-behaviour-and-macros-without-text) (`Q-003`): one macro, no key, empty text allowed.
+- [x] [Confirmation when deleting several macros](ANSWERS.md#q-004-confirmation-when-deleting-several-macros) (`Q-004`): always, with the count.
+- [x] [Pasted copy with a key already in use](ANSWERS.md#q-005-pasted-copy-with-a-key-already-in-use) (`Q-005`): the copy gets no key.
+- [x] [Git remote layout](ANSWERS.md#q-006-git-remote-layout) (`Q-006`): one `origin` with two push URLs.
+- [x] [GitHub repository name](ANSWERS.md#q-007-github-repository-name) (`Q-007`): `VirtualMacroTextInputer`.
+- [x] [Where Forgejo runs](ANSWERS.md#q-008-where-forgejo-runs) (`Q-008`): on a server.
+- [x] [Independent review tool](ANSWERS.md#q-009-independent-review-tool) (`Q-009`): read-only Codex CLI with `AGENTS.md`.
+- [x] [GitHub repository visibility](ANSWERS.md#q-010-github-repository-visibility) (`Q-010`): public.
+- [x] [Agent access to GitHub](ANSWERS.md#q-011-agent-access-to-github) (`Q-011`): the user connects GitHub to Claude.
+- [x] [Forgejo server](ANSWERS.md#q-012-forgejo-server) (`Q-012`): installed by the user, through Tailscale. Makes `Q-014`, `Q-015` and `Q-016` unnecessary.
+- [x] [Codex CLI installation](ANSWERS.md#q-013-codex-cli-installation) (`Q-013`): the user ran the review on the PC.
+- [x] [Handling the review findings](ANSWERS.md#q-017-handling-the-review-findings) (`Q-017`): P1 and P2 confirmed and fixed.
+- [x] [Manual validation method](ANSWERS.md#q-018-manual-validation-method) (`Q-018`): screen control with a separate configuration; the user does the 👤 steps.
+- [x] [Button icon and title/key position](ANSWERS.md#q-019-button-icon-and-titlekey-position) (`Q-019`): no icon; title and key at the top, centre or bottom.
+- [x] [Default global keys](ANSWERS.md#q-020-default-global-keys) (`Q-020`): Shift+Escape suspends; Shift+F12 shows/hides the panel.
+- [x] [How the counter works](ANSWERS.md#q-021-how-the-counter-works) (`Q-021`): panel and key, display only; holding resets.
+- [x] [Assigning a key over a button and existing shortcuts](ANSWERS.md#q-022-assigning-a-key-over-a-button-and-existing-shortcuts) (`Q-022`): Delete, Backspace, Tab, Ctrl+C and Ctrl+V are kept.
+- [x] [Panel title bar](ANSWERS.md#q-023-panel-title-bar) (`Q-023`): the panel draws its own bar.
+- [x] [New program name](ANSWERS.md#q-026-new-program-name) (`Q-026`): Virtual Macro Text Inputer; data copied from the old folder.
+- [x] [Repository location on the PC](ANSWERS.md#q-027-repository-location-on-the-pc) (`Q-027`): `%USERPROFILE%\source\VirtualMacroTextInputer`, outside Google Drive.
+- [x] [Documentation language](ANSWERS.md#q-028-documentation-language) (`Q-028`): English at the root, Portuguese in `docs/pt/`.
+- [x] [E-mail in the commits](ANSWERS.md#q-029-e-mail-in-the-commits) (`Q-029`): GitHub private address; history rewritten.
 
-## Fase 1: Revisão independente e correções — concluída (12-11-2026)
+## Phase 1: Independent review and fixes — complete (12-11-2026)
 
-### Resultado
+### Outcome
 
-O código foi revisto por um agente independente, e os problemas confirmados
-P0/P1 estão corrigidos ou aceites por decisão registada.
+The code was reviewed by an independent agent, and the confirmed P0/P1
+problems are fixed or accepted by a recorded decision.
 
-### Trabalho incluído
+### Included work
 
-- Instalar ou abrir o Codex e correr a revisão completa (só de leitura).
-- Confirmar cada achado no código; registar os falsos positivos.
-- Corrigir os problemas confirmados, com um teste de regressão sempre que
-  possível.
+- Install or open Codex and run the full (read-only) review.
+- Confirm each finding in the code; record false positives.
+- Fix the confirmed problems, with a regression test whenever possible.
 
-### Dependências e riscos
+### Dependencies and risks
 
-- Dependia de **Instalação do Codex CLI** (`Q-013`), já resolvida.
-- Risco: problemas que só se manifestam no Windows real (hook, `SendInput`,
-  foco) não são confirmáveis só pela leitura do código. Passam para a Fase 2
-  como verificações específicas.
-- Rollback: cada correção num commit próprio (`git revert`).
+- Depended on **Codex CLI installation** (`Q-013`), now resolved.
+- Risk: problems that only show on real Windows (hook, `SendInput`, focus)
+  cannot be confirmed by reading the code alone. They move to Phase 3 as
+  specific checks.
+- Rollback: each fix in its own commit (`git revert`).
 
-### Critérios de saída
+### Exit criteria
 
-- O relatório da revisão está guardado (`docs/revisao-codex.md`), com o
-  resultado da confirmação de cada ponto.
-- Não há P0/P1 confirmados por resolver sem decisão registada em `ANSWERS.md`.
+- The review report is stored (`docs/CODEX-REVIEW.md`), with the confirmation
+  result of each point.
+- No confirmed P0/P1 is left unresolved without a decision recorded in
+  `ANSWERS.md`.
 
-### Validação
+### Validation
 
-- `pytest` sem falhas.
-- Novos testes de regressão para os problemas corrigidos que sejam testáveis
-  fora do Windows.
+- `pytest` with no failures.
+- New regression tests for the fixed problems that are testable outside
+  Windows.
 
-## Fase 2: Versão 0.4 — organização do painel, atalhos e preferências — concluída (12-11-2026)
+## Phase 2: Version 0.4 — panel layout, shortcuts and preferences — complete (12-11-2026)
 
-### Resultado
+### Outcome
 
-Os 12 pontos do pedido de 12-11-2026 estão implementados, juntamente com a
-correção da barra de título do painel. A versão passa a 0.4.
+The 12 points of the 12-11-2026 request are implemented, together with the
+panel title bar fix. The version becomes 0.4.
 
-### Trabalho incluído
+### Included work
 
-- Espaços vazios na grelha; contadores; sem ícone; posição do título e da tecla.
-- Áreas Ativo/Arquivo com arrasto nos dois sentidos e inserção na posição
-  largada; colar no Arquivo; área Ativo com o mesmo aspeto do painel, centrada.
-- Atribuição de tecla por cima do botão, com avisos de conflito desativáveis.
-- Teclas globais Shift+Escape (suspender, com migração) e Shift+F12 (painel,
-  indicada no painel).
-- Preferências que se aplicam logo: arranque com o Windows (incluindo a
-  aprovação de arranque do Windows) e confirmação de eliminação (texto
-  invertido), com indicação de erro.
-- Barra de título própria do painel (`Q-023`), com a posição gravada.
+- Empty spaces in the grid; counters; no icon; title and key position.
+- Active/Archive areas with drag in both directions and insertion at the drop
+  position; paste into the Archive; Active area with the panel's look,
+  centred.
+- Key assignment over a button, with conflict warnings that can be turned off.
+- Global keys Shift+Escape (suspend, with migration) and Shift+F12 (panel,
+  shown on the panel).
+- Preferences that apply immediately: start with Windows (including the
+  Windows startup approval) and delete confirmation (inverted wording), with
+  an error indication.
+- The panel's own title bar (`Q-023`), with its position saved.
 
-### Dependências e riscos
+### Dependencies and risks
 
-- Ficheiros antigos (`mostrar_icone`, `Ctrl+Alt+P`) têm de continuar válidos.
-- O arrasto entre grelhas no Qt (`QListWidget`) exige tratamento próprio da
-  largada, para que a grelha de origem não remova itens.
-- Rollback: um commit da versão; `git revert`.
+- Old files (`mostrar_icone`, `Ctrl+Alt+P`) must remain valid.
+- Dragging between grids in Qt (`QListWidget`) needs custom drop handling so
+  that the source grid does not remove items.
+- Rollback: one commit for the version; `git revert`.
 
-### Critérios de saída
+### Exit criteria
 
-- Cada ponto tem comportamento coberto por testes automáticos, ou verificação
-  manual descrita em `docs/VERIFICACAO-MANUAL.md`.
-- `pytest` sem falhas; capturas da interface (Diurno e Noturno) revistas.
+- Each point has its behaviour covered by automated tests, or a manual check
+  described in `docs/MANUAL-CHECKLIST.md`.
+- `pytest` with no failures; interface screenshots (Day and Night) reviewed.
 
-### Validação
+### Validation
 
-- Automática: testes novos do núcleo (espaços, contadores, inserção
-  posicional, colar no Arquivo, migração, conflitos de teclas globais) e da
-  interface (Qt offscreen).
-- Manual: passos novos acrescentados à lista, executados na Fase 3.
+- Automated: new core tests (spaces, counters, positional insertion, paste
+  into the Archive, migration, global key conflicts) and interface tests (Qt
+  offscreen).
+- Manual: new steps added to the checklist, run in Phase 3.
 
-## Fase 3: Validação manual no Windows e distribuição — em pausa
+## Phase 3: Manual validation on Windows and distribution — paused
 
-### Resultado
+### Outcome
 
-O Macropad está validado no Windows real, a partir do código e do executável.
+The program is validated on real Windows, from source and from the executable.
 
-### Trabalho incluído
+### Included work
 
-- Percorrer os passos 1–85 de `docs/VERIFICACAO-MANUAL.md` com `run-dev.ps1`,
-  e depois com `dist\Macropad\Macropad.exe` gerado por `build.ps1`.
-- Corrigir as falhas encontradas, cada uma com o seu passo de verificação
-  repetido.
-- Acrescentar ao documento as verificações que a Fase 1 identificou como
-  dependentes do Windows.
+- Go through steps 1–89 of `docs/MANUAL-CHECKLIST.md` with `run-dev.ps1`, and
+  then with `dist\VirtualMacroTextInputer\VirtualMacroTextInputer.exe` built by
+  `build.ps1`.
+- Fix the failures found, each with its check repeated.
+- Add to the checklist the checks that Phase 1 identified as Windows-dependent.
 
-### Dependências e riscos
+### Dependencies and risks
 
-- Depende das Fases 1 e 2.
-- Os passos são feitos pelo agente por controlo do ecrã (`Q-018`). Os
-  passos 2, 23, 26, 27, 32 e 33 ficam para o utilizador.
-- Problema encontrado: a barra de título do painel real não segue o tema
-  (tarefa em `TASKS.md`).
-- Risco: o PyInstaller pode não incluir os recursos (`ui/assets`, `locales`).
-  Verificar os ícones e as traduções no executável.
+- Depends on Phases 1 and 2.
+- The steps are done by the agent through screen control (`Q-018`) or by the
+  user. Steps 2, 23, 26, 27, 32, 33, 84, 85 and 89 are for the user.
+- Risk: PyInstaller may leave out resources (`ui/assets`, `locales`). Check
+  icons and translations in the executable.
 
-### Critérios de saída
+### Exit criteria
 
-- Todos os passos de `docs/VERIFICACAO-MANUAL.md` estão assinalados como OK ou
-  têm uma limitação aceite em `ANSWERS.md`.
-- Os critérios de aceitação de [SPEC.md](SPEC.md#critérios-de-aceitação)
-  cumprem-se com o executável.
+- Every step of `docs/MANUAL-CHECKLIST.md` is marked OK or has a limitation
+  accepted in `ANSWERS.md`.
+- The acceptance criteria in [SPEC.md](SPEC.md#acceptance-criteria) are met
+  with the executable.
 
-### Validação
+### Validation
 
-- Manual: a lista completa, nos temas Diurno e Noturno e em português e inglês.
-- Automática: `pytest` sem falhas, executado também por `build.ps1`.
+- Manual: the full checklist, in the Day and Night themes and in Portuguese
+  and English.
+- Automated: `pytest` with no failures, also run by `build.ps1`.
 
-## Fase 4: Forgejo e publicação
+## Phase 4: Forgejo and publishing — in progress
 
-### Resultado
+### Outcome
 
-O Forgejo está a correr no servidor, por HTTPS, e o repositório está publicado
-no Forgejo e no GitHub com um único `git push`.
+The repository is published on Forgejo (private) and GitHub (public), and a
+single `git push` updates both.
 
-### Trabalho incluído
+### Included work
 
-- Instalar e configurar o Forgejo (administrador, registo fechado, HTTPS).
-- Criar o repositório no Forgejo e `virtual-visual-vext` no GitHub.
-- Configurar o `origin` com os dois endereços de envio e enviar o histórico
-  completo.
-- Documentar no README como clonar e enviar.
+- Forgejo installed by the user (`Q-012`); repository `VirtualMacroTextInputer`.
+- Documentation in English at the root and Portuguese in `docs/pt/` (`Q-028`).
+- History rewritten with the GitHub private e-mail (`Q-029`) and personal data
+  removed from the published files.
+- Create the public `VirtualMacroTextInputer` repository on GitHub and push.
+- Configure `origin` with both push URLs; the user pushes the rewritten
+  history to Forgejo with `--force`.
+- Document in the README how to clone and push.
 
-### Dependências e riscos
+### Dependencies and risks
 
-- Forgejo feito pelo utilizador a 13-11-2026 (`Q-012`): repositório privado
-  `VirtualMacroTextInputer`, acessível pelo Tailscale em HTTP; o `origin` aponta
-  para lá e `main` segue `origin/main`.
-- Falta o GitHub: bloqueado por `Q-010` e `Q-011`. Depois, acrescentar o
-  GitHub como segundo endereço de envio do `origin`.
-- Ações em servidor (portas, firewall, certificados) são difíceis de reverter
-  sem acesso. Antes de executar, gerar o plano exato de comandos e o
-  procedimento para desinstalar.
-- Credenciais: chaves SSH ou tokens nunca entram no repositório.
+- Needs the GitHub connection (`Q-011`).
+- Rewriting the history changes every commit identifier; old clones must be
+  discarded.
+- Credentials: SSH keys or tokens never go into the repository.
 
-### Critérios de saída
+### Exit criteria
 
-- `git push` atualiza os dois remotos, e `git ls-remote` em ambos mostra o mesmo
+- `git push` updates both remotes, and `git ls-remote` on both shows the same
   commit.
-- O Forgejo responde (hoje em HTTP pelo Tailscale; HTTPS só se `Q-025` o
-  exigir) e sobrevive a um reinício do servidor.
+- The public repository contains no personal e-mail, Forgejo address or local
+  user paths (files and history).
+- Forgejo answers (over HTTP through Tailscale; HTTPS only if `Q-025` requires
+  it) and survives a server restart.
 
-### Validação
+### Validation
 
-- Manual: clonar a partir de cada remoto para uma pasta nova e correr `pytest`.
-- Reiniciar o serviço Forgejo e confirmar que o repositório continua acessível.
+- Manual: clone from each remote into a new folder and run `pytest`.
+- Automated: search the published history for the personal e-mail and private
+  addresses.

@@ -26,6 +26,7 @@ Write-Host "== PyInstaller =="
 if ($LASTEXITCODE -ne 0) { throw "PyInstaller falhou." }
 
 Copy-Item README.md dist\VirtualMacroTextInputer\ -Force
+Copy-Item docs\pt\README.md dist\VirtualMacroTextInputer\LEIA-ME.md -Force
 Copy-Item examples\conjunto-exemplo.toml dist\VirtualMacroTextInputer\ -Force
 Write-Host ""
 Write-Host "Pronto: dist\VirtualMacroTextInputer\VirtualMacroTextInputer.exe"
