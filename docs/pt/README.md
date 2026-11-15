@@ -29,7 +29,7 @@ A página [Releases](https://github.com/gama20000/VirtualMacroTextInputer/releas
 - O executável não tem assinatura digital, por isso na primeira execução o Windows SmartScreen pode dizer «O Windows protegeu o seu PC»: **Mais informações ▸ Executar mesmo assim**. O ficheiro `.sha256` ao lado permite confirmar que a transferência está intacta (`Get-FileHash VirtualMacroTextInputer.exe`).
 - Um executável de ficheiro único descompacta-se para uma pasta temporária a cada arranque, por isso demora mais 1–3 s a abrir do que a versão em pasta. Alguns antivírus desconfiam de programas que leem o teclado e escrevem texto; se o seu o bloquear, gere-o a partir do código (abaixo).
 
-As releases são geradas pelo GitHub Actions numa máquina Windows limpa (`.github/workflows/release.yml`): enviar uma etiqueta `vX.Y.Z` igual à versão do `pyproject.toml` corre os testes, gera o executável e publica a release.
+Cada pull request (incluindo os do Dependabot) e cada envio para `main` correm os testes no Windows (`.github/workflows/tests.yml`). As releases são geradas pelo GitHub Actions numa máquina Windows limpa (`.github/workflows/release.yml`): enviar uma etiqueta `vX.Y.Z` igual à versão do `pyproject.toml` corre os testes, gera o executável e publica a release.
 
 ## Obter o código
 

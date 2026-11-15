@@ -29,7 +29,7 @@ The [Releases](https://github.com/gama20000/VirtualMacroTextInputer/releases) pa
 - The executable is not digitally signed, so on the first run Windows SmartScreen may say «Windows protected your PC»: **More info ▸ Run anyway**. The `.sha256` file next to it lets you check that the download is intact (`Get-FileHash VirtualMacroTextInputer.exe`).
 - A single-file executable unpacks itself to a temporary folder on every start, so it takes 1–3 s longer to open than the folder build. Some antivirus programs are wary of programs that read the keyboard and type text; if yours blocks it, build it yourself from source (below).
 
-Releases are built by GitHub Actions on a clean Windows machine (`.github/workflows/release.yml`): pushing a `vX.Y.Z` tag that matches the version in `pyproject.toml` runs the tests, builds the executable and publishes the release.
+Every pull request (including Dependabot's) and every push to `main` runs the tests on Windows (`.github/workflows/tests.yml`). Releases are built by GitHub Actions on a clean Windows machine (`.github/workflows/release.yml`): pushing a `vX.Y.Z` tag that matches the version in `pyproject.toml` runs the tests, builds the executable and publishes the release.
 
 ## Getting the code
 
