@@ -13,22 +13,20 @@
   utilizador local).
   - Validação: ligações entre documentos verificadas por script; procura dos
     dados privados nos ficheiros.
-- [ ] Reescrever o histórico com o email privado do GitHub (`Q-029`).
-  - Critérios de aceitação: nenhum commit tem o email pessoal como autor ou
-    committer; nenhum ficheiro de nenhum commit contém o endereço do Forgejo
-    nem caminhos com o utilizador local; o `user.email` local é o endereço
-    privado do GitHub.
-  - Validação automática: `git log --format='%ae %ce' | sort -u`; `git grep`
-    em todas as revisões.
-  - Dependências ou bloqueios: a ligação ao GitHub (`Q-011`), para saber o id
-    e o nome da conta.
-- [ ] Criar o repositório público `VirtualMacroTextInputer` no GitHub e enviar.
-  - Critérios de aceitação: o GitHub mostra o README em inglês; o `origin` tem
-    os dois endereços de envio.
-  - Validação manual: o utilizador corre `git push --force` para o Forgejo e
-    depois um `git push` normal, e os dois remotos mostram o mesmo commit.
-  - Dependências ou bloqueios: a tarefa anterior.
-- [ ] README: como clonar e enviar.
+- [x] Histórico reescrito (`Q-029`): autor e committer
+  `gama20000 <87977333+gama20000@users.noreply.github.com>` em todos os
+  commits; endereço e utilizador do Forgejo e caminhos com o utilizador local
+  retirados dos ficheiros e das mensagens de todas as revisões.
+  - Validação: `git log --format='%an %ae %cn %ce' | sort -u` e `git grep` em
+    todas as revisões não encontraram nada pessoal.
+- [x] Repositório `gama20000/VirtualMacroTextInputer` no GitHub, criado pelo
+  utilizador (privado por agora) e enviado; o `origin` tem os dois endereços
+  de envio.
+  - Validação: o `git push --force` do utilizador atualizou o Forgejo e o
+    `git push` seguinte criou o `main` no GitHub (15-11-2026).
+- [x] README: como clonar e enviar.
+- [ ] Tornar público o repositório do GitHub (o utilizador, quando quiser:
+  Settings ▸ General ▸ Change visibility).
 - [x] Licença: MIT (`Q-030`), `LICENSE` na raiz.
 
 ## Em pausa: Fase 3 — Validação manual no Windows e distribuição

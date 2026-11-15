@@ -14,8 +14,9 @@ panel's own title bar) are complete. Since then, six Codex reviews have been
 addressed; 171 automated tests pass. Manual validation on Windows is still
 missing (Phase 3, paused since 12-11-2026, with 16 steps checked and 3
 partial; steps 62–89 cover 0.4 and the rename). The repository is on the
-user's Forgejo (private, through Tailscale); publishing on GitHub (public) is
-in progress (Phase 4).
+user's Forgejo (private, through Tailscale); publishing on GitHub is
+done, with the GitHub repository still private until the user makes it
+public (Phase 4).
 
 ## Open decisions
 

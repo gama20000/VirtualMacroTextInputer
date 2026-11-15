@@ -22,6 +22,14 @@ Macro pad para Windows. Usa teclas normais do teclado (por omissão, 1, 2, 3 e 4
 - Só pode haver uma instância. Abrir o programa outra vez apenas mostra a configuração.
 - **Mudança de nome.** No primeiro arranque com o nome novo, as macros e preferências de `%APPDATA%\Macropad` são copiadas para `%APPDATA%\VirtualMacroTextInputer` (a pasta antiga fica intacta, como cópia de segurança). A entrada antiga de arranque com o Windows («Macropad») é substituída pela nova. Se a versão antiga ainda estiver a correr, o programa pede para a fechar, para as macros não serem escritas duas vezes.
 
+## Obter o código
+
+```powershell
+git clone https://github.com/gama20000/VirtualMacroTextInputer.git
+```
+
+A cópia de trabalho do autor tem um único remoto `origin` com dois endereços de envio (um Forgejo privado e o GitHub), por isso um só `git push` atualiza os dois.
+
 ## Executar
 
 Requisitos: Windows 10/11 e Python 3.11 ou superior. O Python é necessário apenas para executar a partir do código ou para gerar a distribuição.

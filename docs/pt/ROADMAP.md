@@ -15,7 +15,8 @@ revisões do Codex foram corrigidas; 171 testes automáticos passam. Falta a
 validação manual no Windows (Fase 3, em pausa desde 12-11-2026, com 16 passos
 verificados e 3 parciais; os passos 62–89 cobrem a 0.4 e a mudança de nome). O
 repositório está no Forgejo do utilizador (privado, pelo Tailscale); a
-publicação no GitHub (público) está em curso (Fase 4).
+publicação no GitHub está feita, com o repositório ainda privado até o
+utilizador o tornar público (Fase 4).
 
 ## Decisões em aberto
 

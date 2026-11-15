@@ -22,6 +22,14 @@ A macro pad for Windows. It uses ordinary keyboard keys (by default 1, 2, 3 and 
 - Only one instance can run. Opening the program again just shows the settings.
 - **Name change.** On the first start under the new name, macros and preferences in `%APPDATA%\Macropad` are copied to `%APPDATA%\VirtualMacroTextInputer` (the old folder is left untouched as a backup). The old Windows startup entry («Macropad») is replaced by the new one. If the old version is still running, the program asks you to close it so that macros are not typed twice.
 
+## Getting the code
+
+```powershell
+git clone https://github.com/gama20000/VirtualMacroTextInputer.git
+```
+
+The maintainer's working copy has one `origin` remote with two push URLs (a private Forgejo and GitHub), so a single `git push` updates both.
+
 ## Running
 
 Requirements: Windows 10/11 and Python 3.11 or later. Python is only needed to run from source or to build the distribution.

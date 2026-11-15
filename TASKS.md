@@ -12,21 +12,19 @@
   without personal data (Forgejo address and username, local user paths).
   - Validation: links between documents checked by script; search for the
     private data in the files.
-- [ ] Rewrite the history with the GitHub private e-mail (`Q-029`).
-  - Acceptance criteria: no commit has the personal e-mail as author or
-    committer; no file in any commit contains the Forgejo address or local
-    user paths; local `user.email` is the GitHub private address.
-  - Automated validation: `git log --format='%ae %ce' | sort -u`; `git grep`
-    over all revisions.
-  - Dependencies or blockers: the GitHub connection (`Q-011`) to learn the
-    account id and username.
-- [ ] Create the public `VirtualMacroTextInputer` repository on GitHub and push.
-  - Acceptance criteria: GitHub shows the English README; `origin` has both
-    push URLs.
-  - Manual validation: the user runs `git push --force` to Forgejo, then a
-    normal `git push`, and both remotes show the same commit.
-  - Dependencies or blockers: the previous task.
-- [ ] README: how to clone and push.
+- [x] History rewritten (`Q-029`): author and committer
+  `gama20000 <87977333+gama20000@users.noreply.github.com>` in every commit;
+  Forgejo address, Forgejo username and local user paths removed from files
+  and messages in every revision.
+  - Validation: `git log --format='%an %ae %cn %ce' | sort -u` and `git grep`
+    over all revisions found nothing personal.
+- [x] GitHub repository `gama20000/VirtualMacroTextInputer` created by the user
+  (private for now) and pushed; `origin` has both push URLs.
+  - Validation: the user's `git push --force` updated Forgejo and the next
+    `git push` created `main` on GitHub (15-11-2026).
+- [x] README: how to clone and push.
+- [ ] Make the GitHub repository public (the user, when ready: Settings ▸
+  General ▸ Change visibility).
 - [x] Licence: MIT (`Q-030`), `LICENSE` at the root.
 
 ## Paused: Phase 3 — Manual validation on Windows and distribution
