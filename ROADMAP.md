@@ -25,9 +25,6 @@ in progress (Phase 4).
   for a lighter executable with faster start-up? The decision should wait for
   the validation of the Python version (Phase 3), which fixes the behaviour to
   reproduce.
-- [ ] **Licence for the public repository** (`Q-030`): without a licence, the
-  public code is «all rights reserved» (others can read it but not reuse it).
-  Options include MIT, Apache-2.0 or GPL-3.0.
 
 ### Blocked
 
@@ -68,6 +65,7 @@ in progress (Phase 4).
 - [x] [New program name](ANSWERS.md#q-026-new-program-name) (`Q-026`): Virtual Macro Text Inputer; data copied from the old folder.
 - [x] [Repository location on the PC](ANSWERS.md#q-027-repository-location-on-the-pc) (`Q-027`): `%USERPROFILE%\source\VirtualMacroTextInputer`, outside Google Drive.
 - [x] [Documentation language](ANSWERS.md#q-028-documentation-language) (`Q-028`): English at the root, Portuguese in `docs/pt/`.
+- [x] [Licence](ANSWERS.md#q-030-licence) (`Q-030`): MIT.
 - [x] [E-mail in the commits](ANSWERS.md#q-029-e-mail-in-the-commits) (`Q-029`): GitHub private address; history rewritten.
 
 ## Phase 1: Independent review and fixes — complete (12-11-2026)

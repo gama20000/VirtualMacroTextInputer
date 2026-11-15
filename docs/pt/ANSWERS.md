@@ -369,3 +369,15 @@ conversa de 11-11-2026 e nos primeiros commits do histórico git.
   receber o histórico reescrito com `git push --force` (feito pelo
   utilizador). Cópias do histórico antigo devem ser descartadas.
 - **Rever quando:** Nunca.
+
+## Q-030: Licença
+
+- **Resolvido:** 2026-11-15
+- **Resposta:** MIT. `LICENSE` na raiz, direitos de autor em nome de
+  «gama20000» (o nome da conta GitHub, não um nome pessoal).
+- **Justificação:** Escolha do utilizador. A MIT é a licença comum mais
+  permissiva: qualquer pessoa pode reutilizar o código, mantendo o aviso.
+- **Evidência:** Mensagem do utilizador de 15-11-2026.
+- **Consequências:** O `pyproject.toml` declara `license = { text = "MIT" }`.
+- **Rever quando:** O utilizador quiser uma licença copyleft.
+

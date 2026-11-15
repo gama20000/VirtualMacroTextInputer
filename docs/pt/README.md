@@ -248,6 +248,10 @@ src/macropad/
 
 Para uma versão Linux, basta criar `platform/linux` com a mesma interface (por exemplo evdev/uinput para intercetar e injetar, `_NET_ACTIVE_WINDOW` ou o compositor para a janela ativa) e escolhê-la em `platform/__init__.py`. O núcleo e a interface Qt não mudam.
 
+## Licença
+
+MIT — ver [LICENSE](../../LICENSE).
+
 ## Documentos do projeto
 
 Planeamento e revisões (em português, nesta pasta): [SPEC.md](SPEC.md), [ROADMAP.md](ROADMAP.md), [TASKS.md](TASKS.md), [ANSWERS.md](ANSWERS.md), [VERIFICACAO-MANUAL.md](VERIFICACAO-MANUAL.md) e [revisao-codex.md](revisao-codex.md). As versões em inglês estão na raiz do repositório e em `docs/`.

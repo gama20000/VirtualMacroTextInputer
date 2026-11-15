@@ -248,6 +248,10 @@ src/macropad/
 
 For a Linux version, it is enough to create `platform/linux` with the same interface (for example evdev/uinput to intercept and inject, `_NET_ACTIVE_WINDOW` or the compositor for the active window) and select it in `platform/__init__.py`. The core and the Qt interface do not change.
 
+## Licence
+
+MIT — see [LICENSE](LICENSE).
+
 ## Project documents
 
 Planning and review documents (in English): [SPEC.md](SPEC.md), [ROADMAP.md](ROADMAP.md), [TASKS.md](TASKS.md), [ANSWERS.md](ANSWERS.md), [docs/MANUAL-CHECKLIST.md](docs/MANUAL-CHECKLIST.md) and [docs/CODEX-REVIEW.md](docs/CODEX-REVIEW.md). The Portuguese originals are in [docs/pt/](docs/pt/).

@@ -27,7 +27,7 @@
     normal `git push`, and both remotes show the same commit.
   - Dependencies or blockers: the previous task.
 - [ ] README: how to clone and push.
-- [ ] Choose a licence (`Q-030`).
+- [x] Licence: MIT (`Q-030`), `LICENSE` at the root.
 
 ## Paused: Phase 3 — Manual validation on Windows and distribution
 

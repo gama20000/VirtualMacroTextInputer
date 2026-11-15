@@ -29,7 +29,7 @@
     depois um `git push` normal, e os dois remotos mostram o mesmo commit.
   - Dependências ou bloqueios: a tarefa anterior.
 - [ ] README: como clonar e enviar.
-- [ ] Escolher uma licença (`Q-030`).
+- [x] Licença: MIT (`Q-030`), `LICENSE` na raiz.
 
 ## Em pausa: Fase 3 — Validação manual no Windows e distribuição
 

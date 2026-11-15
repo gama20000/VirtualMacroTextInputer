@@ -25,9 +25,6 @@ publicação no GitHub (público) está em curso (Fase 4).
   Rust para ter um executável mais leve e com arranque mais rápido? A decisão
   deve esperar pela validação da versão Python (Fase 3), que fixa o
   comportamento a reproduzir.
-- [ ] **Licença do repositório público** (`Q-030`): sem licença, o código
-  público fica «todos os direitos reservados» (outros podem lê-lo mas não
-  reutilizá-lo). Hipóteses: MIT, Apache-2.0 ou GPL-3.0.
 
 ### Bloqueado
 
@@ -69,6 +66,7 @@ publicação no GitHub (público) está em curso (Fase 4).
 - [x] [Novo nome do programa](ANSWERS.md#q-026-novo-nome-do-programa) (`Q-026`): Virtual Macro Text Inputer; dados copiados da pasta antiga.
 - [x] [Localização do repositório no PC](ANSWERS.md#q-027-localização-do-repositório-no-pc) (`Q-027`): `%USERPROFILE%\source\VirtualMacroTextInputer`, fora do Google Drive.
 - [x] [Idioma da documentação](ANSWERS.md#q-028-idioma-da-documentação) (`Q-028`): inglês na raiz, português em `docs/pt/`.
+- [x] [Licença](ANSWERS.md#q-030-licença) (`Q-030`): MIT.
 - [x] [Email nos commits](ANSWERS.md#q-029-email-nos-commits) (`Q-029`): endereço privado do GitHub; histórico reescrito.
 
 ## Fase 1: Revisão independente e correções — concluída (12-11-2026)
