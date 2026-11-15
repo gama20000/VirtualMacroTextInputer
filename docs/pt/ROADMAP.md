@@ -18,9 +18,9 @@ testes automáticos passam (um ignorado fora do Windows). Falta a
 validação manual no Windows (Fase 3, em pausa desde 12-11-2026, com 16 passos
 verificados e 3 parciais; os passos 62–89 cobrem a 0.4 e a mudança de nome,
 os passos 90–99 cobrem a 0.5). O
-repositório está no Forgejo do utilizador (privado, pelo Tailscale); a
-publicação no GitHub está feita, com o repositório ainda privado até o
-utilizador o tornar público (Fase 4).
+repositório está no Forgejo do utilizador (privado, pelo Tailscale) e é
+público no GitHub; as releases com um só `.exe` são geradas pelo GitHub
+Actions (Fase 4).
 
 ## Decisões em aberto
 
@@ -75,6 +75,7 @@ utilizador o tornar público (Fase 4).
 - [x] [Linhas e páginas do painel](ANSWERS.md#q-031-linhas-e-páginas-do-painel) (`Q-031`): páginas com setas; o painel encolhe com poucos botões.
 - [x] [Reposição do contador com a tecla premida, e som](ANSWERS.md#q-032-reposição-do-contador-com-a-tecla-premida-e-som) (`Q-032`): repõe ao atingir o tempo; som por contador, nenhum por omissão.
 - [x] [Teclas multimédia](ANSWERS.md#q-033-teclas-multimédia) (`Q-033`): atribuídas num menu «Multimédia».
+- [x] [Release num só ficheiro](ANSWERS.md#q-034-release-num-só-ficheiro) (`Q-034`): `build.ps1 -OneFile` no PC; GitHub Actions com etiquetas `vX.Y.Z`.
 - [x] [Email nos commits](ANSWERS.md#q-029-email-nos-commits) (`Q-029`): endereço privado do GitHub; histórico reescrito.
 
 ## Fase 1: Revisão independente e correções — concluída (12-11-2026)

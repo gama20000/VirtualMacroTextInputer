@@ -20,13 +20,21 @@
   - Validação: `git log --format='%an %ae %cn %ce' | sort -u` e `git grep` em
     todas as revisões não encontraram nada pessoal.
 - [x] Repositório `gama20000/VirtualMacroTextInputer` no GitHub, criado pelo
-  utilizador (privado por agora) e enviado; o `origin` tem os dois endereços
+  utilizador (público desde 15-11-2026) e enviado; o `origin` tem os dois endereços
   de envio.
   - Validação: o `git push --force` do utilizador atualizou o Forgejo e o
     `git push` seguinte criou o `main` no GitHub (15-11-2026).
 - [x] README: como clonar e enviar.
-- [ ] Tornar público o repositório do GitHub (o utilizador, quando quiser:
-  Settings ▸ General ▸ Change visibility).
+- [x] Repositório do GitHub tornado público pelo utilizador (15-11-2026).
+- [x] Compilação num só ficheiro: `build.ps1 -OneFile` (`Q-034`).
+- [ ] Workflow de release (`.github/workflows/release.yml`): primeira execução.
+  - Critérios de aceitação: enviar a etiqueta `v0.5.0` publica uma release com
+    `VirtualMacroTextInputer.exe` e o respetivo `.sha256`; o ficheiro
+    descarregado corre no PC do utilizador.
+  - Validação manual: o utilizador envia a etiqueta e abre o `.exe`
+    descarregado.
+  - Dependências ou bloqueios: o utilizador envia o commit e a etiqueta; o
+    workflow ainda não correu (só pode correr no GitHub).
 - [x] Licença: MIT (`Q-030`), `LICENSE` na raiz.
 
 ## Em pausa: Fase 3 — Validação manual no Windows e distribuição

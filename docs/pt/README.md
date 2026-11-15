@@ -22,6 +22,15 @@ Macro pad para Windows. Usa teclas normais do teclado (por omissão, 1, 2, 3 e 4
 - Só pode haver uma instância. Abrir o programa outra vez apenas mostra a configuração.
 - **Mudança de nome.** No primeiro arranque com o nome novo, as macros e preferências de `%APPDATA%\Macropad` são copiadas para `%APPDATA%\VirtualMacroTextInputer` (a pasta antiga fica intacta, como cópia de segurança). A entrada antiga de arranque com o Windows («Macropad») é substituída pela nova. Se a versão antiga ainda estiver a correr, o programa pede para a fechar, para as macros não serem escritas duas vezes.
 
+## Descarregar
+
+A página [Releases](https://github.com/gama20000/VirtualMacroTextInputer/releases) tem o `VirtualMacroTextInputer.exe`, um único ficheiro que não precisa de instalação nem de Python. Coloque-o onde quiser (por exemplo `%LOCALAPPDATA%\Programs\VirtualMacroTextInputer`) e execute-o.
+
+- O executável não tem assinatura digital, por isso na primeira execução o Windows SmartScreen pode dizer «O Windows protegeu o seu PC»: **Mais informações ▸ Executar mesmo assim**. O ficheiro `.sha256` ao lado permite confirmar que a transferência está intacta (`Get-FileHash VirtualMacroTextInputer.exe`).
+- Um executável de ficheiro único descompacta-se para uma pasta temporária a cada arranque, por isso demora mais 1–3 s a abrir do que a versão em pasta. Alguns antivírus desconfiam de programas que leem o teclado e escrevem texto; se o seu o bloquear, gere-o a partir do código (abaixo).
+
+As releases são geradas pelo GitHub Actions numa máquina Windows limpa (`.github/workflows/release.yml`): enviar uma etiqueta `vX.Y.Z` igual à versão do `pyproject.toml` corre os testes, gera o executável e publica a release.
+
 ## Obter o código
 
 ```powershell
@@ -49,6 +58,8 @@ python -m venv .venv
 ```powershell
 .\build.ps1        # cria .venv, corre os testes e gera dist\VirtualMacroTextInputer\VirtualMacroTextInputer.exe
 ```
+
+Ou, num só ficheiro: `.\build.ps1 -OneFile` gera `dist\VirtualMacroTextInputer.exe` e o respetivo SHA-256.
 
 Copie a pasta `dist\VirtualMacroTextInputer` para onde quiser (por exemplo `%LOCALAPPDATA%\Programs\VirtualMacroTextInputer`) e execute `VirtualMacroTextInputer.exe`. O registo de arranque automático (`HKCU\...\Run`) aponta para o executável que estiver a correr. Se mudar a pasta de sítio, abra o programa uma vez a partir da nova localização e volte a ativar "Arrancar com o Windows".
 

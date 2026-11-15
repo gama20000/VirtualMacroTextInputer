@@ -422,3 +422,24 @@ of 11-11-2026 and in the first commits of the git history.
   are not seen by the keyboard hook; to be confirmed on the user's keyboard.
 - **Revisit when:** A keyboard's media keys do not reach the hook.
 
+## Q-034: Single-file release
+
+- **Resolved:** 2026-11-15
+- **Answer:** Releases are a single `VirtualMacroTextInputer.exe` (PyInstaller
+  `--onefile`) with its SHA-256, built by GitHub Actions on `windows-latest`
+  when a `vX.Y.Z` tag is pushed. `build.ps1 -OneFile` builds the same file on
+  the user's PC; `build.ps1` without it keeps the folder build.
+- **Rationale:** The agent's environment is Linux and PyInstaller does not
+  cross-compile, so the build must run on Windows. A clean CI machine gives
+  the same result every time and publishes the release by itself; the local
+  build stays available for quick tests. The repository is public, so the
+  Actions minutes are free.
+- **Evidence:** The user's questions and the note that the repository is
+  public (15-11-2026).
+- **Consequences:** The executable is unsigned (SmartScreen warning on first
+  run). A single file starts 1–3 s slower (it unpacks to a temporary folder)
+  and is more likely to trigger antivirus heuristics than the folder build.
+  The workflow refuses a tag that does not match `pyproject.toml`.
+- **Revisit when:** A code-signing certificate is available, or after a
+  rewrite (Rust, `Q-024`) that produces a small native executable.
+

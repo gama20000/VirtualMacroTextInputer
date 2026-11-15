@@ -15,10 +15,9 @@ addressed, and version 0.5 (counter progress and reset while held, insertion
 after the selection, panel rows with pages, media keys, undoing a deletion)
 is implemented; 187 automated tests pass (one skipped outside Windows). Manual validation on Windows is still
 missing (Phase 3, paused since 12-11-2026, with 16 steps checked and 3
-partial; steps 62–89 cover 0.4 and the rename, steps 90–99 cover 0.5). The repository is on the
-user's Forgejo (private, through Tailscale); publishing on GitHub is
-done, with the GitHub repository still private until the user makes it
-public (Phase 4).
+partial; steps 62–89 cover 0.4 and the rename, steps 90–99 cover 0.5). The
+repository is on the user's Forgejo (private, through Tailscale) and public on
+GitHub; releases with a single `.exe` are built by GitHub Actions (Phase 4).
 
 ## Open decisions
 
@@ -72,6 +71,7 @@ public (Phase 4).
 - [x] [Panel rows and pages](ANSWERS.md#q-031-panel-rows-and-pages) (`Q-031`): pages with arrows; the panel shrinks with few buttons.
 - [x] [Counter reset while held, and sound](ANSWERS.md#q-032-counter-reset-while-held-and-sound) (`Q-032`): resets at the long-press time; sound per counter, none by default.
 - [x] [Media keys](ANSWERS.md#q-033-media-keys) (`Q-033`): assigned from a «Media» menu.
+- [x] [Single-file release](ANSWERS.md#q-034-single-file-release) (`Q-034`): `build.ps1 -OneFile` locally; GitHub Actions on `vX.Y.Z` tags.
 - [x] [E-mail in the commits](ANSWERS.md#q-029-e-mail-in-the-commits) (`Q-029`): GitHub private address; history rewritten.
 
 ## Phase 1: Independent review and fixes — complete (12-11-2026)

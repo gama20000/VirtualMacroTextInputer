@@ -1,7 +1,11 @@
-# Gera a distribuição Windows em dist\VirtualMacroTextInputer\VirtualMacroTextInputer.exe
-# Uso (PowerShell, na pasta do projeto):   .\build.ps1
+# Gera a distribuição Windows.
+# Uso (PowerShell, na pasta do projeto):
+#   .\build.ps1            -> pasta dist\VirtualMacroTextInputer\ (arranque rápido)
+#   .\build.ps1 -OneFile   -> um só ficheiro dist\VirtualMacroTextInputer.exe
+#                             (descompacta-se para uma pasta temporária a cada
+#                             arranque: 1-3 s mais lento)
 # Requer Python 3.11+ no PATH (ou indique-o: .\build.ps1 -Python "C:\caminho\python.exe").
-param([string]$Python = "python")
+param([string]$Python = "python", [switch]$OneFile)
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
 
@@ -15,7 +19,8 @@ Write-Host "== Testes =="
 if ($LASTEXITCODE -ne 0) { throw "Os testes falharam." }
 
 Write-Host "== PyInstaller =="
-& $py -m PyInstaller --noconfirm --clean --windowed `
+$mode = if ($OneFile) { "--onefile" } else { "--onedir" }
+& $py -m PyInstaller --noconfirm --clean --windowed $mode `
     --name VirtualMacroTextInputer `
     --icon assets\macropad.ico `
     --paths src `
@@ -24,6 +29,16 @@ Write-Host "== PyInstaller =="
     --exclude-module tkinter `
     launcher.py
 if ($LASTEXITCODE -ne 0) { throw "PyInstaller falhou." }
+
+if ($OneFile) {
+    $exe = "dist\VirtualMacroTextInputer.exe"
+    $hash = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLower()
+    "$hash  VirtualMacroTextInputer.exe" | Set-Content -Encoding ascii "$exe.sha256"
+    Write-Host ""
+    Write-Host "Pronto: $exe ($([math]::Round((Get-Item $exe).Length / 1MB)) MB)"
+    Write-Host "SHA-256: $hash"
+    return
+}
 
 Copy-Item README.md dist\VirtualMacroTextInputer\ -Force
 Copy-Item docs\pt\README.md dist\VirtualMacroTextInputer\LEIA-ME.md -Force

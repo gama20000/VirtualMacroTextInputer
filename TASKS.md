@@ -19,12 +19,19 @@
   - Validation: `git log --format='%an %ae %cn %ce' | sort -u` and `git grep`
     over all revisions found nothing personal.
 - [x] GitHub repository `gama20000/VirtualMacroTextInputer` created by the user
-  (private for now) and pushed; `origin` has both push URLs.
+  (public since 15-11-2026) and pushed; `origin` has both push URLs.
   - Validation: the user's `git push --force` updated Forgejo and the next
     `git push` created `main` on GitHub (15-11-2026).
 - [x] README: how to clone and push.
-- [ ] Make the GitHub repository public (the user, when ready: Settings ▸
-  General ▸ Change visibility).
+- [x] GitHub repository made public by the user (15-11-2026).
+- [x] Single-file build: `build.ps1 -OneFile` (`Q-034`).
+- [ ] Release workflow (`.github/workflows/release.yml`): first run.
+  - Acceptance criteria: pushing tag `v0.5.0` publishes a release with
+    `VirtualMacroTextInputer.exe` and its `.sha256`; the downloaded file runs
+    on the user's PC.
+  - Manual validation: the user pushes the tag and opens the downloaded `.exe`.
+  - Dependencies or blockers: the user pushes the commit and the tag; the
+    workflow has not run yet (it can only run on GitHub).
 - [x] Licence: MIT (`Q-030`), `LICENSE` at the root.
 
 ## Paused: Phase 3 — Manual validation on Windows and distribution

@@ -22,6 +22,15 @@ A macro pad for Windows. It uses ordinary keyboard keys (by default 1, 2, 3 and 
 - Only one instance can run. Opening the program again just shows the settings.
 - **Name change.** On the first start under the new name, macros and preferences in `%APPDATA%\Macropad` are copied to `%APPDATA%\VirtualMacroTextInputer` (the old folder is left untouched as a backup). The old Windows startup entry («Macropad») is replaced by the new one. If the old version is still running, the program asks you to close it so that macros are not typed twice.
 
+## Download
+
+The [Releases](https://github.com/gama20000/VirtualMacroTextInputer/releases) page has `VirtualMacroTextInputer.exe`, a single file that needs no installation and no Python. Put it wherever you like (for example `%LOCALAPPDATA%\Programs\VirtualMacroTextInputer`) and run it.
+
+- The executable is not digitally signed, so on the first run Windows SmartScreen may say «Windows protected your PC»: **More info ▸ Run anyway**. The `.sha256` file next to it lets you check that the download is intact (`Get-FileHash VirtualMacroTextInputer.exe`).
+- A single-file executable unpacks itself to a temporary folder on every start, so it takes 1–3 s longer to open than the folder build. Some antivirus programs are wary of programs that read the keyboard and type text; if yours blocks it, build it yourself from source (below).
+
+Releases are built by GitHub Actions on a clean Windows machine (`.github/workflows/release.yml`): pushing a `vX.Y.Z` tag that matches the version in `pyproject.toml` runs the tests, builds the executable and publishes the release.
+
 ## Getting the code
 
 ```powershell
@@ -49,6 +58,8 @@ python -m venv .venv
 ```powershell
 .\build.ps1        # creates .venv, runs the tests and builds dist\VirtualMacroTextInputer\VirtualMacroTextInputer.exe
 ```
+
+Or, for a single file: `.\build.ps1 -OneFile` builds `dist\VirtualMacroTextInputer.exe` and its SHA-256.
 
 Copy the `dist\VirtualMacroTextInputer` folder wherever you like (for example `%LOCALAPPDATA%\Programs\VirtualMacroTextInputer`) and run `VirtualMacroTextInputer.exe`. The autostart registry entry (`HKCU\...\Run`) points to the executable that is running. If you move the folder, open the program once from the new location and turn "Start automatically with Windows" on again.
 

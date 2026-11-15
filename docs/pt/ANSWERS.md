@@ -435,3 +435,26 @@ conversa de 11-11-2026 e nos primeiros commits do histórico git.
   do utilizador.
 - **Rever quando:** As teclas multimédia de um teclado não chegarem ao hook.
 
+## Q-034: Release num só ficheiro
+
+- **Resolvido:** 2026-11-15
+- **Resposta:** As releases são um único `VirtualMacroTextInputer.exe`
+  (PyInstaller `--onefile`) com o respetivo SHA-256, gerado pelo GitHub
+  Actions em `windows-latest` quando se envia uma etiqueta `vX.Y.Z`. O
+  `build.ps1 -OneFile` gera o mesmo ficheiro no PC do utilizador; o
+  `build.ps1` sem essa opção mantém a versão em pasta.
+- **Justificação:** O ambiente do agente é Linux e o PyInstaller não compila
+  para outro sistema, por isso a compilação tem de ser feita no Windows. Uma
+  máquina de CI limpa dá sempre o mesmo resultado e publica a release
+  sozinha; a compilação local continua disponível para testes rápidos. O
+  repositório é público, por isso os minutos do Actions são gratuitos.
+- **Evidência:** Perguntas do utilizador e indicação de que o repositório é
+  público (15-11-2026).
+- **Consequências:** O executável não tem assinatura (aviso do SmartScreen na
+  primeira execução). Um só ficheiro arranca 1–3 s mais devagar (descompacta-se
+  para uma pasta temporária) e tem mais probabilidade de alertar os antivírus
+  do que a versão em pasta. O workflow recusa uma etiqueta diferente da versão
+  do `pyproject.toml`.
+- **Rever quando:** Houver um certificado de assinatura de código, ou depois
+  de uma reescrita (Rust, `Q-024`) que gere um executável nativo pequeno.
+
