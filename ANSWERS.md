@@ -371,7 +371,7 @@ of 11-11-2026 and in the first commits of the git history.
 - **Rationale:** The user's choice. MIT is the most permissive common licence:
   anyone may reuse the code, keeping the notice.
 - **Evidence:** The user's message of 15-11-2026.
-- **Consequences:** `pyproject.toml` declares `license = { text = "MIT" }`.
+- **Consequences:** `pyproject.toml` declares `license = "MIT"` (SPDX) and `license-files = ["LICENSE"]`.
 - **Revisit when:** The user wants a copyleft licence.
 
 ## Q-031: Panel rows and pages

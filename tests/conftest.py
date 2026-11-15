@@ -77,3 +77,34 @@ def wait_idle(engine, timeout=5.0):
     while engine.running is not None and time.monotonic() < end:
         time.sleep(0.005)
     assert engine.running is None, "execução não terminou"
+
+
+# ---------------------------------------------------------------- saída limpa
+# Os testes da interface criam uma QApplication que vive até ao fim do
+# processo. No Windows, destruí-la durante a finalização do Python (com
+# janelas e temporizadores ainda vivos) pode rebentar depois de o pytest já ter
+# mostrado «N passed», e o processo sai com um código de erro. Por isso, depois
+# do resumo, o processo termina logo com o resultado real dos testes.
+_exit_status = None
+
+
+def pytest_sessionfinish(session, exitstatus):
+    global _exit_status
+    _exit_status = int(exitstatus)
+
+
+@pytest.hookimpl(trylast=True)
+def pytest_unconfigure(config):
+    if _exit_status is None:
+        return
+    try:
+        from PySide6.QtWidgets import QApplication
+    except ImportError:
+        return
+    if QApplication.instance() is None:
+        return
+    import os
+    import sys
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(_exit_status)

@@ -16,7 +16,7 @@ $py = ".\.venv\Scripts\python.exe"
 
 Write-Host "== Testes =="
 & $py -m pytest -q
-if ($LASTEXITCODE -ne 0) { throw "Os testes falharam." }
+if ($LASTEXITCODE -ne 0) { throw "Os testes falharam (código de saída $LASTEXITCODE)." }
 
 Write-Host "== PyInstaller =="
 $mode = if ($OneFile) { "--onefile" } else { "--onedir" }
@@ -28,7 +28,7 @@ $mode = if ($OneFile) { "--onefile" } else { "--onedir" }
     --add-data "src\macropad\locales;macropad\locales" `
     --exclude-module tkinter `
     launcher.py
-if ($LASTEXITCODE -ne 0) { throw "PyInstaller falhou." }
+if ($LASTEXITCODE -ne 0) { throw "PyInstaller falhou (código de saída $LASTEXITCODE)." }
 
 if ($OneFile) {
     $exe = "dist\VirtualMacroTextInputer.exe"

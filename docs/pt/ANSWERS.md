@@ -380,7 +380,7 @@ conversa de 11-11-2026 e nos primeiros commits do histórico git.
 - **Justificação:** Escolha do utilizador. A MIT é a licença comum mais
   permissiva: qualquer pessoa pode reutilizar o código, mantendo o aviso.
 - **Evidência:** Mensagem do utilizador de 15-11-2026.
-- **Consequências:** O `pyproject.toml` declara `license = { text = "MIT" }`.
+- **Consequências:** O `pyproject.toml` declara `license = "MIT"` (SPDX) e `license-files = ["LICENSE"]`.
 - **Rever quando:** O utilizador quiser uma licença copyleft.
 
 ## Q-031: Linhas e páginas do painel
