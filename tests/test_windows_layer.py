@@ -208,3 +208,15 @@ def test_area_de_transferencia_falha_ao_definir(win):
         win.mod.WindowsPlatform()._set_clipboard("x")
     names = [n for n, _ in order]
     assert "GlobalFree" in names and "CloseClipboard" in names and "DestroyWindow" in names
+
+
+def test_teclas_multimedia_enviadas_como_estendidas(win):
+    """{MediaPlayPause} e afins: código virtual da tecla, com a marca própria
+    e a flag de tecla estendida (Enter e Tab continuam sem ela)."""
+    p = win.mod.WindowsPlatform()
+    p.send_key("MediaPlayPause")
+    p.send_key("VolumeUp")
+    ext = win.w.KEYEVENTF_EXTENDEDKEY
+    got = [(s[1], s[3]) for s in win.sent]
+    assert got == [(0xB3, ext), (0xB3, ext | 2), (0xAF, ext), (0xAF, ext | 2)]
+    assert all(s[4] == win.w.MAGIC_EXTRA_INFO for s in win.sent)

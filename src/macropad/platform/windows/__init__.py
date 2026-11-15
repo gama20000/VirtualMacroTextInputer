@@ -93,13 +93,14 @@ class WindowsPlatform:
             inputs.append(self._key_input(0, u, w.KEYEVENTF_UNICODE | w.KEYEVENTF_KEYUP))
         self._send(inputs)
 
-    def _tap_vk(self, vk: int, with_ctrl: bool = False) -> None:
+    def _tap_vk(self, vk: int, with_ctrl: bool = False, extended: bool = False) -> None:
         scan = w.MapVirtualKeyW(vk, 0)
+        ext = w.KEYEVENTF_EXTENDEDKEY if extended else 0
         seq = []
         if with_ctrl:
             seq.append(self._key_input(w.VK_CONTROL, w.MapVirtualKeyW(w.VK_CONTROL, 0), 0))
-        seq.append(self._key_input(vk, scan, 0))
-        seq.append(self._key_input(vk, scan, w.KEYEVENTF_KEYUP))
+        seq.append(self._key_input(vk, scan, ext))
+        seq.append(self._key_input(vk, scan, ext | w.KEYEVENTF_KEYUP))
         if with_ctrl:
             seq.append(self._key_input(w.VK_CONTROL, w.MapVirtualKeyW(w.VK_CONTROL, 0),
                                        w.KEYEVENTF_KEYUP))
@@ -171,8 +172,10 @@ class WindowsPlatform:
             self._type_unicode(text)
 
     def send_key(self, key: str) -> None:
-        vk = {"Enter": w.VK_RETURN, "Tab": w.VK_TAB}[key]
-        self._tap_vk(vk)
+        """Pressiona Enter, Tab ou uma tecla multimédia (``{MediaNext}``...)."""
+        vk = {"Enter": w.VK_RETURN, "Tab": w.VK_TAB}.get(key) or w.NAME_TO_VK[key]
+        # as teclas multimédia e de volume são teclas "estendidas"
+        self._tap_vk(vk, extended=key not in ("Enter", "Tab"))
 
     def modifiers_down(self) -> frozenset[str]:
         return current_modifiers()

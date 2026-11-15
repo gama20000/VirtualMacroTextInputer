@@ -118,6 +118,10 @@ no ecrã, sem hardware adicional.
   reposição. Som opcional ao repor, por contador (nenhum por omissão, ou um dos
   sons do sistema do Windows), com botão «Testar». Não escreve texto. A
   configuração e a contagem persistem entre sessões.
+- Comandos multimédia no texto: `{MediaPlayPause}`, `{MediaPrev}`,
+  `{MediaNext}`, `{MediaStop}`, `{VolumeUp}`, `{VolumeDown}` e `{VolumeMute}`
+  pressionam essa tecla, por isso um botão do painel pode ser um botão
+  Reproduzir/Pausa; o menu «Multimédia» insere-os na posição do cursor.
 - Teclas multimédia: Reproduzir/Pausa, faixa anterior e faixa seguinte podem
   ser atribuídas a macros e contadores, pelo menu «Multimédia» junto ao campo
   da tecla (premi-las para gravar faria também reagir o leitor de música). Os

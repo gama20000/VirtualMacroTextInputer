@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (QAbstractSpinBox, QApplication, QButtonGroup, QCh
 
 from ..branding import APP_NAME
 from ..core import macro_ops as ops
+from ..core.commands import MEDIA_COMMANDS
 from ..core.store import export_filename
 from ..core.commands import CommandError, describe_steps, parse_action
 from ..core.configio import (ConfigError, Issue, macro_label, macros_from_clipboard,
@@ -354,6 +355,12 @@ class ConfigWindow(QWidget):
         media.setToolTip(tr("field.media_keys_tip"))
         media.setPopupMode(QToolButton.InstantPopup)
         mmenu = QMenu(media)
+        # 1) o botão ENVIA uma tecla multimédia (comando no texto)
+        mmenu.addSection(tr("media.send_section"))
+        for name in MEDIA_COMMANDS:
+            mmenu.addAction(tr(f"keyname.{name}"), lambda n=name: self._insert_media(n))
+        # 2) a tecla multimédia do teclado ATIVA esta macro
+        mmenu.addSection(tr("media.trigger_section"))
         for name in MEDIA_KEYS:
             mmenu.addAction(tr(f"keyname.{name}"), lambda n=name: self._assign_media(n))
         media.setMenu(mmenu)
@@ -1565,6 +1572,16 @@ class ConfigWindow(QWidget):
             return True
         self.assign_key(real, str(Binding(name, mods)))
         return True
+
+    def _insert_media(self, name: str) -> None:
+        """Insere ``{name}`` no texto, na posição do cursor: o botão passa a
+        pressionar essa tecla multimédia (ex.: um botão Reproduzir/Pausa)."""
+        if not self.ms or self._multi() or not (0 <= self.cur < len(self.ms.macros)):
+            return
+        if self.ms.macros[self.cur].is_counter or self.ms.macros[self.cur].is_space:
+            return
+        self.f_text.insertPlainText("{" + name + "}")
+        self.f_text.setFocus()
 
     def _assign_media(self, name: str) -> None:
         """Tecla multimédia escolhida no menu: mesmas verificações de conflito

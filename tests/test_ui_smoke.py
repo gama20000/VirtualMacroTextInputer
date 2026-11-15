@@ -955,8 +955,9 @@ def test_tecla_multimedia_pelo_menu_com_conflitos(app, qapp):
     w._select(act[1])
     w._assign_media("MediaPlayPause")
     assert w.ms.macros[act[1]].tecla == before
-    assert [a.text() for a in w.media_key_btn.menu().actions()] == [
-        "Reproduzir/Pausa", "Faixa anterior", "Faixa seguinte"]
+    acts = [a.text() for a in w.media_key_btn.menu().actions()]
+    i = acts.index("A tecla do teclado ativa esta macro")
+    assert acts[i + 1:] == ["Reproduzir/Pausa", "Faixa anterior", "Faixa seguinte"]
 
 
 def _ctrl(qtkey, shift=False):
@@ -1067,3 +1068,17 @@ def test_nome_de_ficheiro_para_exportar():
     assert export_filename("a/b:c?") == "a-b-c-.toml"
     assert export_filename("CON") == "CON_.toml"
     assert export_filename(" nome. ") == "nome.toml"
+
+
+def test_menu_multimedia_insere_comando_no_texto(app, qapp):
+    w = app.config_window
+    act = w.ms.active_indices()
+    w._select(act[0])
+    w.f_text.setPlainText("")
+    w._insert_media("MediaPlayPause")
+    w.flush()
+    assert app.store.sets["predefinido"].macros[act[0]].texto == "{MediaPlayPause}"
+    menu = w.media_key_btn.menu()
+    texts = [a.text() for a in menu.actions()]
+    assert texts[0] == "O botão envia (insere no texto)"
+    assert "A tecla do teclado ativa esta macro" in texts

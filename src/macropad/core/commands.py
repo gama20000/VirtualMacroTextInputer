@@ -5,10 +5,13 @@ Comandos suportados (nomes sem distinção de maiúsculas/minúsculas):
 * ``{Enter}``      – pressiona Enter
 * ``{Tab}``        – pressiona Tab
 * ``{Delay:500}``  – espera 500 ms (0 a 600000)
+* ``{MediaPlayPause}``, ``{MediaPrev}``, ``{MediaNext}``, ``{MediaStop}``,
+  ``{VolumeUp}``, ``{VolumeDown}``, ``{VolumeMute}`` – pressionam a tecla
+  multimédia correspondente (um botão do painel pode ser Reproduzir/Pausa)
 
 Regras:
 
-* ``{Enter}`` e ``{Tab}`` são sempre comandos.
+* ``{Enter}``, ``{Tab}`` e as teclas multimédia são sempre comandos.
 * Uma chaveta seguida de um nome conhecido tem de formar um comando válido;
   caso contrário é um erro (ex.: ``{Delay:abc}``, ``{Enter``).
 * ``{Palavra}`` ou ``{Palavra:...}`` com um nome desconhecido é um erro
@@ -23,6 +26,7 @@ from dataclasses import dataclass
 from typing import Union
 
 from ..i18n import tr
+from .keys import display_binding
 
 MAX_DELAY_MS = 600_000
 
@@ -34,7 +38,7 @@ class TextStep:
 
 @dataclass(frozen=True)
 class KeyStep:
-    key: str  # "Enter" ou "Tab"
+    key: str  # "Enter", "Tab" ou uma tecla multimédia (MEDIA_COMMANDS)
 
 
 @dataclass(frozen=True)
@@ -60,7 +64,13 @@ class CommandError(ValueError):
         return tr("cmd.at_position", msg=self.message, pos=self.position + 1)
 
 
-_KNOWN = {"enter": "Enter", "tab": "Tab", "delay": "Delay"}
+# Teclas multimédia que o texto de uma macro pode pressionar (nome canónico,
+# o mesmo das associações de teclas).
+MEDIA_COMMANDS: tuple[str, ...] = ("MediaPlayPause", "MediaPrev", "MediaNext", "MediaStop",
+                                   "VolumeUp", "VolumeDown", "VolumeMute")
+_KNOWN = {"enter": "Enter", "tab": "Tab", "delay": "Delay",
+          **{k.lower(): k for k in MEDIA_COMMANDS}}
+VALID_COMMANDS = "{Enter}, {Tab}, {Delay:ms}, {MediaPlayPause}, {MediaPrev}, {MediaNext}, …"
 _NAME_RE = re.compile(r"[A-Za-z]+")
 
 
@@ -113,12 +123,12 @@ def parse_action(text: str) -> list[Step]:
                 close = text.find("}", j)
                 shown = text[i: close + 1] if close != -1 else text[i: j + 1]
                 raise CommandError(tr("cmd.unknown", cmd=shown,
-                                      valid="{Enter}, {Tab}, {Delay:ms}"), i)
+                                      valid=VALID_COMMANDS), i)
             buf.append(ch)            # ex.: "{abc def" -> literal
             i += 1
             continue
 
-        if known in ("Enter", "Tab"):
+        if known != "Delay":
             if nxt != "}":
                 if nxt == ":":
                     raise CommandError(tr("cmd.no_params", cmd="{" + known + "}"), i)
@@ -159,7 +169,7 @@ def describe_steps(steps: list[Step]) -> str:
         if isinstance(s, TextStep):
             out.append(tr("step.type", text=s.text))
         elif isinstance(s, KeyStep):
-            out.append(tr("step.press", key=s.key))
+            out.append(tr("step.press", key=display_binding(s.key)))
         else:
             out.append(tr("step.wait", ms=s.ms))
     return ", ".join(out)

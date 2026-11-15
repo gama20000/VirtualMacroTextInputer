@@ -118,6 +118,10 @@ has and an on-screen panel, with no extra hardware.
   Optional sound on reset, per counter (none by default, or one of the Windows
   system sounds), with a «Test» button. It types no text. The configuration
   and the count persist between sessions.
+- Media commands in the text: `{MediaPlayPause}`, `{MediaPrev}`,
+  `{MediaNext}`, `{MediaStop}`, `{VolumeUp}`, `{VolumeDown}` and
+  `{VolumeMute}` press that key, so a panel button can be a Play/Pause
+  button; the «Media» menu inserts them at the cursor.
 - Media keys: Play/Pause, previous track and next track can be assigned to
   macros and counters, from the «Media» menu next to the key field (pressing
   them to record would also control the music player). Conflicts with other

@@ -619,3 +619,17 @@ def test_teclas_multimedia_suspensas_ou_fora_do_ambito_passam(fake):
     e.set_suspended(False)
     fake.fg = OTHER
     assert e.handle_key(down("MediaPlayPause")) is False         # fora do âmbito: normal
+
+
+def test_botao_do_painel_envia_tecla_multimedia(fake):
+    """Uma macro só com {MediaPlayPause}: o botão do painel pressiona a tecla."""
+    import time
+    from macropad.core.model import Macro
+    e = Engine(fake)
+    e.set_config(make_config([Macro("Play", "", "{MediaPlayPause}")]))
+    ok, why = e.trigger(0)
+    assert ok, why
+    end = time.monotonic() + 2
+    while e.running is not None and time.monotonic() < end:
+        time.sleep(0.01)
+    assert fake.log == [("key", "MediaPlayPause")]

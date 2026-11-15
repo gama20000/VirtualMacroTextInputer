@@ -69,3 +69,16 @@ def test_bindings():
     for bad in ["Ctrl", "Ctrl+", "Ctrl+Ctrl+1", "Hyper+1", "Foo", ""]:
         with pytest.raises(KeyBindingError):
             parse_binding(bad)
+
+
+def test_comandos_de_teclas_multimedia():
+    from macropad.core.commands import MEDIA_COMMANDS
+    steps = parse_action("{MediaPlayPause}x{medianext}{VOLUMEUP}")
+    assert steps == [KeyStep("MediaPlayPause"), TextStep("x"), KeyStep("MediaNext"),
+                     KeyStep("VolumeUp")]
+    for name in MEDIA_COMMANDS:
+        assert parse_action("{" + name + "}") == [KeyStep(name)]
+    with pytest.raises(CommandError):
+        parse_action("{MediaNext:2}")
+    with pytest.raises(CommandError):
+        parse_action("{MediaPlay}")                 # erro de escrita
