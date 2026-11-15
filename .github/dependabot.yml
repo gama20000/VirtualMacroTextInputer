@@ -1,0 +1,23 @@
+# Dependabot: verifica todas as semanas se há versões novas e abre pull requests.
+# - github-actions: as ações do workflow de release (checkout, setup-python...)
+# - pip: as dependências do pyproject.toml (PySide6, pytest, PyInstaller)
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    groups:
+      acoes:
+        patterns: ["*"]
+
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    # Sobe o mínimo (ex.: PySide6>=6.7 -> >=6.8), para a release ser compilada
+    # e testada com a versão nova.
+    versioning-strategy: "increase"
+    open-pull-requests-limit: 5
