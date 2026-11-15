@@ -11,7 +11,7 @@ requires-python = ">=3.11"
 dependencies = ["PySide6-Essentials>=6.6"]
 
 [project.optional-dependencies]
-dev = ["pytest>=7", "pyinstaller>=6"]
+dev = ["pytest>=9.2.0", "pyinstaller>=6"]
 
 [project.gui-scripts]
 macropad = "macropad.__main__:main"
