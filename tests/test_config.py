@@ -457,3 +457,20 @@ def test_migracao_com_falha_de_escrita_nao_interrompe(tmp_path, monkeypatch):
     assert msgs and "Acesso negado" in msgs[0]
     assert st.settings.tecla_suspensao == "Ctrl+Alt+P"
     assert state.migracoes == []
+
+
+def test_teclas_multimedia_e_conflitos():
+    """Play/Pausa, faixa anterior e seguinte são teclas válidas; os conflitos
+    com outras macros e com os atalhos globais são detetados como os outros."""
+    from macropad.core.keys import display_binding, parse_binding
+    assert str(parse_binding("mediaplaypause")) == "MediaPlayPause"
+    ms = MacroSet("x", "x", Scope(), [Macro("a", "MediaNext", "t"),
+                                      Macro("b", "MediaPrev", "u"),
+                                      Macro("c", "MediaPlayPause", "v")])
+    assert not validate_macros(ms, Settings())
+    ms.macros[1].tecla = "MediaNext"
+    assert validate_macros(ms, Settings())                       # duas macros, a mesma tecla
+    ms.macros[1].tecla = "MediaPrev"
+    assert validate_macros(ms, Settings(tecla_painel="MediaPlayPause"))   # tecla global
+    assert display_binding("Ctrl+MediaNext") == "Ctrl+Faixa seguinte"
+    assert display_binding("F5") == "F5"

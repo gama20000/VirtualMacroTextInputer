@@ -179,3 +179,48 @@ def test_copiar_contador_recebe_id_novo():
     ms = mk(Macro("C", tipo="contador", id="orig"))
     ops.insert_copy(ms, ms.macros[0], 0)
     assert ms.macros[1].id != "orig" and ms.macros[1].is_counter
+
+
+def test_novo_item_a_seguir_a_selecionada_ou_no_fim():
+    ms = mk(Macro("A", texto="a"), Macro("B", texto="b"),
+            Macro("Z", texto="z", arquivada=True))
+    assert ops.new_macro(ms, "N", after=0) == 1                # a seguir a A
+    assert [m.titulo for m in ms.macros] == ["A", "N", "B", "Z"]
+    assert ops.new_counter(ms, "C", after=2) == 3              # a seguir a B
+    assert ms.macros[3].is_counter and not ms.macros[3].arquivada
+    assert ops.new_space(ms) == 4                              # sem seleção: fim das ativas
+    assert ms.macros[4].is_space and ms.macros[5].titulo == "Z"
+    # selecionada no Arquivo: o novo item vai para o fim das ativas
+    assert ops.new_macro(ms, "M", after=6) == 5
+    assert [m.titulo for m in ms.macros if m.arquivada] == ["Z"]
+
+
+def test_anular_e_refazer_eliminacao_na_mesma_posicao():
+    ms = mk(Macro("A", "1", "a"), Macro("B", "2", "b"), Macro("C", "3", "c"),
+            Macro("Z", "", "z", arquivada=True), Macro("Y", "", "y", arquivada=True))
+    orig = [ (m.titulo, m.tecla, m.arquivada) for m in ms.macros]
+    rec = ops.snapshot_deletion(ms, [1, 4, 2])              # B, C (ativas) e Y (arquivo)
+    ops.delete_many(ms, [1, 2, 4])
+    assert [m.titulo for m in ms.macros] == ["A", "Z"]
+    idxs, lost = ops.undo_deletion(ms, rec)
+    assert idxs == [1, 2, 4] and lost == []
+    assert [(m.titulo, m.tecla, m.arquivada) for m in ms.macros] == orig
+    # refazer encontra as mesmas macros pelo conteúdo (mesmo depois de clonar)
+    ms = ms.clone() if hasattr(ms, "clone") else ms
+    assert ops.find_items(ms, rec) == [1, 2, 4]
+
+
+def test_anular_eliminacao_retira_tecla_entretanto_usada():
+    ms = mk(Macro("A", "1", "a"), Macro("B", "2", "b"))
+    rec = ops.snapshot_deletion(ms, [1])
+    ops.delete_many(ms, [1])
+    ms.macros.append(Macro("N", "2", "n"))                  # a tecla 2 passou a ser usada
+    idxs, lost = ops.undo_deletion(ms, rec)
+    assert ms.macros[idxs[0]].titulo == "B" and ms.macros[idxs[0]].tecla == ""
+    assert lost == ["B"]
+    assert ops.find_items(ms, rec) == idxs                   # refazer ainda a encontra
+    ms2 = mk(Macro("A", "1", "a"), Macro("B", "F12", "b"))
+    rec = ops.snapshot_deletion(ms2, [1])
+    ops.delete_many(ms2, [1])
+    _, lost = ops.undo_deletion(ms2, rec, global_keys=("F12",))
+    assert lost == ["B"]                                     # tecla global

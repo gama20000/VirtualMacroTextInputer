@@ -180,3 +180,18 @@ Before starting: in the test configuration, the previous suspend hotkey
 | 87 | With the old Macropad running, open the new program (`run-dev.ps1`) | warning to close the old Macropad; the new one does not start | ☐ |
 | 88 | Close the old one and open the new one | windows, icon and menus show «Virtual Macro Text Inputer»; your macros and preferences are there (copied from `%APPDATA%\Macropad`, which still exists) | ☐ |
 | 89 | With «Start with Windows» on, check Task Manager ▸ Startup apps | only the new entry, enabled; «Macropad» is gone | 👤 |
+
+## Version 0.5
+
+| # | Action | Expected | OK |
+|---|---|---|---|
+| 90 | Panel counter with long press 1500 ms: hold it with the mouse | a green line runs along the border from the top; at 1.5 s the count resets at once with a green flash, still held; keeping it held does not reset again; releasing does not add | ☐ |
+| 91 | Same counter with F9 in Notepad: hold F9 with the panel visible | same progress and reset on the panel button while F9 is still held; nothing typed | ☐ |
+| 92 | Editor of the counter: «Sound on reset» ▸ «Warning», click «Test», then reset by holding | the Windows warning sound plays on «Test» and on the reset; with «None» there is no sound | ☐ |
+| 93 | Select the 2nd macro and click «New macro»; then «Counter»; click an empty area of the grid (no selection) and «Empty space» | the macro goes right after the 2nd, the counter right after the new macro; the space goes to the end of Active; the new item is selected | ☐ |
+| 94 | Panel tab: 3 columns and 2 rows, with 8 buttons | preview and real panel show 6 cells and ◀ 1 / 2 ▶; ▶ shows the rest in a panel of the same size; clicking the arrows does not take the focus from Notepad; the setting is kept after restarting | ☐ |
+| 95 | Rows «All», then 5 rows with 8 buttons and 3 columns | no arrows; the panel only takes the rows it needs | ☐ |
+| 96 | Editor ▸ «Media» ▸ «Next track» on a macro; in Notepad press the keyboard's ⏭ key | the macro runs; the music player does not skip track | ☐ |
+| 97 | Suspend (Shift+Esc) and press ⏭; then, active but with a window outside the scope, press ⏭ | the music player skips track in both cases | ☐ |
+| 98 | Assign «Next track» to a second macro | «already assigned» warning; nothing changes | ☐ |
+| 99 | Delete two macros (one active, one archived), Ctrl+Z, Ctrl+Y, Ctrl+Z; then in the Title field type text and press Ctrl+Z | they come back in the same places with the same keys; Ctrl+Y deletes them again; in the field Ctrl+Z only undoes the text | ☐ |

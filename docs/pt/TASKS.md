@@ -36,7 +36,7 @@ autorizar.
 
 - [ ] Percorrer a lista de verificação com o código-fonte
   (`tools\macropad-teste.cmd`).
-  - Âmbito: passos 1–89 de `docs/pt/VERIFICACAO-MANUAL.md`, exceto os 👤; o
+  - Âmbito: passos 1–99 de `docs/pt/VERIFICACAO-MANUAL.md`, exceto os 👤; o
     resultado de cada passo fica registado nesse documento.
   - Critérios de aceitação: todos os passos não 👤 estão ✅, ou têm uma tarefa
     de correção ou uma limitação aceite em `ANSWERS.md`.
@@ -51,6 +51,26 @@ autorizar.
   ícones e as traduções foram incluídos.
 
 ## Concluídas
+
+### Versão 0.5 (15-11-2026)
+
+- [x] Contador: progresso ao longo da borda do botão do painel enquanto está
+  premido (rato ou tecla); reposição ao atingir o tempo da pressão longa, uma
+  vez, com sinal verde; som opcional por contador (`Q-032`).
+- [x] Nova macro, contador ou espaço vazio inseridos logo a seguir à macro
+  selecionada; sem seleção, no fim da área Ativo.
+- [x] Linhas do painel, com páginas e setas ◀ ▶ quando os botões não cabem
+  (`Q-031`); pré-visualização e painel real atualizados; gravado no
+  `config.toml`.
+- [x] Teclas multimédia (Reproduzir/Pausa, anterior, seguinte) num menu
+  «Multimédia», com as verificações de conflito habituais; comportamento
+  normal quando suspenso ou fora do âmbito (`Q-033`).
+- [x] Ctrl+Z / Ctrl+Y anulam e refazem a eliminação de macros (mesma área,
+  posição, definições e tecla); os campos de texto mantêm o seu Ctrl+Z.
+  - Validação: `pytest` 186 passam, 1 ignorado; capturas do painel com
+    páginas, progresso e sinal verificadas. Risco residual: passos 90–99 no
+    Windows (sons do sistema, teclas multimédia no teclado do utilizador,
+    tempos reais).
 
 ### Novo nome: Virtual Macro Text Inputer (13-11-2026)
 

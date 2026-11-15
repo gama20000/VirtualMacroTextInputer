@@ -257,9 +257,10 @@ of 11-11-2026 and in the first commits of the git history.
 - **Rationale:** The user's answer. Saving the count outside the set's TOML
   avoids rewriting that file, and reloading it, on every click.
 - **Evidence:** The user's answer of 12-11-2026.
-- **Consequences:** Each counter has a stable `id`. A long press is decided by
-  the time between press and release and never adds. A counter key pressed
-  with the settings window in front is counted by that window.
+- **Consequences:** Each counter has a stable `id`. A long press never adds.
+  A counter key pressed with the settings window in front is counted the same
+  way. Since 15-11-2026 the reset happens when the long-press time is reached,
+  not on release ([Q-032](#q-032-counter-reset-while-held-and-sound)).
 - **Revisit when:** The counter is asked to type its value.
 
 ## Q-022: Assigning a key over a button and existing shortcuts
@@ -372,4 +373,52 @@ of 11-11-2026 and in the first commits of the git history.
 - **Evidence:** The user's message of 15-11-2026.
 - **Consequences:** `pyproject.toml` declares `license = { text = "MIT" }`.
 - **Revisit when:** The user wants a copyleft licence.
+
+## Q-031: Panel rows and pages
+
+- **Resolved:** 2026-11-15
+- **Answer:** The panel has a number of rows besides the columns («All» by
+  default, `linhas = 0`). With more cells than rows × columns, it shows pages
+  with ◀ ▶ arrows, and every page has the full size. With fewer, the panel
+  shrinks to the rows it needs.
+- **Rationale:** The user's choice among pages, scrolling or hiding the
+  surplus. Pages are how a Stream Deck works; a fixed size across pages keeps
+  the buttons in place when changing page.
+- **Evidence:** The user's answers of 15-11-2026.
+- **Consequences:** `[painel] linhas` in `config.toml` (0–12). Style presets
+  keep the rows, as they keep the columns. Keys run macros on any page. The
+  settings Active area keeps showing every macro.
+- **Revisit when:** The user wants the panel to keep a fixed size even with
+  few buttons.
+
+## Q-032: Counter reset while held, and sound
+
+- **Resolved:** 2026-11-15
+- **Answer:** While a counter is held (mouse or key), its panel button shows
+  the progress along its border; at the long-press time the count resets
+  immediately, once, with a green flash. The reset sound is configured per
+  counter: none by default, or a Windows system sound (`som_reposicao`).
+- **Rationale:** The user's request and answer (sound per counter).
+- **Evidence:** The user's messages of 15-11-2026.
+- **Consequences:** The engine starts a timer when the key goes down; release
+  only adds if the reset has not happened. The settings window uses the same
+  engine logic. The progress shows on the panel; the settings Active area does
+  not animate.
+- **Revisit when:** A counter needs its own custom sound file.
+
+## Q-033: Media keys
+
+- **Resolved:** 2026-11-15
+- **Answer:** Play/Pause, previous track and next track are assigned from a
+  «Media» menu next to the key field, with the same conflict checks as a key
+  assigned with the mouse. The keys are shown with readable names; the file
+  keeps the canonical names (`MediaPlayPause`, `MediaPrev`, `MediaNext`).
+- **Rationale:** Pressing a media key to record it also reaches the music
+  player, because the hook lets keys through while recording.
+- **Evidence:** The user's request of 15-11-2026; `platform/winkeys.py`
+  already mapped the virtual-key codes.
+- **Consequences:** Suspended or outside the scope, the keys pass to Windows.
+  Keyboards whose media keys only send `WM_APPCOMMAND` (no virtual-key code)
+  are not seen by the keyboard hook; to be confirmed on the user's keyboard.
+- **Revisit when:** A keyboard's media keys do not reach the hook.
 

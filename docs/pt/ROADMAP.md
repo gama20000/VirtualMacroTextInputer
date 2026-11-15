@@ -8,12 +8,16 @@ Ver [SPEC.md](SPEC.md#destino).
 
 ## Estado atual
 
-O código está na versão 0.4 e o programa chama-se agora Virtual Macro Text
+O código está na versão 0.5 e o programa chama-se agora Virtual Macro Text
 Inputer. A Fase 1 (revisão independente) e a Fase 2 (versão 0.4, incluindo a
 barra de título própria do painel) estão concluídas. Depois disso, seis
-revisões do Codex foram corrigidas; 171 testes automáticos passam. Falta a
+revisões do Codex foram corrigidas e a versão 0.5 (progresso e reposição do
+contador com a tecla premida, inserção a seguir à seleção, linhas do painel
+com páginas, teclas multimédia, anular a eliminação) está implementada; 187
+testes automáticos passam (um ignorado fora do Windows). Falta a
 validação manual no Windows (Fase 3, em pausa desde 12-11-2026, com 16 passos
-verificados e 3 parciais; os passos 62–89 cobrem a 0.4 e a mudança de nome). O
+verificados e 3 parciais; os passos 62–89 cobrem a 0.4 e a mudança de nome,
+os passos 90–99 cobrem a 0.5). O
 repositório está no Forgejo do utilizador (privado, pelo Tailscale); a
 publicação no GitHub está feita, com o repositório ainda privado até o
 utilizador o tornar público (Fase 4).
@@ -68,6 +72,9 @@ utilizador o tornar público (Fase 4).
 - [x] [Localização do repositório no PC](ANSWERS.md#q-027-localização-do-repositório-no-pc) (`Q-027`): `%USERPROFILE%\source\VirtualMacroTextInputer`, fora do Google Drive.
 - [x] [Idioma da documentação](ANSWERS.md#q-028-idioma-da-documentação) (`Q-028`): inglês na raiz, português em `docs/pt/`.
 - [x] [Licença](ANSWERS.md#q-030-licença) (`Q-030`): MIT.
+- [x] [Linhas e páginas do painel](ANSWERS.md#q-031-linhas-e-páginas-do-painel) (`Q-031`): páginas com setas; o painel encolhe com poucos botões.
+- [x] [Reposição do contador com a tecla premida, e som](ANSWERS.md#q-032-reposição-do-contador-com-a-tecla-premida-e-som) (`Q-032`): repõe ao atingir o tempo; som por contador, nenhum por omissão.
+- [x] [Teclas multimédia](ANSWERS.md#q-033-teclas-multimédia) (`Q-033`): atribuídas num menu «Multimédia».
 - [x] [Email nos commits](ANSWERS.md#q-029-email-nos-commits) (`Q-029`): endereço privado do GitHub; histórico reescrito.
 
 ## Fase 1: Revisão independente e correções — concluída (12-11-2026)
@@ -152,7 +159,7 @@ O programa está validado no Windows real, a partir do código e do executável.
 
 ### Trabalho incluído
 
-- Percorrer os passos 1–89 de `docs/pt/VERIFICACAO-MANUAL.md` com
+- Percorrer os passos 1–99 de `docs/pt/VERIFICACAO-MANUAL.md` com
   `run-dev.ps1`, e depois com
   `dist\VirtualMacroTextInputer\VirtualMacroTextInputer.exe` gerado por
   `build.ps1`.

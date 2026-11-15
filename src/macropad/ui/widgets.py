@@ -6,13 +6,14 @@ from __future__ import annotations
 import sys
 from typing import Callable, Optional
 
-from PySide6.QtCore import QEvent, QPoint, QRect, QRectF, QSize, Qt, QTimer, Signal
+from PySide6.QtCore import (QElapsedTimer, QEvent, QPoint, QRect, QRectF, QSize, Qt, QTimer,
+                            Signal)
 from PySide6.QtGui import (QColor, QCursor, QFont, QFontMetrics, QKeyEvent, QPainter,
                            QPainterPath, QPen)
 from PySide6.QtWidgets import (QAbstractButton, QAbstractItemView, QLineEdit, QListWidget,
                                QListWidgetItem, QStyle, QStyledItemDelegate, QWidget)
 
-from ..core.keys import MODIFIERS, Binding
+from ..core.keys import MODIFIERS, Binding, display_binding
 from ..core.model import PanelSettings
 from ..i18n import tr
 from ..platform.winkeys import VK_TO_NAME
@@ -58,15 +59,39 @@ def paint_space(p: QPainter, rect: QRect, style: PanelSettings, pal: theme.Palet
     p.restore()
 
 
+def _draw_progress(p: QPainter, path: QPainterPath, r: QRectF, frac: float,
+                   color: QColor) -> None:
+    """Traça ``frac`` do contorno ``path``, no sentido dos ponteiros do relógio,
+    a começar no meio do lado de cima."""
+    n = 160
+    pts = [path.pointAtPercent(k / n) for k in range(n)]
+    start = min(range(n), key=lambda k: (pts[k].x() - r.center().x()) ** 2
+                + (pts[k].y() - r.top()) ** 2)
+    step = 1 if pts[(start + 1) % n].x() >= pts[start].x() else -1   # para a direita
+    m = max(1, round(frac * n))
+    poly = QPainterPath(pts[start])
+    for k in range(1, m + 1):
+        poly.lineTo(pts[(start + step * k) % n])
+    pen = QPen(color, 4)
+    pen.setCapStyle(Qt.RoundCap)
+    p.setPen(pen)
+    p.setBrush(Qt.NoBrush)
+    p.drawPath(poly)
+
+
 def paint_tile(p: QPainter, rect: QRect, title: str, key: str, style: PanelSettings,
                pal: theme.Palette, *, selected=False, error=False, dup=False, hover=False,
                pressed=False, dim=False, running=False, waiting=False,
-               count: Optional[int] = None) -> None:
+               count: Optional[int] = None, progress: Optional[float] = None,
+               flash: bool = False) -> None:
     """Desenha um botão de macro (ou de contador, se ``count`` não for None).
 
     O título e a tecla ocupam as faixas indicadas no estilo (em cima, ao centro,
     em baixo). Elementos na mesma faixa empilham-se; o título é cortado com
     reticências se não couber, para nunca se sobrepor à tecla nem à contagem.
+
+    ``progress`` (0–1) desenha o progresso de uma pressão longa ao longo da
+    borda, a partir do meio do lado de cima; ``flash`` assinala a reposição.
     """
     p.save()
     p.setRenderHint(QPainter.Antialiasing)
@@ -76,7 +101,10 @@ def paint_tile(p: QPainter, rect: QRect, title: str, key: str, style: PanelSetti
     radius = r.width() * style.arredondamento / 100.0
     path = QPainterPath()
     path.addRoundedRect(r, radius, radius)
-    p.fillPath(path, _mix(bg, fg, 0.12) if pressed else (_mix(bg, fg, 0.05) if hover else bg))
+    fill = _mix(bg, fg, 0.12) if pressed else (_mix(bg, fg, 0.05) if hover else bg)
+    if flash:
+        fill = _mix(fill, QColor(pal.ok), 0.55)
+    p.fillPath(path, fill)
 
     if waiting:
         border, width = QColor(pal.warn), 3
@@ -96,6 +124,11 @@ def paint_tile(p: QPainter, rect: QRect, title: str, key: str, style: PanelSetti
     if width > 0:
         p.setPen(QPen(border, width))
         p.drawPath(path)
+    if flash:
+        p.setPen(QPen(QColor(pal.ok), 4))
+        p.drawPath(path)
+    elif progress is not None and progress > 0:
+        _draw_progress(p, path, r, min(1.0, progress), QColor(pal.ok))
 
     if dim:
         p.setOpacity(0.35)
@@ -115,7 +148,7 @@ def paint_tile(p: QPainter, rect: QRect, title: str, key: str, style: PanelSetti
     fc.setPointSizeF(max(8.0, r.height() / 4.2 * scale))
     fmc = QFontMetrics(fc)
 
-    key_label = (tr("tile.press_key") if waiting else (key or "—"))
+    key_label = (tr("tile.press_key") if waiting else (display_binding(key) or "—"))
     key_h = fmk.height() + 2
     # faixas: o contador ocupa sempre o centro; o título vai para cima se
     # também tiver sido posto ao centro.
@@ -246,29 +279,72 @@ class TileButton(QAbstractButton):
         self.count = count
         self.running = False
         self._long_done = False
+        self.long_ms = long_ms
         self._long_timer = QTimer(self, singleShot=True, interval=long_ms,
                                   timeout=self._on_long)
+        # progresso da pressão longa (rato ou tecla) e sinal de reposição
+        self._hold_clock = QElapsedTimer()
+        self._hold_ms = long_ms
+        self.progress: Optional[float] = None
+        self.flashing = False
+        self._anim = QTimer(self, interval=30, timeout=self._tick)
+        self._flash_timer = QTimer(self, singleShot=True, interval=450,
+                                   timeout=self._end_flash)
         self.setFocusPolicy(Qt.NoFocus)
         self.setFixedSize(style.tamanho_botao, style.tamanho_botao)
-        tip = tr("tile.tooltip", title=title, key=key or tr("tile.no_key"))
+        tip = tr("tile.tooltip", title=title, key=display_binding(key) or tr("tile.no_key"))
         if count is not None:
             tip += "\n" + tr("tile.counter_tip", ms=long_ms)
         self.setToolTip(tip)
         self.setCursor(Qt.PointingHandCursor)
 
+    # ------------------------------------------- progresso da pressão longa
+    def hold_start(self, ms: Optional[int] = None) -> None:
+        """Começa a mostrar o progresso de uma pressão (durante ``ms``)."""
+        self._hold_ms = max(1, ms or self.long_ms)
+        self._hold_clock.start()
+        self.progress = 0.0
+        self._anim.start()
+        self.update()
+
+    def hold_reset(self) -> None:
+        """A contagem foi reposta: sinal visual breve; o progresso termina."""
+        self._anim.stop()
+        self.progress = None
+        self.flashing = True
+        self._flash_timer.start()
+        self.update()
+
+    def hold_end(self) -> None:
+        """A pressão terminou (o sinal de reposição, se houver, acaba sozinho)."""
+        self._anim.stop()
+        self.progress = None
+        self.update()
+
+    def _tick(self) -> None:
+        self.progress = min(1.0, self._hold_clock.elapsed() / self._hold_ms)
+        self.update()
+
+    def _end_flash(self) -> None:
+        self.flashing = False
+        self.update()
+
     def _on_long(self):
         self._long_done = True
+        self.hold_reset()
         self.long_pressed.emit()
-        self.update()
 
     def mousePressEvent(self, e):
         self._long_done = False
         if self.count is not None and e.button() == Qt.LeftButton and self.isEnabled():
             self._long_timer.start()
+            self.hold_start(self.long_ms)
         super().mousePressEvent(e)
 
     def mouseReleaseEvent(self, e):
         self._long_timer.stop()
+        if not self._long_done:
+            self.hold_end()
         was_long = self._long_done
         super().mouseReleaseEvent(e)
         if self.count is not None and not was_long and e.button() == Qt.LeftButton \
@@ -279,7 +355,8 @@ class TileButton(QAbstractButton):
         p = QPainter(self)
         paint_tile(p, self.rect(), self.title, self.key, self.tile_style, self.pal,
                    hover=self.underMouse(), pressed=self.isDown(), dim=not self.isEnabled(),
-                   running=self.running, count=self.count)
+                   running=self.running, count=self.count, progress=self.progress,
+                   flash=self.flashing)
         p.end()
 
     def enterEvent(self, e):
@@ -607,7 +684,14 @@ _QT_FALLBACK = {Qt.Key_Space: "Space", Qt.Key_Tab: "Tab", Qt.Key_Backtab: "Tab",
                 Qt.Key_Home: "Home", Qt.Key_End: "End", Qt.Key_PageUp: "PageUp",
                 Qt.Key_PageDown: "PageDown", Qt.Key_Up: "Up", Qt.Key_Down: "Down",
                 Qt.Key_Left: "Left", Qt.Key_Right: "Right", Qt.Key_Pause: "Pause",
-                Qt.Key_ScrollLock: "ScrollLock"}
+                Qt.Key_ScrollLock: "ScrollLock",
+                # multimédia (no Windows chega pelo código virtual; isto serve
+                # quando não há código nativo)
+                Qt.Key_MediaTogglePlayPause: "MediaPlayPause", Qt.Key_MediaPlay: "MediaPlayPause",
+                Qt.Key_MediaPause: "MediaPlayPause", Qt.Key_MediaPrevious: "MediaPrev",
+                Qt.Key_MediaNext: "MediaNext", Qt.Key_MediaStop: "MediaStop",
+                Qt.Key_VolumeMute: "VolumeMute", Qt.Key_VolumeDown: "VolumeDown",
+                Qt.Key_VolumeUp: "VolumeUp"}
 _MOD_KEYS = {Qt.Key_Control, Qt.Key_Shift, Qt.Key_Alt, Qt.Key_Meta, Qt.Key_AltGr,
              Qt.Key_Super_L, Qt.Key_Super_R}
 
@@ -665,14 +749,14 @@ class KeyCaptureEdit(QLineEdit):
 
     def set_binding(self, b: str) -> None:
         self._binding = b
-        self.setText(b)
+        self.setText(display_binding(b))
 
     def _capturing(self, on: bool) -> None:
         self.setProperty("capturing", on)
         self.style().unpolish(self)
         self.style().polish(self)
         self._set_capture_mode(on)
-        self.setText(tr("key.press_now") if on else self._binding)
+        self.setText(tr("key.press_now") if on else display_binding(self._binding))
 
     def focusInEvent(self, e):
         super().focusInEvent(e)

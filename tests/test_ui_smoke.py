@@ -101,6 +101,7 @@ def test_nova_macro_e_duplicados(app, qapp):
     w = app.config_window
     w.flush()
     w._last_add = 0
+    w._select(-1)                  # sem seleção: no fim da área Ativo
     w._add_macro()
     w._add_macro()                     # clique repetido imediato: ignorado
     w.flush()
@@ -378,6 +379,7 @@ def test_reordenar_arquivo_com_pesquisa_nao_perde_macros(app, qapp):
 def test_espacos_vazios_no_painel_e_na_configuracao(app, qapp):
     w = app.config_window
     w._last_add = 0
+    w._select(-1)                  # sem seleção: no fim da área Ativo
     w._add_item("espaco")
     w.flush()
     ms = app.store.sets["predefinido"]
@@ -447,6 +449,7 @@ def test_colar_copia_arquivada_fica_no_arquivo(app, qapp):
 def test_contador_clique_curto_longo_e_persistencia(app, qapp, tmp_path):
     w = app.config_window
     w._last_add = 0
+    w._select(-1)                  # sem seleção: no fim da área Ativo
     w._add_item("contador")
     i = len([m for m in w.ms.macros if not m.arquivada]) - 1
     w._select(i)
@@ -594,6 +597,7 @@ def test_tecla_do_contador_com_a_configuracao_a_frente(app, qapp):
     (o hook deixa-a passar para a janela; quem conta é a própria janela)."""
     w = app.config_window
     w._last_add = 0
+    w._select(-1)                  # sem seleção: no fim da área Ativo
     w._add_item("contador")
     i = len(w.ms.active_indices()) - 1
     w.ms.macros[i].tecla = "F9"
@@ -727,6 +731,7 @@ def test_alteracao_externa_nao_e_sobrescrita_por_edicao_pendente(app, qapp):
 def test_tecla_do_contador_na_janela_ao_mudar_de_conjunto(app, qapp):
     w = app.config_window
     w._last_add = 0
+    w._select(-1)                  # sem seleção: no fim da área Ativo
     w._add_item("contador")
     i = len(w.ms.active_indices()) - 1
     w.ms.macros[i].tecla = "F9"
@@ -807,3 +812,213 @@ def test_painel_muda_de_idioma_sem_recriar(app, qapp):
     qapp.processEvents()
     assert "Active" in app.panel.view.btn_on.text()
     assert "Suspended" in app.panel.view.btn_off.text()
+
+
+def _novo_contador(app, qapp, tecla="", **campos):
+    w = app.config_window
+    w._last_add = 0
+    w._add_item("contador")
+    m = w.ms.macros[w.cur]
+    m.tecla = tecla
+    for k, v in campos.items():
+        setattr(m, k, v)
+    w._changed()
+    w.flush()
+    app.set_panel_visible(True)
+    qapp.processEvents()
+    return app.engine.active_set.macros[w.cur]
+
+
+def test_contador_mostra_progresso_e_repoe_com_a_tecla_premida(app, qapp):
+    """Pressão longa pela tecla: o botão do painel mostra o progresso; ao fim
+    do tempo repõe logo (com sinal visual e o som escolhido), uma única vez."""
+    m = _novo_contador(app, qapp, "F9", incremento=1, reposicao=0,
+                       pressao_longa_ms=200, som_reposicao="aviso")
+    from macropad.core.engine import KeyEvent
+    eng = app.engine
+    app.set_count(eng.active_set_id, m.id, 7)
+    b = app.panel.view.counter_buttons[m.id]
+    assert eng.handle_key(KeyEvent("F9", True)) is True
+    end = time.monotonic() + 0.12
+    while time.monotonic() < end:
+        qapp.processEvents()
+        time.sleep(0.01)
+    assert b.progress is not None and 0 < b.progress < 1   # a meio do tempo
+    end = time.monotonic() + 0.4
+    while time.monotonic() < end:
+        qapp.processEvents()
+        time.sleep(0.01)
+    # ainda premida: já repôs, com sinal visual e som, e não repete
+    assert b.count == 0 and b.flashing and b.progress is None
+    assert app.platform.sounds == ["aviso"]
+    eng.handle_key(KeyEvent("F9", False))
+    qapp.processEvents()
+    assert b.count == 0 and app.platform.sounds == ["aviso"]
+    b.grab()                                          # desenha sem erros
+
+
+def test_contador_sem_som_por_omissao_e_progresso_do_rato(app, qapp):
+    m = _novo_contador(app, qapp, pressao_longa_ms=200)
+    assert m.som_reposicao == ""
+    w = app.config_window
+    assert w.f_sound.currentData() == "" and not w.sound_test.isEnabled()
+    b = app.panel.view.counter_buttons[m.id]
+    b.hold_start(200)
+    b.progress = 0.6
+    b.grab()                                          # desenha o progresso
+    b.long_pressed.emit()
+    qapp.processEvents()
+    assert app.platform.sounds == []
+    # escolher um som no editor grava-o no contador
+    w.f_sound.setCurrentIndex(w.f_sound.findData("pergunta"))
+    w.flush()
+    assert app.engine.active_set.macros[w.cur].som_reposicao == "pergunta"
+    assert w.sound_test.isEnabled()
+    w.sound_test.click()
+    assert app.platform.sounds == ["pergunta"]
+
+
+def test_nova_macro_a_seguir_a_selecionada(app, qapp):
+    w = app.config_window
+    act = w.ms.active_indices()
+    w._select(act[0])
+    w._last_add = 0
+    w._add_item("texto")
+    assert w.cur == act[0] + 1 and w.selected == [act[0] + 1]
+    assert w.ms.macros[w.cur].titulo == i18n.tr("macros.new_title")
+    w._select(-1)
+    w._last_add = 0
+    w._add_item("espaco")
+    assert w.cur == len(w.ms.active_indices()) - 1           # sem seleção: no fim
+
+
+def test_linhas_do_painel_com_paginas(app, qapp):
+    """Linhas × colunas: com mais botões, páginas (setas); o tamanho não muda
+    entre páginas; com menos, o painel encolhe. Os espaços vazios contam."""
+    from macropad.core.model import Macro
+    w = app.config_window
+    ms = w.ms
+    ms.macros = [Macro(f"M{k}", texto=f"t{k}") for k in range(7)]
+    ms.macros.insert(2, Macro(tipo="espaco"))        # 8 células ativas
+    w._changed()
+    w.flush()
+    w.tabs.setCurrentIndex(1)
+    w.p_spins["colunas"].setValue(3)
+    w.p_spins["linhas"].setValue(2)
+    w.flush()
+    assert app.store.settings.painel.linhas == 2
+    assert "linhas = 2" in (app.store.root / "config.toml").read_text(encoding="utf-8")
+    app.set_panel_visible(True)
+    qapp.processEvents()
+    v = app.panel.view
+    assert v.pages == 2 and v.pager.isVisible() and v.page_label.text() == "1 / 2"
+    assert [b.title for b in v.buttons] == ["M0", "M1", "M2", "M3", "M4"]
+    assert len(v.spacers) == 1
+    size1 = app.panel.size()
+    assert not v.page_prev.isEnabled() and v.page_next.isEnabled()
+    v.page_next.click()
+    qapp.processEvents()
+    assert v.page == 1 and [b.title for b in v.buttons] == ["M5", "M6"]
+    assert app.panel.size() == size1                  # mesma altura em todas as páginas
+    # a pré-visualização também mostra as páginas
+    assert w.preview.view.pages == 2 and not w.preview.view.pager.isHidden()
+    # «Todas»: uma página só, sem setas
+    w.p_spins["linhas"].setValue(0)
+    w.flush()
+    qapp.processEvents()
+    assert v.pages == 1 and not v.pager.isVisible() and len(v.buttons) == 7
+    # mais linhas do que as necessárias: encolhe (sem setas)
+    w.p_spins["linhas"].setValue(5)
+    w.flush()
+    qapp.processEvents()
+    assert v.pages == 1 and not v.pager.isVisible()
+    assert app.panel.height() < size1.height() + 3 * 78
+
+
+def test_tecla_multimedia_pelo_menu_com_conflitos(app, qapp):
+    w = app.config_window
+    act = w.ms.active_indices()
+    w._select(act[0])
+    w._assign_media("MediaNext")
+    assert w.ms.macros[act[0]].tecla == "MediaNext"
+    assert w.f_key.text() == "Faixa seguinte"
+    # outra macro, a mesma tecla: não atribui e avisa
+    w._select(act[1])
+    before = w.ms.macros[act[1]].tecla
+    w._assign_media("MediaNext")
+    assert w.ms.macros[act[1]].tecla == before
+    # tecla global (mostrar/ocultar o painel) também é conflito
+    s = app.store.settings.clone()
+    s.tecla_painel = "MediaPlayPause"
+    app.store.save_settings(s)
+    app.apply_config()
+    w._select(act[1])
+    w._assign_media("MediaPlayPause")
+    assert w.ms.macros[act[1]].tecla == before
+    assert [a.text() for a in w.media_key_btn.menu().actions()] == [
+        "Reproduzir/Pausa", "Faixa anterior", "Faixa seguinte"]
+
+
+def _ctrl(qtkey, shift=False):
+    from PySide6.QtGui import QKeyEvent
+    mods = Qt.ControlModifier | (Qt.ShiftModifier if shift else Qt.NoModifier)
+    return QKeyEvent(QEvent.KeyPress, qtkey, mods)
+
+
+def test_anular_e_refazer_eliminacao_com_ctrl_z_e_ctrl_y(app, qapp):
+    w = app.config_window
+    app.store.settings.confirmar_eliminacao = False
+    before = [(m.titulo, m.tecla, m.texto, m.arquivada) for m in w.ms.macros]
+    act = w.ms.active_indices()
+    w._select_many([act[1], act[2]])
+    w._delete_macro()
+    w.flush()
+    assert len(app.store.sets["predefinido"].macros) == len(before) - 2
+    w._undo_delete()
+    w.flush()
+    after = [(m.titulo, m.tecla, m.texto, m.arquivada)
+             for m in app.store.sets["predefinido"].macros]
+    assert after == before                            # mesma área, posição, tecla
+    assert w.selected == [act[1], act[2]]
+    w._redo_delete()
+    w.flush()
+    assert len(app.store.sets["predefinido"].macros) == len(before) - 2
+    w._redo_delete()                                  # nada mais para refazer
+    w._undo_delete()
+    w._undo_delete()                                  # nada mais para anular
+    w.flush()
+    assert [(m.titulo, m.tecla, m.texto, m.arquivada)
+            for m in app.store.sets["predefinido"].macros] == before
+
+
+def test_ctrl_z_nos_campos_de_texto_e_nao_na_grelha(app, qapp):
+    """Ctrl+Z/Ctrl+Y anulam a eliminação na janela, mas num campo de texto
+    mantêm o comportamento normal de texto; com o rato sobre um botão não são
+    gravados como tecla."""
+    w = app.config_window
+    w.activateWindow()
+    qapp.processEvents()
+    if not w.isActiveWindow():
+        pytest.skip("o QPA offscreen não ativou a janela")
+    app.store.settings.confirmar_eliminacao = False
+    n = len(w.ms.macros)
+    w._select(w.ms.active_indices()[0])
+    w._delete_macro()
+    w.grid.setFocus()
+    qapp.processEvents()
+    assert w.eventFilter(w.grid, _ctrl(Qt.Key_Z)) is True
+    qapp.processEvents()
+    assert len(w.ms.macros) == n
+    assert w.eventFilter(w.grid, _ctrl(Qt.Key_Y)) is True
+    qapp.processEvents()
+    assert len(w.ms.macros) == n - 1
+    assert w.eventFilter(w.grid, _ctrl(Qt.Key_Z, shift=True)) is True   # outro refazer: nada
+    qapp.processEvents()
+    assert len(w.ms.macros) == n - 1
+    w.f_title.setFocus()
+    qapp.processEvents()
+    assert w.eventFilter(w.f_title, _ctrl(Qt.Key_Z)) is False       # texto: desfaz o texto
+    assert len(w.ms.macros) == n - 1
+    from macropad.ui.config_window import _is_undo_redo
+    assert _is_undo_redo(_ctrl(Qt.Key_Z)) == "undo"
+    assert _is_undo_redo(_ctrl(Qt.Key_Y)) == "redo"

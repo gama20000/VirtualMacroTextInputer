@@ -137,11 +137,16 @@ class PanelTitleBar(QWidget):
 class PanelView(QWidget):
     """Barra de estado + grelha de botões, com o estilo configurado.
 
-    Os espaços vazios ocupam a sua célula mas não se veem nem fazem nada."""
+    Os espaços vazios ocupam a sua célula mas não se veem nem fazem nada.
+
+    Com um número de linhas definido e mais botões do que linhas × colunas, a
+    grelha mostra uma página de cada vez, com setas por baixo. Com menos
+    botões, o painel só ocupa as linhas necessárias."""
 
     clicked = Signal(int)                 # índice real da macro
     counter_pressed = Signal(int, bool)   # índice real, pressão longa?
     suspend_requested = Signal(bool)      # True = suspender, False = ativar
+    page_requested = Signal(int)          # página pedida pelas setas
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -179,10 +184,38 @@ class PanelView(QWidget):
         self.grid = QGridLayout(self.grid_host)
         self.grid.setContentsMargins(0, 0, 0, 0)
         v.addWidget(self.grid_host)
+        # páginas: ◀ 1 / 3 ▶ (só aparece quando há mais de uma)
+        self.pager = QWidget(objectName="panelpager")
+        pg = QHBoxLayout(self.pager)
+        pg.setContentsMargins(0, 0, 0, 0)
+        pg.setSpacing(6)
+        self.page_prev = QPushButton("◀", objectName="pageBtn")
+        self.page_next = QPushButton("▶", objectName="pageBtn")
+        self.page_label = QLabel(objectName="pageLabel")
+        self.page_label.setAlignment(Qt.AlignCenter)
+        for b in (self.page_prev, self.page_next):
+            b.setFocusPolicy(Qt.NoFocus)        # não tira o foco à aplicação de destino
+            b.setCursor(Qt.PointingHandCursor)
+            b.setAutoRepeat(False)
+        self.page_prev.setToolTip(tr("panel.page_prev"))
+        self.page_next.setToolTip(tr("panel.page_next"))
+        self.page_prev.clicked.connect(lambda: self.page_requested.emit(self.page - 1))
+        self.page_next.clicked.connect(lambda: self.page_requested.emit(self.page + 1))
+        pg.addStretch(1)
+        pg.addWidget(self.page_prev)
+        pg.addWidget(self.page_label)
+        pg.addWidget(self.page_next)
+        pg.addStretch(1)
+        self.pager.hide()
+        v.addWidget(self.pager)
         v.addStretch(0)
+        self.page = 0
+        self.pages = 1
+        self._page_set: Optional[str] = None     # conjunto a que a página se refere
         self.buttons: list[TileButton] = []
         self.indices: list[int] = []
-        self.spacers: list[QWidget] = []
+        self.spacers: list[QWidget] = []      # espaços vazios configurados
+        self.fillers: list[QWidget] = []      # células que completam a última página
         self.counter_buttons: dict[str, TileButton] = {}     # id do contador -> botão
         self.pal = theme.DAY
         self.style_ = PanelSettings()
@@ -196,10 +229,10 @@ class PanelView(QWidget):
         # acompanhar uma mudança de idioma sem recriar o painel
         self.btn_on.setText("● " + tr("state.active"))
         self.btn_off.setText(theme.PAUSE + " " + tr("state.suspended"))
-        for w in self.buttons + self.spacers:
+        for w in self.buttons + self.spacers + self.fillers:
             w.setParent(None)
             w.deleteLater()
-        self.buttons, self.indices, self.spacers = [], [], []
+        self.buttons, self.indices, self.spacers, self.fillers = [], [], [], []
         self.counter_buttons = {}
         bg = style.cor_fundo or pal.panel_bg
         fg = _contrast_text(bg)
@@ -210,6 +243,12 @@ class PanelView(QWidget):
             f"#panelview, #panelhead, #panelgrid {{ background: {bg}; }}"
             f"#panelview QLabel {{ background: transparent; }}"
             f"#panelview QLabel#status {{ color: {fg}; font-size: 9pt; }}"
+            f"#panelpager {{ background: {bg}; }}"
+            f"#panelview QLabel#pageLabel {{ color: {fg}; font-size: 9pt; min-width: 44px; }}"
+            f"#panelview QPushButton#pageBtn {{ color: {fg}; background: transparent;"
+            f" border: 1px solid {muted}; border-radius: 9px; padding: 1px 10px; }}"
+            f"#panelview QPushButton#pageBtn:hover {{ border-color: {fg}; }}"
+            f"#panelview QPushButton#pageBtn:disabled {{ color: {muted}; border-color: {muted}; }}"
             + theme.state_button_css(pal, fg, muted, small=True))
         self.dot.setVisible(style.mostrar_estado)
         self.label.setVisible(style.mostrar_estado)
@@ -217,19 +256,29 @@ class PanelView(QWidget):
         self.btn_off.setVisible(style.mostrar_controlos)
         self.header.setVisible(style.mostrar_estado or style.mostrar_controlos)
         self.grid.setSpacing(style.espacamento)
-        cols = style.colunas
+        cols = max(1, style.colunas)
+        items = ms.active_indices() if ms is not None else []
+        rows = style.linhas
+        per = rows * cols if rows > 0 else max(1, len(items))
+        self.pages = max(1, -(-len(items) // per))
+        set_id = ms.id if ms is not None else None
+        if set_id != self._page_set:          # outro conjunto: volta à primeira página
+            self._page_set, self.page = set_id, 0
+        self.page = min(max(0, self.page), self.pages - 1)
+        paged = self.pages > 1
+        self.pager.setVisible(paged)
+        self.page_label.setText(tr("panel.page", n=self.page + 1, total=self.pages))
+        self.page_prev.setEnabled(self.page > 0)
+        self.page_next.setEnabled(self.page < self.pages - 1)
+        self.page_prev.setToolTip(tr("panel.page_prev"))
+        self.page_next.setToolTip(tr("panel.page_next"))
         if ms is not None:
-            for pos, i in enumerate(ms.active_indices()):
+            page_items = items[self.page * per:(self.page + 1) * per]
+            for pos, i in enumerate(page_items):
                 m = ms.macros[i]
                 r, c = pos // cols, pos % cols
                 if m.is_space:
-                    sp = QWidget()
-                    sp.setFixedSize(style.tamanho_botao, style.tamanho_botao)
-                    sp.setAttribute(Qt.WA_TransparentForMouseEvents, True)
-                    sp.setStyleSheet("background: transparent;")
-                    self.grid.addWidget(sp, r, c)
-                    sp.show()
-                    self.spacers.append(sp)
+                    self.spacers.append(self._blank(style, r, c))
                     continue
                 if m.is_counter:
                     b = TileButton(m.display_title(), m.tecla, style, pal,
@@ -245,8 +294,23 @@ class PanelView(QWidget):
                 b.show()      # senão o tamanho é calculado sem os botões novos
                 self.buttons.append(b)
                 self.indices.append(i)
+            if paged:
+                # última página incompleta: células vazias até linhas × colunas,
+                # para o painel não mudar de tamanho de página para página
+                for pos in range(len(page_items), per):
+                    self.fillers.append(self._blank(style, pos // cols, pos % cols))
         self.grid_host.adjustSize()
         self.adjustSize()
+
+    def _blank(self, style: PanelSettings, r: int, c: int) -> QWidget:
+        """Célula vazia, invisível e sem reação ao rato."""
+        sp = QWidget()
+        sp.setFixedSize(style.tamanho_botao, style.tamanho_botao)
+        sp.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+        sp.setStyleSheet("background: transparent;")
+        self.grid.addWidget(sp, r, c)
+        sp.show()
+        return sp
 
     def set_count(self, counter_id: str, value: int) -> None:
         b = self.counter_buttons.get(counter_id)
@@ -301,6 +365,7 @@ class PanelWindow(QWidget):
         self.view = PanelView()
         self.view.clicked.connect(self._clicked)
         self.view.counter_pressed.connect(self._counter)
+        self.view.page_requested.connect(self.show_page)
         self.view.suspend_requested.connect(self.app.engine.set_suspended)
         lay.addWidget(self.titlebar)
         lay.addWidget(self.view)
@@ -420,6 +485,14 @@ class PanelWindow(QWidget):
 
     def set_count(self, counter_id: str, value: int) -> None:
         self.view.set_count(counter_id, value)
+
+    def show_page(self, page: int) -> None:
+        """Muda de página (setas). O tamanho da janela mantém-se: todas as
+        páginas têm linhas × colunas células."""
+        if page == self.view.page or not (0 <= page < self.view.pages):
+            return
+        self.view.page = page
+        self.rebuild()
 
     def _clicked(self, idx: int) -> None:
         ok, why = self.app.engine.trigger(idx, "painel")

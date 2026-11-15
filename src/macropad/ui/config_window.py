@@ -5,7 +5,6 @@ As alterações válidas são gravadas automaticamente (de forma atómica) e
 aplicadas a execuções futuras."""
 from __future__ import annotations
 
-import time
 
 import os
 from pathlib import Path
@@ -25,9 +24,10 @@ from ..core import macro_ops as ops
 from ..core.commands import CommandError, describe_steps, parse_action
 from ..core.configio import (ConfigError, Issue, macro_label, macros_from_clipboard,
                              macros_to_clipboard, validate_macros)
-from ..core.keys import Binding, KeyBindingError, parse_binding
+from ..core.keys import MEDIA_KEYS, Binding, KeyBindingError, display_binding, parse_binding
 from ..core.model import (MAX_INTERVAL_MS, MAX_REPEAT, PANEL_PRESETS, PANEL_RANGES, POSITIONS,
-                          MacroSet, PanelSettings, Settings, apply_preset, matching_preset)
+                          RESET_SOUNDS, MacroSet, PanelSettings, Settings, apply_preset,
+                          matching_preset)
 from ..i18n import available as available_languages
 from ..i18n import tr
 from . import theme
@@ -87,6 +87,17 @@ class _ColorButton(QPushButton):
             self._on_change()
 
 
+
+def _is_undo_redo(e) -> str:
+    """"undo" para Ctrl+Z, "redo" para Ctrl+Y ou Ctrl+Shift+Z, "" para o resto."""
+    mods = e.modifiers() & ~Qt.KeypadModifier
+    if e.key() == Qt.Key_Z and mods == Qt.ControlModifier:
+        return "undo"
+    if (e.key() == Qt.Key_Y and mods == Qt.ControlModifier) or (
+            e.key() == Qt.Key_Z and mods == (Qt.ControlModifier | Qt.ShiftModifier)):
+        return "redo"
+    return ""
+
 class ConfigWindow(QWidget):
     def __init__(self, app: "MacropadApp"):
         super().__init__()
@@ -97,6 +108,10 @@ class ConfigWindow(QWidget):
         self.ms: Optional[MacroSet] = None       # cópia de trabalho do conjunto ativo
         self.settings: Settings = app.store.settings.clone()
         self.cur = -1                            # índice real da macro atual (editor)
+        # eliminações que se podem anular/refazer, por conjunto (id -> pilha);
+        # cada entrada: [(posição, cópia da macro), ...]
+        self._undo_del: dict[str, list] = {}
+        self._redo_del: dict[str, list] = {}
         self.selected: list[int] = []            # índices reais selecionados
         self._loading = False
         self._last_add = 0.0
@@ -105,7 +120,7 @@ class ConfigWindow(QWidget):
         self._hover_real = -1
         self._hover_grid: Optional[MacroGrid] = None
         # tecla Qt -> (conjunto, id do contador, início)
-        self._counter_keys: dict[int, tuple[str, str, float]] = {}
+        self._counter_keys: dict[int, str] = {}      # tecla Qt -> conjunto
         self._dirty_set = False        # o conjunto em edição tem alterações por gravar
         self._dirty_settings = False   # as preferências têm alterações por gravar
         self._save_set_timer = QTimer(self, singleShot=True, interval=450,
@@ -330,6 +345,18 @@ class ConfigWindow(QWidget):
         clear.clicked.connect(lambda: self._on_key_captured(""))
         krow.addWidget(clear)
         self.no_key_btn = clear
+        # teclas multimédia: escolhidas num menu, porque premi-las para gravar
+        # também faria reagir o leitor de música
+        media = QToolButton()
+        media.setText(tr("field.media_keys"))
+        media.setToolTip(tr("field.media_keys_tip"))
+        media.setPopupMode(QToolButton.InstantPopup)
+        mmenu = QMenu(media)
+        for name in MEDIA_KEYS:
+            mmenu.addAction(tr(f"keyname.{name}"), lambda n=name: self._assign_media(n))
+        media.setMenu(mmenu)
+        krow.addWidget(media)
+        self.media_key_btn = media
         form.addRow(tr("field.key"), krow)
 
         el.addLayout(form)
@@ -390,6 +417,19 @@ class ConfigWindow(QWidget):
         self.f_long.setSuffix(" ms")
         self.f_long.valueChanged.connect(self._on_edit)
         cf.addRow(tr("field.counter_long"), self.f_long)
+        snd = QHBoxLayout()
+        self.f_sound = QComboBox()
+        for kind in RESET_SOUNDS:
+            self.f_sound.addItem(tr(f"sound.{kind or 'none'}"), kind)
+        self.f_sound.currentIndexChanged.connect(self._on_edit)
+        snd.addWidget(self.f_sound)
+        self.sound_test = QPushButton(tr("field.counter_sound_test"))
+        self.sound_test.setToolTip(tr("field.counter_sound_test_tip"))
+        self.sound_test.clicked.connect(
+            lambda: self.app.platform.play_sound(self.f_sound.currentData() or ""))
+        snd.addWidget(self.sound_test)
+        snd.addStretch(1)
+        cf.addRow(tr("field.counter_sound"), snd)
         cnow = QHBoxLayout()
         self.f_count = QLabel()
         cnow.addWidget(self.f_count)
@@ -478,7 +518,8 @@ class ConfigWindow(QWidget):
         grid.setHorizontalSpacing(14)
         grid.setVerticalSpacing(8)
         self.p_spins: dict[str, QSpinBox] = {}
-        spec = [("colunas", "panel.columns", ""), ("tamanho_botao", "panel.size", " px"),
+        spec = [("colunas", "panel.columns", ""), ("linhas", "panel.rows", ""),
+                ("tamanho_botao", "panel.size", " px"),
                 ("espacamento", "panel.spacing", " px"), ("arredondamento", "panel.radius", " %"),
                 ("borda", "panel.border", " px"), ("escala_texto", "panel.text_scale", " %")]
         for n, (name, label, suffix) in enumerate(spec):
@@ -486,6 +527,9 @@ class ConfigWindow(QWidget):
             lo, hi = PANEL_RANGES[name]
             sb.setRange(int(lo), int(hi))
             sb.setSuffix(suffix)
+            if name == "linhas":
+                sb.setSpecialValueText(tr("panel.rows_auto"))   # 0 = sem limite
+                sb.setToolTip(tr("panel.rows_tip"))
             sb.valueChanged.connect(self._on_panel_edit)
             self.p_spins[name] = sb
             grid.addWidget(QLabel(tr(label)), n // 2, (n % 2) * 2, Qt.AlignRight)
@@ -802,7 +846,8 @@ class ConfigWindow(QWidget):
         if m.is_space:
             return {"index": i, "kind": "espaco", "title": "", "key": "", "error": i in bad,
                     "dup": False, "tip": tr("tile.space_tip"), "count": None}
-        tip = tr("tile.tooltip", title=m.display_title(), key=m.tecla or tr("tile.no_key"))
+        tip = tr("tile.tooltip", title=m.display_title(),
+                 key=display_binding(m.tecla) or tr("tile.no_key"))
         if i in dups:
             tip += "\n" + self._dup_text(i, dups)
         if i in bad:
@@ -871,7 +916,7 @@ class ConfigWindow(QWidget):
         multi = self._multi()
         single = m is not None and not multi
         is_space = single and m.is_space
-        for wdg in (self.f_title, self.f_key, self.no_key_btn):
+        for wdg in (self.f_title, self.f_key, self.no_key_btn, self.media_key_btn):
             wdg.setEnabled(single and not is_space)
         for wdg in (self.f_text, self.f_repeat, self.f_interval, self.f_step, self.f_reset,
                     self.f_long, self.left_btn, self.right_btn):
@@ -896,6 +941,8 @@ class ConfigWindow(QWidget):
             self.f_step.setValue(m.incremento)
             self.f_reset.setValue(m.reposicao)
             self.f_long.setValue(m.pressao_longa_ms)
+            self.f_sound.setCurrentIndex(max(0, self.f_sound.findData(m.som_reposicao)))
+            self.sound_test.setEnabled(bool(m.som_reposicao))
             self._update_count_label()
             self._update_preview_and_errors()
         self._update_editor_header()
@@ -983,6 +1030,8 @@ class ConfigWindow(QWidget):
             m.incremento = self.f_step.value()
             m.reposicao = self.f_reset.value()
             m.pressao_longa_ms = self.f_long.value()
+            m.som_reposicao = self.f_sound.currentData() or ""
+            self.sound_test.setEnabled(bool(m.som_reposicao))
         else:
             m.texto = self.f_text.toPlainText()
             m.repeticoes = self.f_repeat.value()
@@ -1087,11 +1136,49 @@ class ConfigWindow(QWidget):
         self._refresh_grid()
         self._load_editor()
 
+    def _undo_delete(self) -> None:
+        """Ctrl+Z: repõe as últimas macros eliminadas no mesmo sítio."""
+        stack = self._undo_del.get(self.ms.id) if self.ms else None
+        if not stack:
+            self.show_status(tr("status.nothing_to_undo"))
+            return
+        rec = stack.pop()
+        st = self.app.store.settings
+        idxs, lost = ops.undo_deletion(self.ms, rec, (st.tecla_suspensao, st.tecla_painel))
+        self._redo_del.setdefault(self.ms.id, []).append(rec)
+        self._select_many(idxs)
+        self._changed()
+        self.show_status(tr("status.undone", n=len(idxs)))
+        if lost:
+            self.show_status(tr("status.undone_key_lost", titles=", ".join(lost)), error=True)
+
+    def _redo_delete(self) -> None:
+        """Ctrl+Y: volta a eliminar o que foi reposto."""
+        stack = self._redo_del.get(self.ms.id) if self.ms else None
+        if not stack:
+            self.show_status(tr("status.nothing_to_redo"))
+            return
+        rec = stack.pop()
+        idxs = ops.find_items(self.ms, rec)
+        if not idxs:
+            self.show_status(tr("status.nothing_to_redo"))
+            return
+        self._undo_del.setdefault(self.ms.id, []).append(ops.snapshot_deletion(self.ms, idxs))
+        was_archived = self.ms.macros[idxs[0]].arquivada
+        ops.delete_many(self.ms, idxs)
+        group = self.ms.archived_indices() if was_archived else self.ms.active_indices()
+        nxt = max([i for i in group if i < idxs[0]], default=group[0] if group else -1)
+        self._select(nxt)
+        self._changed()
+        self.show_status(tr("status.redone", n=len(idxs)))
+
     def _add_macro(self) -> None:
         self._add_item("texto")
 
     def _add_item(self, kind: str) -> None:
-        """Nova macro, contador ou espaço vazio (no fim da área Ativo)."""
+        """Nova macro, contador ou espaço vazio: logo a seguir à macro
+        selecionada na área Ativo; sem seleção (ou com uma do Arquivo), no fim
+        da área Ativo."""
         if not self.ms:
             return
         # Uma pressão = um item (ignora cliques repetidos muito rápidos).
@@ -1100,12 +1187,16 @@ class ConfigWindow(QWidget):
         if now - self._last_add < 0.35:
             return
         self._last_add = now
+        # com várias selecionadas, a seguir à última delas na área Ativo
+        sel = [i for i in self.selected
+               if 0 <= i < len(self.ms.macros) and not self.ms.macros[i].arquivada]
+        after = max(sel) if sel else None
         if kind == "contador":
-            i = ops.new_counter(self.ms, tr("macros.new_counter_title"))
+            i = ops.new_counter(self.ms, tr("macros.new_counter_title"), after)
         elif kind == "espaco":
-            i = ops.new_space(self.ms)
+            i = ops.new_space(self.ms, after)
         else:
-            i = ops.new_macro(self.ms, tr("macros.new_title"))
+            i = ops.new_macro(self.ms, tr("macros.new_title"), after)
         self._select(i)
         self._changed()
         self.flush()
@@ -1152,13 +1243,17 @@ class ConfigWindow(QWidget):
                     self._loading = False
         was_archived = targets[0].arquivada
         first = min(self.selected)
+        self._undo_del.setdefault(self.ms.id, []).append(
+            ops.snapshot_deletion(self.ms, self.selected))
+        self._redo_del.pop(self.ms.id, None)     # nova eliminação: o refazer acaba
         ops.delete_many(self.ms, self.selected)
         group = self.ms.archived_indices() if was_archived else self.ms.active_indices()
         nxt = max([i for i in group if i < first], default=group[0] if group else -1)
         self._select(nxt)
         self._changed()
-        self.show_status(tr("status.deleted") if len(targets) == 1
-                         else tr("status.deleted_n", n=len(targets)))
+        self.show_status((tr("status.deleted") if len(targets) == 1
+                          else tr("status.deleted_n", n=len(targets)))
+                         + " " + tr("status.undo_hint"))
         if pref_error:
             self.show_status(pref_error, error=True)
 
@@ -1338,7 +1433,8 @@ class ConfigWindow(QWidget):
                          if len(macros) == 1 else tr("status.pasted_n", n=len(macros)))
 
     def eventFilter(self, obj: QObject, e: QEvent) -> bool:
-        """Atalhos da grelha: Delete/Backspace elimina, Ctrl+C copia, Ctrl+V cola.
+        """Atalhos da grelha: Delete/Backspace elimina, Ctrl+Z anula a
+        eliminação e Ctrl+Y (ou Ctrl+Shift+Z) refaz, Ctrl+C copia, Ctrl+V cola.
         Só atuam quando o foco não está num campo de edição (aí mantêm o
         comportamento normal de texto). As teclas dos contadores também
         contam com esta janela à frente."""
@@ -1363,6 +1459,10 @@ class ConfigWindow(QWidget):
                 QTimer.singleShot(0, self._delete_macro)
                 return True
             return False
+        which = _is_undo_redo(e)
+        if which:
+            QTimer.singleShot(0, self._undo_delete if which == "undo" else self._redo_delete)
+            return True
         if e.matches(QKeySequence.Copy) and has_sel:
             self._copy_macro()
             return True
@@ -1373,17 +1473,17 @@ class ConfigWindow(QWidget):
 
     def _counter_key(self, e) -> bool:
         """Tecla de um contador premida com esta janela à frente (o hook deixa
-        passar as teclas nas janelas do Macropad). Toque curto soma; manter
-        premida repõe — decidido ao largar, como no hook."""
+        passar as teclas nas janelas do Macropad). Como no hook: toque curto
+        soma ao largar; manter premida repõe quando passa o tempo, uma vez."""
         k = e.key()
+        token = f"janela:{k}"
         if e.type() == QEvent.KeyRelease:
             if e.isAutoRepeat() or k not in self._counter_keys:
                 return k in self._counter_keys
-            sid, cid, t0 = self._counter_keys.pop(k)
+            sid = self._counter_keys.pop(k)
             # só conta se o conjunto ainda for o mesmo (verificado no motor,
             # sob o lock, junto com a operação)
-            ok, why = self.app.engine.counter_press_id(sid, cid,
-                                                       held_s=time.monotonic() - t0)
+            ok, why = self.app.engine.end_counter_hold(token)
             if not ok and self.app.engine.active_set_id == sid:
                 self.show_status(why, error=True)
             return True
@@ -1403,7 +1503,9 @@ class ConfigWindow(QWidget):
         if idx is None:
             return False
         ms = self.app.engine.active_set
-        self._counter_keys[k] = (ms.id, ms.macros[idx].id, time.monotonic())
+        m = ms.macros[idx]
+        self._counter_keys[k] = ms.id
+        self.app.engine.begin_counter_hold(token, ms.id, m.id, m.pressao_longa_ms)
         return True
 
     # ============================================== tecla pelo rato (hover)
@@ -1439,7 +1541,8 @@ class ConfigWindow(QWidget):
 
     def _hover_assign_key(self, e) -> bool:
         """Atribui a tecla premida ao botão sob o rato. Delete/Backspace, Tab,
-        Ctrl+C e Ctrl+V mantêm as suas funções; Esc sozinho cancela."""
+        Ctrl+C, Ctrl+V, Ctrl+Z e Ctrl+Y mantêm as suas funções; Esc sozinho
+        cancela."""
         real = self._hover_target()
         if real < 0 or not self.ms:
             return False
@@ -1448,7 +1551,8 @@ class ConfigWindow(QWidget):
             return True                      # espera pela tecla principal
         if k in (Qt.Key_Delete, Qt.Key_Backspace, Qt.Key_Tab, Qt.Key_Backtab):
             return False
-        if e.matches(QKeySequence.Copy) or e.matches(QKeySequence.Paste):
+        if e.matches(QKeySequence.Copy) or e.matches(QKeySequence.Paste) \
+                or _is_undo_redo(e):
             return False
         mods = mods_from_event(e)
         if k == Qt.Key_Escape and not mods:
@@ -1459,6 +1563,12 @@ class ConfigWindow(QWidget):
             return True
         self.assign_key(real, str(Binding(name, mods)))
         return True
+
+    def _assign_media(self, name: str) -> None:
+        """Tecla multimédia escolhida no menu: mesmas verificações de conflito
+        que a atribuição com o rato."""
+        if self.ms and not self._multi() and 0 <= self.cur < len(self.ms.macros):
+            self.assign_key(self.cur, name)
 
     def assign_key(self, real: int, binding: str) -> bool:
         """Atribui ``binding`` ao item ``real`` se não estiver em uso por outra
@@ -1473,7 +1583,8 @@ class ConfigWindow(QWidget):
                           (tr("prefs.panel_key").rstrip(":").lower(), st.tecla_painel)):
             try:
                 if hk and parse_binding(hk) == b:
-                    conflict = tr("hover.conflict_global", key=binding, what=label)
+                    conflict = tr("hover.conflict_global", key=display_binding(binding),
+                                  what=label)
             except KeyBindingError:
                 pass
         if not conflict and not m.arquivada:
@@ -1482,7 +1593,8 @@ class ConfigWindow(QWidget):
                     continue
                 try:
                     if parse_binding(x.tecla) == b:
-                        conflict = tr("hover.conflict", key=binding, title=x.display_title())
+                        conflict = tr("hover.conflict", key=display_binding(binding),
+                                      title=x.display_title())
                         break
                 except KeyBindingError:
                     continue
@@ -1503,7 +1615,8 @@ class ConfigWindow(QWidget):
         self._select(real)
         self._changed()
         self.flush()
-        self.show_status(tr("status.key_assigned", key=binding, title=m.display_title()))
+        self.show_status(tr("status.key_assigned", key=display_binding(binding),
+                            title=m.display_title()))
         return True
 
     # ============================================================ âmbito
@@ -1671,7 +1784,9 @@ class ConfigWindow(QWidget):
     def changeEvent(self, e):
         super().changeEvent(e)
         if e.type() == QEvent.ActivationChange:
-            self._counter_keys.clear()        # o keyup pode ir para outra janela
+            # o keyup pode ir para outra janela: esquece as pressões em curso
+            self._counter_keys.clear()
+            self.app.engine.cancel_counter_holds("janela:")
             self._sync_capture()
 
     def hideEvent(self, e):

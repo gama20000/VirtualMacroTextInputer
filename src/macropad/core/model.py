@@ -11,6 +11,8 @@ MODIFIER_MODES = ("exatos", "ignorar")
 SCOPE_MODES = ("global", "aplicacoes")
 THEMES = ("diurno", "noturno", "automatico")
 POSITIONS = ("cima", "centro", "baixo")
+# Som ao repor um contador: "" = nenhum; os outros são sons do sistema
+RESET_SOUNDS = ("", "padrao", "aviso", "erro", "pergunta")
 ITEM_TYPES = ("texto", "espaco", "contador")
 
 MAX_REPEAT = 1000
@@ -36,6 +38,7 @@ class Macro:
     incremento: int = 1
     reposicao: int = 0         # valor para que a contagem é reposta
     pressao_longa_ms: int = 800
+    som_reposicao: str = ""    # som ao repor (contadores); ver RESET_SOUNDS
 
     @property
     def is_space(self) -> bool:
@@ -86,6 +89,7 @@ class PanelSettings:
     sempre_por_cima: bool = True
     opacidade: float = 0.92
     colunas: int = 4
+    linhas: int = 0               # 0 = sem limite; com limite, páginas no painel
     tamanho_botao: int = 78
     espacamento: int = 6
     arredondamento: int = 17      # % do lado (0 = quadrado, 50 = círculo)
@@ -107,14 +111,14 @@ class PanelSettings:
     def style_fields(self) -> list[str]:
         """Campos de aparência (os que as predefinições de estilo alteram)."""
         return [f.name for f in fields(self)
-                if f.name not in ("sempre_por_cima", "opacidade", "colunas")]
+                if f.name not in ("sempre_por_cima", "opacidade", "colunas", "linhas")]
 
 
 LEGACY_HOTKEY = "Ctrl+Alt+P"          # predefinição até à versão 0.3
 
 # (mínimo, máximo) dos campos numéricos do painel
 PANEL_RANGES: dict[str, tuple[float, float]] = {
-    "opacidade": (0.2, 1.0), "colunas": (1, 12), "tamanho_botao": (40, 160),
+    "opacidade": (0.2, 1.0), "colunas": (1, 12), "linhas": (0, 12), "tamanho_botao": (40, 160),
     "espacamento": (0, 30), "arredondamento": (0, 50), "borda": (0, 8),
     "escala_texto": (60, 180),
 }
@@ -141,8 +145,8 @@ PANEL_PRESETS: dict[str, dict] = {
 
 
 def apply_preset(p: PanelSettings, preset: str) -> PanelSettings:
-    """Aplica uma predefinição de estilo, mantendo colunas, opacidade e
-    'sempre por cima'."""
+    """Aplica uma predefinição de estilo, mantendo colunas, linhas, opacidade
+    e 'sempre por cima'."""
     base = PanelSettings()
     out = p.clone()
     for name in out.style_fields():

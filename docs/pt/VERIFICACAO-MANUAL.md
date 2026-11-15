@@ -179,3 +179,18 @@ Antes de começar: na configuração de teste, a tecla de suspensão anterior
 | 87 | Com o Macropad antigo a correr, abra o programa novo (`run-dev.ps1`) | aviso para fechar o Macropad antigo; o novo não arranca | ☐ |
 | 88 | Feche o antigo e abra o novo | janelas, ícone e menus com «Virtual Macro Text Inputer»; as suas macros e preferências estão lá (copiadas de `%APPDATA%\Macropad`, que continua a existir) | ☐ |
 | 89 | Com «Arrancar com o Windows» ativo, veja Gestor de Tarefas ▸ Aplicações de arranque | aparece só a entrada nova, ativada; a «Macropad» desapareceu | 👤 |
+
+## Versão 0.5
+
+| # | Ação | Esperado | OK |
+|---|---|---|---|
+| 90 | Contador no painel com pressão longa de 1500 ms: mantenha-o premido com o rato | uma linha verde percorre a borda a partir de cima; aos 1,5 s a contagem é reposta logo, com sinal verde, ainda premido; continuar premido não repete; ao largar não soma | ☐ |
+| 91 | O mesmo contador com F9 no Bloco de Notas: mantenha F9 premida com o painel visível | o mesmo progresso e reposição no botão do painel com F9 ainda premida; nada é escrito | ☐ |
+| 92 | Editor do contador: «Som ao repor» ▸ «Aviso», clique em «Testar» e depois reponha mantendo premido | toca o som de aviso do Windows no «Testar» e na reposição; com «Nenhum» não há som | ☐ |
+| 93 | Selecione a 2.ª macro e clique em «Nova macro»; depois «Contador»; clique numa zona vazia da grelha (sem seleção) e «Espaço vazio» | a macro fica logo a seguir à 2.ª, o contador logo a seguir à nova macro; o espaço vai para o fim do Ativo; o novo item fica selecionado | ☐ |
+| 94 | Separador Painel: 3 colunas e 2 linhas, com 8 botões | pré-visualização e painel real mostram 6 células e ◀ 1 / 2 ▶; ▶ mostra o resto num painel do mesmo tamanho; clicar nas setas não tira o foco ao Bloco de Notas; a definição mantém-se depois de reiniciar | ☐ |
+| 95 | Linhas «Todas», depois 5 linhas com 8 botões e 3 colunas | sem setas; o painel só ocupa as linhas necessárias | ☐ |
+| 96 | Editor ▸ «Multimédia» ▸ «Faixa seguinte» numa macro; no Bloco de Notas prima a tecla ⏭ do teclado | a macro executa; o leitor de música não muda de faixa | ☐ |
+| 97 | Suspenda (Shift+Esc) e prima ⏭; depois, ativo mas com uma janela fora do âmbito, prima ⏭ | o leitor de música muda de faixa nos dois casos | ☐ |
+| 98 | Atribua «Faixa seguinte» a uma segunda macro | aviso «já atribuída»; nada muda | ☐ |
+| 99 | Elimine duas macros (uma ativa, uma arquivada), Ctrl+Z, Ctrl+Y, Ctrl+Z; depois escreva no campo Título e prima Ctrl+Z | voltam aos mesmos sítios com as mesmas teclas; Ctrl+Y elimina-as de novo; no campo, Ctrl+Z só desfaz o texto | ☐ |

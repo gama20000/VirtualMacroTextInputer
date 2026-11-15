@@ -33,7 +33,7 @@ Paused since 12-11-2026 at the user's request; resumes when the user
 authorises it.
 
 - [ ] Go through the checklist from source (`tools\macropad-teste.cmd`).
-  - Scope: steps 1–89 of `docs/MANUAL-CHECKLIST.md`, except the 👤 ones; each
+  - Scope: steps 1–99 of `docs/MANUAL-CHECKLIST.md`, except the 👤 ones; each
     step's result is recorded there.
   - Acceptance criteria: every non-👤 step is ✅, or has a fix task or a
     limitation accepted in `ANSWERS.md`.
@@ -46,6 +46,24 @@ authorises it.
   translations included.
 
 ## Completed
+
+### Version 0.5 (15-11-2026)
+
+- [x] Counter: progress along the panel button's border while held (mouse or
+  key); reset at the long-press time, once, with a green flash; optional sound
+  per counter (`Q-032`).
+- [x] New macro, counter or empty space inserted right after the selected
+  macro; with nothing selected, at the end of the Active area.
+- [x] Panel rows, with pages and ◀ ▶ arrows when the buttons do not fit
+  (`Q-031`); preview and real panel updated; saved in `config.toml`.
+- [x] Media keys (Play/Pause, previous, next) from a «Media» menu, with the
+  usual conflict checks; normal behaviour when suspended or outside the scope
+  (`Q-033`).
+- [x] Ctrl+Z / Ctrl+Y undo and redo deleting macros (same area, position,
+  settings and key); text fields keep their own Ctrl+Z.
+  - Validation: `pytest` 186 pass, 1 skipped; screenshots of the panel with
+    pages, progress and flash checked. Residual risk: steps 90–99 on Windows
+    (system sounds, media keys on the user's keyboard, real timing).
 
 ### New name: Virtual Macro Text Inputer (13-11-2026)
 

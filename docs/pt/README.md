@@ -73,13 +73,13 @@ Os testes cobrem a interpretação de comandos, as teclas e os modificadores, as
 **Configuração.** Tem quatro separadores, por esta ordem:
 - *Macros*: duas áreas, **Ativo** e **Arquivo**, e o editor do botão selecionado. A área **Ativo** está centrada e tem o mesmo aspeto do painel real (tamanho, cores, espaçamento, colunas, posição do título e da tecla); se for grande, a janela desloca-se. As alterações válidas são gravadas automaticamente.
   - **Arrastar**: largue um botão antes ou depois de outro para o pôr nessa posição (uma linha azul mostra onde fica), dentro da mesma área ou entre **Ativo** e **Arquivo**, nos dois sentidos. Largar sobre um espaço vazio troca os dois de lugar. Largar no título da área, ou numa zona vazia, põe o botão no fim. Tudo fica gravado logo. A tecla atribuída não muda. ◀ ▶ também mudam a ordem.
-  - **Tecla**: clique no campo **Tecla** e prima a tecla ou combinação; ou, mais rápido, ponha o rato sobre um botão (a etiqueta da tecla fica amarela, «Tecla…») e prima a tecla. Só é atribuída se não estiver em uso por outra macro ativa nem for a tecla de suspensão ou do painel; caso contrário aparece um aviso, com a opção **Não voltar a mostrar** (reative em Preferências ▸ «Avisar quando a tecla atribuída com o rato já está em uso»). Por cima de um botão, Delete/Backspace, Tab, Ctrl+C e Ctrl+V mantêm as suas funções e Esc cancela. **Sem tecla** deixa a macro disponível só no painel.
-  - **Nova macro** acrescenta uma única macro, sem tecla e com o texto vazio, e põe o cursor no campo **Texto**.
-  - **Contador** acrescenta um botão que conta: um clique curto no painel (ou a sua tecla) soma o **incremento** (por omissão 1); manter premido durante a **pressão longa** (por omissão 800 ms) repõe o **valor de reposição** (por omissão 0), sem somar. O contador só mostra a contagem: não escreve nada. A contagem fica guardada em `estado.toml` e mantém-se entre sessões; **Repor agora** no editor repõe-na.
+  - **Tecla**: clique no campo **Tecla** e prima a tecla ou combinação; ou, mais rápido, ponha o rato sobre um botão (a etiqueta da tecla fica amarela, «Tecla…») e prima a tecla. Só é atribuída se não estiver em uso por outra macro ativa nem for a tecla de suspensão ou do painel; caso contrário aparece um aviso, com a opção **Não voltar a mostrar** (reative em Preferências ▸ «Avisar quando a tecla atribuída com o rato já está em uso»). Por cima de um botão, Delete/Backspace, Tab, Ctrl+C, Ctrl+V, Ctrl+Z e Ctrl+Y mantêm as suas funções e Esc cancela. **Sem tecla** deixa a macro disponível só no painel. **Multimédia** atribui Reproduzir/Pausa, Faixa anterior ou Faixa seguinte sem as premir (premi-las para gravar faria também reagir o leitor de música); aplicam-se as mesmas verificações de conflito. Suspenso ou fora do âmbito, as teclas multimédia funcionam como habitualmente.
+  - **Nova macro** acrescenta uma única macro, sem tecla e com o texto vazio, e põe o cursor no campo **Texto**. **Nova macro**, **Contador** e **Espaço vazio** inserem o novo item logo a seguir à macro selecionada em **Ativo** (a seguir à última, se houver várias selecionadas); sem seleção, ou com uma macro arquivada selecionada, no fim de **Ativo**.
+  - **Contador** acrescenta um botão que conta: um clique curto no painel (ou a sua tecla) soma o **incremento** (por omissão 1); enquanto o mantém premido, o botão do painel mostra o tempo decorrido numa linha ao longo da borda e, ao atingir a **pressão longa** (por omissão 800 ms), a contagem volta logo ao **valor de reposição** (por omissão 0), com um sinal verde, sem somar e sem esperar que largue (continuar premido não repete). **Som ao repor** toca um som do sistema do Windows na reposição (nenhum por omissão; **Testar** toca-o). O contador só mostra a contagem: não escreve nada. A contagem fica guardada em `estado.toml` e mantém-se entre sessões; **Repor agora** no editor repõe-na.
   - **Espaço vazio** ocupa uma posição da grelha sem botão. Na configuração aparece tracejado e pode ser arrastado; no painel é invisível e não faz nada, mas ocupa o lugar. Os espaços não vão para o Arquivo.
   - **Vermelho** (selo «!») indica um erro, incluindo um *conflito de tecla*, quando duas macros ativas têm a mesma tecla. Os erros não são gravados.
   - **Amarelo** (selo «=») indica *conteúdo duplicado*: macros com a mesma sequência de texto e comandos, mesmo que tenham títulos ou teclas diferentes (`{enter}`, `{Enter}` e uma quebra de linha contam como iguais). Passe o rato por cima do botão, ou veja a linha amarela no editor, para saber com que macros coincide. Os duplicados são apenas um aviso e são gravados.
-- *Painel*: estilo, colunas, tamanho dos botões, espaçamento, arredondamento, borda, tamanho do texto, cores (botão, texto, borda, fundo), posição do título e posição da tecla (em cima, ao centro, em baixo, independentes e sem se sobreporem), elementos visíveis (tecla, barra de estado, botões Ativo/Suspenso), «sempre por cima» e opacidade. A **pré-visualização**, centrada, usa o mesmo desenho do painel real (incluindo os botões Ativo/Suspenso) e atualiza-se a cada alteração, sem abrir o painel. Há estilos predefinidos (Predefinido, Compacto, Grande, Claro, Néon, Redondo, Minimalista, Título em cima). **Repor predefinição** volta ao aspeto original sem mexer nas colunas, na opacidade nem em «sempre por cima».
+- *Painel*: estilo, colunas, linhas (com mais botões do que linhas × colunas, o painel mostra páginas, com setas ◀ 1 / 2 ▶; com menos, só ocupa as linhas necessárias), tamanho dos botões, espaçamento, arredondamento, borda, tamanho do texto, cores (botão, texto, borda, fundo), posição do título e posição da tecla (em cima, ao centro, em baixo, independentes e sem se sobreporem), elementos visíveis (tecla, barra de estado, botões Ativo/Suspenso), «sempre por cima» e opacidade. A **pré-visualização**, centrada, usa o mesmo desenho do painel real (incluindo os botões Ativo/Suspenso) e atualiza-se a cada alteração, sem abrir o painel. Há estilos predefinidos (Predefinido, Compacto, Grande, Claro, Néon, Redondo, Minimalista, Título em cima). **Repor predefinição** volta ao aspeto original sem mexer nas colunas, na opacidade nem em «sempre por cima».
 - *Âmbito*: o conjunto funciona em todas as aplicações ou só nas aplicações indicadas, identificadas pelo executável, por exemplo `notepad.exe`. Fora delas, as teclas funcionam normalmente e o painel não envia texto.
 - *Preferências*: tema, idioma, arranque com o Windows, «Não pedir confirmação antes de eliminar macros», aviso de tecla em uso, tecla de suspensão, tecla do painel, modificadores e modo de texto. Cada alteração aplica-se logo. O arranque com o Windows é confirmado depois de aplicado (incluindo a aprovação em Gestor de Tarefas ▸ Aplicações de arranque); se não for possível, aparece um erro por baixo da opção.
 - Menu **⋯**: novo, duplicar, mudar o nome, eliminar, importar e exportar conjuntos, e abrir a pasta de configuração.
@@ -93,8 +93,10 @@ Os testes cobrem a interpretação de comandos, as teclas e os modificadores, as
 | Delete ou Backspace | elimina a(s) macro(s) (pede confirmação) |
 | Ctrl+C | copia a(s) macro(s) |
 | Ctrl+V | cola cópias a seguir à seleção, na mesma área: a cópia de uma macro arquivada fica no Arquivo, logo a seguir à original. Se a tecla já estiver em uso, uma cópia ativa fica sem tecla |
+| Ctrl+Z | anula a última eliminação: as macros voltam à mesma área e posição, com as mesmas definições e tecla (se a tecla entretanto foi atribuída a outra macro, a reposta fica sem tecla, com mensagem). Guardado por conjunto enquanto a janela estiver aberta |
+| Ctrl+Y ou Ctrl+Shift+Z | volta a eliminá-las |
 
-Com o foco num campo de texto, estes atalhos copiam, colam e apagam texto como habitualmente. A caixa de confirmação de eliminação tem a opção **Não voltar a perguntar**. Para voltar a ativar as confirmações, desmarque Preferências ▸ «Não pedir confirmação antes de eliminar macros».
+Com o foco num campo de texto, estes atalhos copiam, colam, apagam e desfazem texto como habitualmente. A caixa de confirmação de eliminação tem a opção **Não voltar a perguntar**. Para voltar a ativar as confirmações, desmarque Preferências ▸ «Não pedir confirmação antes de eliminar macros».
 
 **Arquivo.** Por baixo das macros ativas, a divisória **Arquivo** mostra as macros arquivadas, com uma caixa de pesquisa por título, texto ou tecla.
 - **Arquivar** retira a macro das teclas e do painel sem a apagar. Fica no ficheiro do conjunto com `arquivada = true`. Também pode arrastar uma macro ativa, ou a seleção inteira, para a área **Arquivo**: fica arquivada imediatamente, na posição largada.
@@ -172,6 +174,7 @@ avisar_conflito_tecla = true
 
 [painel]
 colunas = 4
+linhas = 0                   # 0 = todas; senão, páginas com setas ◀ ▶
 tamanho_botao = 78           # 40–160 px
 espacamento = 6              # 0–30 px
 arredondamento = 17          # 0 (quadrado) – 50 (redondo), % do lado
@@ -214,6 +217,7 @@ tecla = "F9"
 incremento = 1
 reposicao = 0
 pressao_longa_ms = 800
+som_reposicao = "aviso"    # opcional: "padrao", "aviso", "erro", "pergunta"
 ```
 
 O campo `mostrar_icone` das versões anteriores é aceite e ignorado.
@@ -239,7 +243,8 @@ O campo `mostrar_icone` das versões anteriores é aceite e ignorado.
 - No modo *Colar*, aplicações que leiam a área de transferência de forma muito lenta podem colar o texto anterior. O programa espera 80 ms depois de cada Ctrl+V.
 - `AltGr` é tratado pelo Windows como `Ctrl+Alt`.
 - As teclas de suspensão e do painel são globais e intercetadas mesmo nas janelas do programa, exceto enquanto um campo **Tecla** está a gravar ou o rato está sobre um botão da configuração (com a janela ativa).
-- O contador decide entre toque e pressão longa quando a tecla é largada. O Windows repete a tecla enquanto está premida; essas repetições são ignoradas.
+- O contador repõe quando o tempo da pressão longa é atingido, com a tecla ainda premida; um toque soma quando a tecla é largada. O Windows repete a tecla enquanto está premida; essas repetições são ignoradas.
+- As teclas multimédia são vistas quando o teclado as envia como teclas (códigos virtuais). Os teclados cujas teclas multimédia só chegam às aplicações como «comandos de aplicação» (alguns utilitários de fabricante fazem isto) não as permitem atribuir.
 
 ## Arquitetura
 

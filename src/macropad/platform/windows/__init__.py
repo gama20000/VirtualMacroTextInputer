@@ -316,6 +316,17 @@ class WindowsPlatform:
         self._mutex = w.CreateMutexW(None, False, f"Local\\{name}")
         return ctypes.get_last_error() != w.ERROR_ALREADY_EXISTS
 
+    # sons do sistema (MessageBeep), pela ordem de RESET_SOUNDS
+    _SOUNDS = {"padrao": 0x00000000, "aviso": 0x00000030, "erro": 0x00000010,
+               "pergunta": 0x00000020}
+
+    def play_sound(self, kind: str) -> None:
+        """Toca um som do sistema sem bloquear (MessageBeep é assíncrono)."""
+        code = self._SOUNDS.get(kind)
+        if code is not None:
+            import winsound
+            winsound.MessageBeep(code)
+
     def is_elevated_hint(self) -> str:
         return ("O Windows impede que uma aplicação sem privilégios intercete ou "
                 "envie teclas para janelas executadas como administrador.")

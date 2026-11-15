@@ -22,8 +22,9 @@ from ..i18n import tr
 from .commands import CommandError, parse_action
 from .keys import KeyBindingError, parse_binding
 from .model import (ITEM_TYPES, MAX_INTERVAL_MS, MAX_REPEAT, MODIFIER_MODES, PANEL_COLORS,
-                    PANEL_ENUMS, PANEL_OBSOLETE, PANEL_RANGES, SCHEMA_VERSION, SCOPE_MODES,
-                    TEXT_MODES, THEMES, Macro, MacroSet, PanelSettings, Scope, Settings)
+                    PANEL_ENUMS, PANEL_OBSOLETE, PANEL_RANGES, RESET_SOUNDS, SCHEMA_VERSION,
+                    SCOPE_MODES, TEXT_MODES, THEMES, Macro, MacroSet, PanelSettings, Scope,
+                    Settings)
 
 _COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 
@@ -278,7 +279,8 @@ def _parse_panel(ctx: _Ctx, painel: dict) -> PanelSettings:
 # conjuntos/<id>.toml
 # --------------------------------------------------------------------------
 _MACRO_FIELDS = {"titulo", "tecla", "texto", "repeticoes", "intervalo_ms", "arquivada",
-                 "tipo", "id", "incremento", "reposicao", "pressao_longa_ms"}
+                 "tipo", "id", "incremento", "reposicao", "pressao_longa_ms",
+                 "som_reposicao"}
 
 
 def parse_set(text: str, set_id: str, file: Optional[str] = None) -> MacroSet:
@@ -337,6 +339,12 @@ def parse_set(text: str, set_id: str, file: Optional[str] = None) -> MacroSet:
         mac.incremento = _get(ctx, m, "incremento", int, 1, "macros", i, where)
         mac.reposicao = _get(ctx, m, "reposicao", int, 0, "macros", i, where)
         mac.pressao_longa_ms = _get(ctx, m, "pressao_longa_ms", int, 800, "macros", i, where)
+        mac.som_reposicao = _get(ctx, m, "som_reposicao", str, "", "macros", i, where)
+        if mac.som_reposicao not in RESET_SOUNDS:
+            ctx.add(tr("cfg.bad_option", field="som_reposicao", value=mac.som_reposicao,
+                       options=tr("word.or").join(repr(t) for t in RESET_SOUNDS)),
+                    "macros", "som_reposicao", i)
+            mac.som_reposicao = ""
         if mac.is_counter and not mac.id.strip():
             # contador escrito à mão sem id: id estável a partir da posição
             mac.id = f"contador-{i + 1}"
@@ -550,7 +558,8 @@ SET_HEADER = """\
 # A ordem das secções [[macros]] é a ordem dos botões; não depende da tecla.
 # arquivada = true: a macro fica no arquivo (fora das teclas e do painel).
 # tipo = "espaco": célula vazia na grelha. tipo = "contador": botão que conta
-#   (id, incremento, reposicao, pressao_longa_ms); a contagem fica em estado.toml.
+#   (id, incremento, reposicao, pressao_longa_ms; som_reposicao opcional:
+#   "padrao", "aviso", "erro" ou "pergunta"); a contagem fica em estado.toml.
 #
 # Este ficheiro é recarregado automaticamente quando é guardado.
 """
@@ -568,6 +577,8 @@ def dump_macro(m: Macro) -> list[str]:
                   f"incremento = {m.incremento}",
                   f"reposicao = {m.reposicao}",
                   f"pressao_longa_ms = {m.pressao_longa_ms}"]
+        if m.som_reposicao:
+            lines.append(f"som_reposicao = {toml_str(m.som_reposicao)}")
     else:
         lines += [f"titulo = {toml_str(m.titulo)}",
                   f"tecla = {toml_str(m.tecla)}",

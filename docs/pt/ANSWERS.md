@@ -219,9 +219,11 @@ conversa de 11-11-2026 e nos primeiros commits do histórico git.
 - **Justificação:** Resposta do utilizador. Gravar a contagem fora do TOML do
   conjunto evita reescrever esse ficheiro, e recarregá-lo, a cada clique.
 - **Evidência:** Resposta do utilizador a 12-11-2026.
-- **Consequências:** Cada contador tem um `id` estável. A pressão longa decide-se
-  pela duração entre premir e largar e nunca soma. A tecla de um contador
-  premida com a janela de configuração à frente é contada por essa janela.
+- **Consequências:** Cada contador tem um `id` estável. A pressão longa nunca
+  soma. A tecla de um contador premida com a janela de configuração à frente
+  conta da mesma forma. Desde 15-11-2026 a reposição acontece quando o tempo da
+  pressão longa é atingido, e não ao largar
+  ([Q-032](#q-032-reposição-do-contador-com-a-tecla-premida-e-som)).
 - **Rever quando:** For pedido que o contador escreva o valor.
 
 ## Q-022: Atribuição de tecla por cima do botão e atalhos existentes
@@ -380,4 +382,56 @@ conversa de 11-11-2026 e nos primeiros commits do histórico git.
 - **Evidência:** Mensagem do utilizador de 15-11-2026.
 - **Consequências:** O `pyproject.toml` declara `license = { text = "MIT" }`.
 - **Rever quando:** O utilizador quiser uma licença copyleft.
+
+## Q-031: Linhas e páginas do painel
+
+- **Resolvido:** 2026-11-15
+- **Resposta:** O painel tem um número de linhas além das colunas («Todas» por
+  omissão, `linhas = 0`). Com mais células do que linhas × colunas, mostra
+  páginas com setas ◀ ▶, e todas as páginas têm o tamanho completo. Com menos,
+  o painel encolhe para as linhas necessárias.
+- **Justificação:** Escolha do utilizador entre páginas, deslocamento ou
+  esconder o excesso. As páginas são como funciona um Stream Deck; o tamanho
+  fixo entre páginas mantém os botões no sítio ao mudar de página.
+- **Evidência:** Respostas do utilizador de 15-11-2026.
+- **Consequências:** `[painel] linhas` no `config.toml` (0–12). Os estilos
+  predefinidos mantêm as linhas, tal como as colunas. As teclas executam as
+  macros de qualquer página. A área Ativo da configuração continua a mostrar
+  todas as macros.
+- **Rever quando:** O utilizador quiser que o painel mantenha o tamanho fixo
+  mesmo com poucos botões.
+
+## Q-032: Reposição do contador com a tecla premida, e som
+
+- **Resolvido:** 2026-11-15
+- **Resposta:** Enquanto um contador está premido (rato ou tecla), o botão do
+  painel mostra o progresso ao longo da borda; ao atingir o tempo da pressão
+  longa, a contagem é reposta logo, uma vez, com um sinal verde. O som da
+  reposição configura-se por contador: nenhum por omissão, ou um som do sistema
+  do Windows (`som_reposicao`).
+- **Justificação:** Pedido e resposta do utilizador (som por contador).
+- **Evidência:** Mensagens do utilizador de 15-11-2026.
+- **Consequências:** O motor inicia um temporizador quando a tecla é premida;
+  largar só soma se a reposição ainda não aconteceu. A janela de configuração
+  usa a mesma lógica do motor. O progresso aparece no painel; a área Ativo da
+  configuração não tem animação.
+- **Rever quando:** Um contador precisar de um ficheiro de som próprio.
+
+## Q-033: Teclas multimédia
+
+- **Resolvido:** 2026-11-15
+- **Resposta:** Reproduzir/Pausa, faixa anterior e faixa seguinte atribuem-se
+  num menu «Multimédia» junto ao campo da tecla, com as mesmas verificações de
+  conflito da atribuição com o rato. As teclas aparecem com nomes legíveis; o
+  ficheiro guarda os nomes canónicos (`MediaPlayPause`, `MediaPrev`,
+  `MediaNext`).
+- **Justificação:** Premir uma tecla multimédia para a gravar também chega ao
+  leitor de música, porque o hook deixa passar as teclas durante a gravação.
+- **Evidência:** Pedido do utilizador de 15-11-2026; o `platform/winkeys.py`
+  já tinha os códigos virtuais.
+- **Consequências:** Suspensas ou fora do âmbito, as teclas seguem para o
+  Windows. Os teclados cujas teclas multimédia só enviam `WM_APPCOMMAND` (sem
+  código virtual) não são vistos pelo hook de teclado; a confirmar no teclado
+  do utilizador.
+- **Rever quando:** As teclas multimédia de um teclado não chegarem ao hook.
 

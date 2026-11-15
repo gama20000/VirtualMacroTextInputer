@@ -100,28 +100,47 @@ has and an on-screen panel, with no extra hardware.
 - Editor for title, key, text, repetitions and interval; automatic save when
   valid; errors in red (including key conflicts); duplicate content (same
   sequence of text and commands) in yellow, with an explanation.
-- «New macro» creates exactly one macro, with no key and empty text.
+- «New macro» creates exactly one macro, with no key and empty text. «New
+  macro», «Counter» and «Empty space» insert the new item right after the
+  selected macro in the Active area (after the last one, with several
+  selected); with nothing selected, or with an archived macro selected, at the
+  end of the Active area. The new item becomes the selection.
 - Empty spaces: can be inserted between buttons to compose the grid. They are
   not macros, do not run, do not go to the Archive and are only visible
   (dashed outline) in the settings; on the real panel they take their cell,
   invisible. The layout is saved.
 - Counters: a button that shows a count. A short click (or a tap on its key)
-  adds the step (default 1); holding it for the long-press time resets it to
-  the configured value (default 0) without adding. It types no text. The
-  configuration and the count persist between sessions.
+  adds the step (default 1). While it is held (mouse or key), the panel button
+  shows the elapsed time as a line that runs along its border; when the
+  long-press time is reached the count is reset to the configured value
+  (default 0) at that moment, without adding and without waiting for the
+  release, with a brief green flash. Keeping it held does not reset again.
+  Optional sound on reset, per counter (none by default, or one of the Windows
+  system sounds), with a «Test» button. It types no text. The configuration
+  and the count persist between sessions.
+- Media keys: Play/Pause, previous track and next track can be assigned to
+  macros and counters, from the «Media» menu next to the key field (pressing
+  them to record would also control the music player). Conflicts with other
+  macros and with the global keys are reported as for any key. When macros
+  are suspended or outside the scope, these keys keep their normal behaviour.
 - Assigning a key over a button: with the pointer over a button in the editing
   area and the focus outside edit fields, pressing a key assigns it (the button
   shows that it is waiting). Delete, Backspace, Tab, Ctrl+C and Ctrl+V keep
-  their functions. If the key is already used by an active macro, or matches a
-  global key (suspend, panel), nothing changes and a message identifies the
-  conflict, with «Don't show again» (can be turned back on in Preferences).
+  their functions, as do Ctrl+Z and Ctrl+Y. If the key is already used by an
+  active macro, or matches a global key (suspend, panel), nothing changes and a
+  message identifies the conflict, with «Don't show again» (can be turned back
+  on in Preferences).
 - Multiple selection (Ctrl+click, Shift+click) to archive, restore, delete and
   copy/paste.
 - Outside edit fields: Delete/Backspace deletes (with confirmation and a
   «Don't ask again» option; several macros always ask for confirmation with
   the count), Ctrl+C copies, Ctrl+V pastes. Pasting with an archived macro
-  selected creates the copy in the Archive, right after it. Inside text fields,
-  normal behaviour.
+  selected creates the copy in the Archive, right after it. Ctrl+Z undoes the
+  last deletion: the macros come back in the same area and position, with the
+  same settings and key (a key that has since come into use is removed, with a
+  message); Ctrl+Y (or Ctrl+Shift+Z) deletes them again. The history is per set
+  and kept while the window is open. Inside text fields, normal behaviour
+  (Ctrl+Z undoes the text).
 - Preference «Don't ask for confirmation before deleting macros»: when ticked,
   deletes without asking; applied and saved as soon as it changes.
 - Preference «Start automatically with Windows»: actually enables or disables
@@ -144,10 +163,15 @@ has and an on-screen panel, with no extra hardware.
   stealing the focus from the target application; always on top by default;
   adjustable transparency (also with the mouse wheel over the panel, 5 % steps,
   with a brief indication); respects suspend, scope and execution rules.
-- Customisable look while keeping the grid: columns, size, spacing, rounding,
-  border, text size, colours, visible elements, title and key position (top,
-  centre or bottom, independently and without unreadable overlap), preset
-  styles and «Restore default». Buttons have no icon.
+- Rows: besides the columns, a number of rows can be set («All» by default,
+  no limit). With more cells than rows × columns, the panel shows one page at
+  a time, with ◀ 1 / 2 ▶ arrows below the grid that do not take the focus; all
+  pages have the same size. With fewer cells, the panel only takes the rows it
+  needs. Empty spaces count as cells. Keys work for macros on every page.
+- Customisable look while keeping the grid: columns, rows, size, spacing,
+  rounding, border, text size, colours, visible elements, title and key
+  position (top, centre or bottom, independently and without unreadable
+  overlap), preset styles and «Restore default». Buttons have no icon.
 - Centred preview in the preferences, identical to the real panel (including
   the title bar in the theme colours) and updated on every change.
 

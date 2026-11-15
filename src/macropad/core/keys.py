@@ -106,6 +106,24 @@ def parse_binding(text: str) -> Binding:
     return Binding(canonical_key(key_part), frozenset(mods))
 
 
+# Teclas multimédia e afins: no ficheiro ficam com o nome canónico, na
+# interface aparecem com um nome legível (traduzido).
+MEDIA_KEYS: tuple[str, ...] = ("MediaPlayPause", "MediaPrev", "MediaNext")
+_DISPLAY_KEYS = set(MEDIA_KEYS) | {"MediaStop", "VolumeMute", "VolumeDown", "VolumeUp",
+                                   "BrowserBack", "BrowserForward"}
+
+
+def display_binding(text: str) -> str:
+    """Associação para mostrar ao utilizador: ``"Ctrl+MediaNext"`` passa a
+    ``"Ctrl+Faixa seguinte"``. Texto que não é uma associação fica igual."""
+    if not text:
+        return text
+    parts = text.split("+")
+    if parts[-1] in _DISPLAY_KEYS:
+        parts[-1] = tr(f"keyname.{parts[-1]}")
+    return "+".join(parts)
+
+
 def normalize_binding(text: str) -> str:
     """Forma canónica de uma associação (texto) ou "" se vazia."""
     if not text or not text.strip():

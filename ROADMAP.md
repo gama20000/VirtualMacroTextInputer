@@ -8,12 +8,14 @@ See [SPEC.md](SPEC.md#destination).
 
 ## Current state
 
-The code is at version 0.4 and the program is now called Virtual Macro Text
+The code is at version 0.5 and the program is now called Virtual Macro Text
 Inputer. Phase 1 (independent review) and Phase 2 (version 0.4, including the
 panel's own title bar) are complete. Since then, six Codex reviews have been
-addressed; 171 automated tests pass. Manual validation on Windows is still
+addressed, and version 0.5 (counter progress and reset while held, insertion
+after the selection, panel rows with pages, media keys, undoing a deletion)
+is implemented; 187 automated tests pass (one skipped outside Windows). Manual validation on Windows is still
 missing (Phase 3, paused since 12-11-2026, with 16 steps checked and 3
-partial; steps 62–89 cover 0.4 and the rename). The repository is on the
+partial; steps 62–89 cover 0.4 and the rename, steps 90–99 cover 0.5). The repository is on the
 user's Forgejo (private, through Tailscale); publishing on GitHub is
 done, with the GitHub repository still private until the user makes it
 public (Phase 4).
@@ -67,6 +69,9 @@ public (Phase 4).
 - [x] [Repository location on the PC](ANSWERS.md#q-027-repository-location-on-the-pc) (`Q-027`): `%USERPROFILE%\source\VirtualMacroTextInputer`, outside Google Drive.
 - [x] [Documentation language](ANSWERS.md#q-028-documentation-language) (`Q-028`): English at the root, Portuguese in `docs/pt/`.
 - [x] [Licence](ANSWERS.md#q-030-licence) (`Q-030`): MIT.
+- [x] [Panel rows and pages](ANSWERS.md#q-031-panel-rows-and-pages) (`Q-031`): pages with arrows; the panel shrinks with few buttons.
+- [x] [Counter reset while held, and sound](ANSWERS.md#q-032-counter-reset-while-held-and-sound) (`Q-032`): resets at the long-press time; sound per counter, none by default.
+- [x] [Media keys](ANSWERS.md#q-033-media-keys) (`Q-033`): assigned from a «Media» menu.
 - [x] [E-mail in the commits](ANSWERS.md#q-029-e-mail-in-the-commits) (`Q-029`): GitHub private address; history rewritten.
 
 ## Phase 1: Independent review and fixes — complete (12-11-2026)
@@ -152,7 +157,7 @@ The program is validated on real Windows, from source and from the executable.
 
 ### Included work
 
-- Go through steps 1–89 of `docs/MANUAL-CHECKLIST.md` with `run-dev.ps1`, and
+- Go through steps 1–99 of `docs/MANUAL-CHECKLIST.md` with `run-dev.ps1`, and
   then with `dist\VirtualMacroTextInputer\VirtualMacroTextInputer.exe` built by
   `build.ps1`.
 - Fix the failures found, each with its check repeated.

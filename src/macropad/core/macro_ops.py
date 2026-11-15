@@ -159,23 +159,29 @@ def new_id() -> str:
     return uuid.uuid4().hex[:10]
 
 
-def new_macro(ms: MacroSet, title: str) -> int:
-    """Acrescenta uma única macro nova (sem tecla, texto vazio) no fim das ativas."""
-    return _append_active(ms, Macro(titulo=title))
+def new_macro(ms: MacroSet, title: str, after: Optional[int] = None) -> int:
+    """Nova macro (sem tecla, texto vazio): logo a seguir à macro ativa
+    ``after`` ou, sem ela, no fim das ativas."""
+    return _insert_active(ms, Macro(titulo=title), after)
 
 
-def new_space(ms: MacroSet) -> int:
-    """Acrescenta um espaço vazio no fim das ativas."""
-    return _append_active(ms, Macro(tipo="espaco"))
+def new_space(ms: MacroSet, after: Optional[int] = None) -> int:
+    """Novo espaço vazio (posição como em ``new_macro``)."""
+    return _insert_active(ms, Macro(tipo="espaco"), after)
 
 
-def new_counter(ms: MacroSet, title: str) -> int:
-    """Acrescenta um contador (incremento 1, reposição 0) no fim das ativas."""
-    return _append_active(ms, Macro(titulo=title, tipo="contador", id=new_id()))
+def new_counter(ms: MacroSet, title: str, after: Optional[int] = None) -> int:
+    """Novo contador, incremento 1 e reposição 0 (posição como em ``new_macro``)."""
+    return _insert_active(ms, Macro(titulo=title, tipo="contador", id=new_id()), after)
 
 
-def _append_active(ms: MacroSet, m: Macro) -> int:
-    pos = len([x for x in ms.macros if not x.arquivada])
+def _insert_active(ms: MacroSet, m: Macro, after: Optional[int]) -> int:
+    """Insere ``m`` na área Ativo, logo a seguir a ``after`` se for uma macro
+    ativa; caso contrário (nenhuma, ou uma do Arquivo), no fim das ativas."""
+    if after is not None and 0 <= after < len(ms.macros) and not ms.macros[after].arquivada:
+        pos = after + 1
+    else:
+        pos = len([x for x in ms.macros if not x.arquivada])
     ms.macros.insert(pos, m)
     return pos
 
@@ -243,3 +249,62 @@ def move(ms: MacroSet, i: int, delta: int) -> int:
         return i
     ms.macros[i], ms.macros[j] = ms.macros[j], ms.macros[i]
     return j
+
+
+# ------------------------------------------------- anular / refazer eliminação
+def snapshot_deletion(ms: MacroSet, idxs: list[int]) -> list[tuple[int, Macro]]:
+    """Cópias das macros ``idxs`` com a posição de cada uma, por ordem, para
+    se poder anular a eliminação."""
+    return [(i, copy.deepcopy(ms.macros[i])) for i in sorted(set(idxs))]
+
+
+def undo_deletion(ms: MacroSet, items: list[tuple[int, Macro]],
+                  global_keys: tuple = ()) -> tuple[list[int], list[str]]:
+    """Repõe as macros eliminadas na mesma área e posição, com as mesmas
+    definições e tecla. Uma tecla que entretanto passou a estar em uso (por
+    uma macro ativa ou por um atalho global de ``global_keys``) é retirada:
+    devolve os índices repostos e os títulos das macros que ficaram sem tecla.
+
+    A ordem crescente garante as posições originais: cada macro volta ao
+    índice que tinha antes de todas serem eliminadas."""
+    globals_ = {b for b in (_binding(k) for k in global_keys) if b is not None}
+    out, lost = [], []
+    for i, m in sorted(items, key=lambda t: t[0]):
+        new = copy.deepcopy(m)
+        pos = min(i, len(ms.macros))
+        # a área decide a posição: as ativas ficam antes das arquivadas
+        n_act = len([x for x in ms.macros if not x.arquivada])
+        pos = min(pos, n_act) if not new.arquivada else max(pos, n_act)
+        ms.macros.insert(pos, new)
+        if not new.arquivada and new.tecla and (
+                key_conflict(ms, pos) is not None or _binding(new.tecla) in globals_):
+            new.tecla = ""
+            lost.append(new.display_title())
+        out.append(pos)
+    return out, lost
+
+
+def find_items(ms: MacroSet, items: list[tuple[int, Macro]]) -> list[int]:
+    """Índices atuais das macros iguais às de ``items`` (a mais próxima da
+    posição guardada); as que já não existem são ignoradas."""
+    taken: set[int] = set()
+    out = []
+    for i, m in items:
+        cands = [j for j, x in enumerate(ms.macros)
+                 if j not in taken and _same(x, m)]
+        if cands:
+            j = min(cands, key=lambda j: abs(j - i))
+            taken.add(j)
+            out.append(j)
+    return sorted(out)
+
+
+def _same(a: Macro, b: Macro) -> bool:
+    """Mesma macro, ignorando a tecla se ela foi retirada ao repor."""
+    return a == b or (a.tecla == "" and _with_key(a, b.tecla) == b)
+
+
+def _with_key(m: Macro, key: str) -> Macro:
+    out = copy.copy(m)
+    out.tecla = key
+    return out

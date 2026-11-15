@@ -73,13 +73,13 @@ The tests cover command parsing, keys and modifiers, repetitions, cancellation (
 **Settings.** Four tabs, in this order:
 - *Macros*: two areas, **Active** and **Archive**, and the editor for the selected button. The **Active** area is centred and looks exactly like the real panel (size, colours, spacing, columns, title and key position); if it is large, the window scrolls. Valid changes are saved automatically.
   - **Drag**: drop a button before or after another to put it there (a blue line shows where it goes), within the same area or between **Active** and **Archive**, in both directions. Dropping on an empty space swaps the two. Dropping on the area title, or on an empty part of the area, puts the button at the end. Everything is saved immediately. The assigned key does not change. ◀ ▶ also change the order.
-  - **Key**: click the **Key** field and press the key or combination; or, faster, hover the mouse over a button (the key label turns yellow, «Key…») and press the key. It is only assigned if no other active macro uses it and it is not the suspend or panel key; otherwise a warning appears, with a **Don't show again** option (turn it back on in Preferences ▸ «Warn when a key assigned with the mouse is already in use»). Over a button, Delete/Backspace, Tab, Ctrl+C and Ctrl+V keep their functions and Esc cancels. **No key** leaves the macro available only on the panel.
-  - **New macro** adds a single macro, with no key and empty text, and puts the cursor in the **Text** field.
-  - **Counter** adds a button that counts: a short click on the panel (or its key) adds the **step** (1 by default); holding it for the **long press** time (800 ms by default) resets it to the **reset value** (0 by default) without adding. A counter only shows the count; it types nothing. The count is stored in `estado.toml` and kept between sessions; **Reset now** in the editor resets it.
+  - **Key**: click the **Key** field and press the key or combination; or, faster, hover the mouse over a button (the key label turns yellow, «Key…») and press the key. It is only assigned if no other active macro uses it and it is not the suspend or panel key; otherwise a warning appears, with a **Don't show again** option (turn it back on in Preferences ▸ «Warn when a key assigned with the mouse is already in use»). Over a button, Delete/Backspace, Tab, Ctrl+C, Ctrl+V, Ctrl+Z and Ctrl+Y keep their functions and Esc cancels. **No key** leaves the macro available only on the panel. **Media** assigns Play/Pause, Previous track or Next track without pressing them (pressing them to record would also control your music player); the same conflict checks apply. Suspended or outside the scope, media keys work as usual.
+  - **New macro** adds a single macro, with no key and empty text, and puts the cursor in the **Text** field. **New macro**, **Counter** and **Empty space** insert the new item right after the selected macro in **Active** (after the last one if several are selected); with nothing selected, or with an archived macro selected, at the end of **Active**.
+  - **Counter** adds a button that counts: a short click on the panel (or its key) adds the **step** (1 by default); while you hold it, the panel button shows the elapsed time as a line along its border, and when the **long press** time (800 ms by default) is reached the count goes back to the **reset value** (0 by default) at once, with a green flash, without adding and without waiting for you to let go (holding longer does not reset again). **Sound on reset** plays a Windows system sound on reset (none by default; **Test** plays it). A counter only shows the count; it types nothing. The count is stored in `estado.toml` and kept between sessions; **Reset now** in the editor resets it.
   - **Empty space** takes a grid position without a button. In the settings it is drawn dashed and can be dragged; on the panel it is invisible and does nothing, but keeps its place. Empty spaces do not go to the Archive.
   - **Red** (a «!» badge) marks an error, including a *key conflict* when two active macros have the same key. Errors are not saved.
   - **Yellow** (a «=» badge) marks *duplicate content*: macros with the same sequence of text and commands, even with different titles or keys (`{enter}`, `{Enter}` and a line break count as equal). Hover the button, or look at the yellow line in the editor, to see which macros it matches. Duplicates are only a warning and are saved.
-- *Panel*: style, columns, button size, spacing, corner rounding, border, text size, colours (button, text, border, background), title position and key position (top, centre, bottom; independent and never overlapping), visible elements (key, status bar, Active/Suspended buttons), «always on top» and opacity. The centred **preview** uses the same drawing as the real panel (including the Active/Suspended buttons) and updates on every change, without opening the panel. There are preset styles (Default, Compact, Large, Light, Neon, Round, Minimal, Title on top). **Restore default** goes back to the original look without touching columns, opacity or «always on top».
+- *Panel*: style, columns, rows (with more buttons than rows × columns the panel shows pages, with ◀ 1 / 2 ▶ arrows; with fewer it only takes the rows it needs), button size, spacing, corner rounding, border, text size, colours (button, text, border, background), title position and key position (top, centre, bottom; independent and never overlapping), visible elements (key, status bar, Active/Suspended buttons), «always on top» and opacity. The centred **preview** uses the same drawing as the real panel (including the Active/Suspended buttons) and updates on every change, without opening the panel. There are preset styles (Default, Compact, Large, Light, Neon, Round, Minimal, Title on top). **Restore default** goes back to the original look without touching columns, opacity or «always on top».
 - *Scope*: the set works in all applications or only in the listed ones, identified by their executable, for example `notepad.exe`. Outside them, keys work normally and the panel does not send text.
 - *Preferences*: theme, language, start with Windows, «Don't ask for confirmation before deleting macros», key-in-use warning, suspend hotkey, panel key, modifiers and text mode. Every change applies immediately. Starting with Windows is checked after it is applied (including the approval in Task Manager ▸ Startup apps); if it cannot be applied, an error appears below the option.
 - **⋯** menu: new, duplicate, rename, delete, import and export sets, and open the configuration folder.
@@ -93,8 +93,10 @@ The tests cover command parsing, keys and modifiers, repetitions, cancellation (
 | Delete or Backspace | deletes the macro(s) (asks for confirmation) |
 | Ctrl+C | copies the macro(s) |
 | Ctrl+V | pastes copies after the selection, in the same area: a copy of an archived macro stays in the Archive, right after the original. If the key is already in use, an active copy gets no key |
+| Ctrl+Z | undoes the last deletion: the macros come back in the same area and position, with the same settings and key (if the key has meanwhile been assigned to another macro, the restored one gets no key, with a message). Kept per set while the window is open |
+| Ctrl+Y or Ctrl+Shift+Z | deletes them again |
 
-With the focus in a text field, these shortcuts copy, paste and delete text as usual. The delete confirmation has a **Don't ask again** option. To turn confirmations back on, untick Preferences ▸ «Don't ask for confirmation before deleting macros».
+With the focus in a text field, these shortcuts copy, paste, delete and undo text as usual. The delete confirmation has a **Don't ask again** option. To turn confirmations back on, untick Preferences ▸ «Don't ask for confirmation before deleting macros».
 
 **Archive.** Below the active macros, the **Archive** area shows the archived macros, with a search box for title, text or key.
 - **Archive** removes the macro from the keys and the panel without deleting it. It stays in the set file with `arquivada = true`. You can also drag an active macro, or the whole selection, into the **Archive** area: it is archived immediately, at the position where you drop it.
@@ -172,6 +174,7 @@ avisar_conflito_tecla = true
 
 [painel]
 colunas = 4
+linhas = 0                   # 0 = all; otherwise pages with ◀ ▶ arrows
 tamanho_botao = 78           # 40–160 px
 espacamento = 6              # 0–30 px
 arredondamento = 17          # 0 (square) – 50 (round), % of the side
@@ -214,6 +217,7 @@ tecla = "F9"
 incremento = 1
 reposicao = 0
 pressao_longa_ms = 800
+som_reposicao = "aviso"    # optional: "padrao", "aviso", "erro", "pergunta"
 ```
 
 The `mostrar_icone` field from earlier versions is accepted and ignored.
@@ -239,7 +243,8 @@ The `mostrar_icone` field from earlier versions is accepted and ignored.
 - In *Paste* mode, applications that read the clipboard very slowly may paste the previous text. The program waits 80 ms after each Ctrl+V.
 - `AltGr` is treated by Windows as `Ctrl+Alt`.
 - The suspend and panel keys are global and are intercepted even in the program's windows, except while a **Key** field is recording or the mouse is over a button in the settings (with that window active).
-- A counter decides between a tap and a long press when the key is released. Windows repeats the key while it is held; those repeats are ignored.
+- A counter resets when the long-press time is reached, with the key still held; a tap adds when the key is released. Windows repeats the key while it is held; those repeats are ignored.
+- Media keys are seen when the keyboard sends them as keys (virtual-key codes). Keyboards whose media keys only reach applications as «app commands» (some vendor utilities do this) cannot be assigned.
 
 ## Architecture
 

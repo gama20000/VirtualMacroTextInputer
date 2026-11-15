@@ -296,6 +296,24 @@ class MacropadApp(QObject):
         cur = self.counts_for(ms).get(p["id"], p["value"])
         new = p["value"] if p["action"] == "reset" else cur + p["step"]
         self.set_count(ms.id, p["id"], new)
+        if p["action"] == "reset":
+            m = next((x for x in ms.macros if x.is_counter and x.id == p["id"]), None)
+            if m is not None and m.som_reposicao:
+                self.platform.play_sound(m.som_reposicao)
+
+    def _on_counter_hold(self, p: dict) -> None:
+        """Pressão na tecla de um contador: progresso no botão do painel."""
+        if p.get("set_id") != self.engine.active_set_id:
+            return
+        b = self.panel.view.counter_buttons.get(p.get("id"))
+        if b is None:
+            return
+        if p["phase"] == "start":
+            b.hold_start(p.get("ms"))
+        elif p["phase"] == "reset":
+            b.hold_reset()
+        else:
+            b.hold_end()
 
     def set_panel_opacity(self, value: float) -> None:
         """Transparência alterada com a roda do rato: grava (agrupando
@@ -414,6 +432,8 @@ class MacropadApp(QObject):
             self.panel.refresh_status()
         elif ev == "counter":
             self._on_counter(payload)
+        elif ev == "counter_hold":
+            self._on_counter_hold(payload)
         elif ev == "toggle_panel":
             self.toggle_panel()
 

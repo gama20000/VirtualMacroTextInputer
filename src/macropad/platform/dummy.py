@@ -19,6 +19,7 @@ class DummyPlatform:
         self.fg: Optional[WindowInfo] = WindowInfo(1, 999_999, "C:\\Windows\\notepad.exe")
         self.mods: frozenset[str] = frozenset()
         self._autostart = False
+        self.sounds: list[str] = []
 
     def own_pid(self) -> int:
         return os.getpid()
@@ -70,6 +71,10 @@ class DummyPlatform:
 
     def acquire_single_instance(self, name: str) -> bool:
         return True
+
+    def play_sound(self, kind: str) -> None:
+        """Som do sistema (ver ``RESET_SOUNDS``); aqui só fica registado."""
+        self.sounds.append(kind)
 
     def is_elevated_hint(self) -> str:
         return ""

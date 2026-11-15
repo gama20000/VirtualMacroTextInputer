@@ -300,7 +300,11 @@ def test_contador_por_tecla_toque_soma_e_manter_repoe(fake):
     assert e.handle_key(down("5")) is True          # auto-repetição: suprimida, sem efeito
     assert e.handle_key(up("5")) is True
     time_ = __import__("time")
-    e.handle_key(down("5")); time_.sleep(0.25); e.handle_key(up("5"))
+    e.handle_key(down("5")); time_.sleep(0.3)
+    # repõe ao fim do tempo, ainda com a tecla premida
+    assert [p["action"] for ev, p in got if ev == "counter"] == ["inc", "reset"]
+    time_.sleep(0.3)                                 # continuar premida não repete
+    e.handle_key(up("5"))
     counters = [p for ev, p in got if ev == "counter"]
     assert [c["action"] for c in counters] == ["inc", "reset"]
     assert counters[0]["step"] == 2 and counters[1]["value"] == 10
@@ -564,3 +568,54 @@ def test_backends_seguem_o_contrato_da_plataforma():
         sig = inspect.signature(cls.send_text)
         assert list(sig.parameters) == list(proto.parameters), cls
         assert sig.parameters["still_ok"].default is None, cls
+
+
+def test_contador_avisa_inicio_reposicao_e_fim_da_pressao(fake):
+    """A interface recebe o início (com a duração), a reposição e o fim da
+    pressão, para mostrar o progresso no botão."""
+    import time
+    from macropad.core.model import Macro
+    e = Engine(fake)
+    e.set_config(make_config([Macro("C", "5", tipo="contador", id="c1",
+                                    pressao_longa_ms=200)]))
+    got = _events(e)
+    e.handle_key(down("5")); e.handle_key(up("5"))            # toque curto
+    e.handle_key(down("5")); time.sleep(0.3); e.handle_key(up("5"))
+    holds = [(p["phase"], p.get("ms")) for ev, p in got if ev == "counter_hold"]
+    assert holds == [("start", 200), ("end", None), ("start", 200), ("reset", None),
+                     ("end", None)]
+
+
+def test_contador_suspenso_durante_a_pressao_nao_repoe(fake):
+    import time
+    from macropad.core.model import Macro
+    e = Engine(fake)
+    e.set_config(make_config([Macro("C", "5", tipo="contador", id="c1",
+                                    pressao_longa_ms=200)]))
+    got = _events(e)
+    e.handle_key(down("5"))
+    e.set_suspended(True)
+    time.sleep(0.3)
+    e.handle_key(up("5"))
+    assert [p for ev, p in got if ev == "counter"] == []
+
+
+def test_teclas_multimedia_suspensas_ou_fora_do_ambito_passam(fake):
+    """Uma macro na tecla Reproduzir/Pausa: ativa, a tecla executa a macro e
+    é suprimida; suspensa ou fora do âmbito, a tecla segue para o sistema."""
+    from macropad.core.model import Macro, Scope
+    e = Engine(fake)
+    e.set_config(make_config([Macro("P", "MediaPlayPause", "olá")],
+                             scope=Scope("aplicacoes", ["editor.exe"])))
+    assert e.handle_key(down("MediaPlayPause")) is True
+    e.handle_key(up("MediaPlayPause"))
+    wait = __import__("time").monotonic() + 2
+    while e.running is not None and __import__("time").monotonic() < wait:
+        __import__("time").sleep(0.01)
+    e.set_suspended(True)
+    assert e.handle_key(down("MediaNext")) is False
+    assert e.handle_key(down("MediaPlayPause")) is False         # suspenso: normal
+    e.handle_key(up("MediaPlayPause"))
+    e.set_suspended(False)
+    fake.fg = OTHER
+    assert e.handle_key(down("MediaPlayPause")) is False         # fora do âmbito: normal

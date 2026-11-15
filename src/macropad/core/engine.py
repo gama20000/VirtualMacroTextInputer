@@ -196,6 +196,17 @@ class _ActiveSet:
     counters: dict[Binding, int] = field(default_factory=dict)   # tecla -> índice
 
 
+@dataclass
+class _CounterHold:
+    """Pressão em curso na tecla de um contador."""
+    set_id: str
+    counter_id: str
+    t0: float
+    long_ms: int
+    reset_done: bool = False
+    timer: Optional[threading.Timer] = None
+
+
 class Engine:
     def __init__(self, platform: PlatformAPI):
         self.platform = platform
@@ -207,8 +218,8 @@ class Engine:
         self._suspended = False
         self._hotkey: Optional[Binding] = None
         self._panel_key: Optional[Binding] = None
-        # tecla -> (conjunto, id do contador, início)
-        self._counter_down: dict[str, tuple[str, str, float]] = {}
+        # tecla -> pressão em curso na tecla de um contador
+        self._counter_down: dict[str, _CounterHold] = {}
         self._running: Optional[Execution] = None
         self._held: set[str] = set()        # teclas cujo keydown foi suprimido
         self._passed: set[str] = set()      # teclas premidas que passaram normalmente
@@ -438,10 +449,68 @@ class Engine:
                 return i
         return None
 
-    def _counter_released(self, set_id: str, counter_id: str, held_s: float) -> None:
-        # Revalida ao largar: a suspensão, o âmbito, o conjunto ou o próprio
-        # contador podem ter mudado desde que a tecla foi premida.
-        self.counter_press_id(set_id, counter_id, held_s=held_s)
+    def begin_counter_hold(self, token: str, set_id: str, counter_id: str,
+                           long_ms: int) -> None:
+        """Começa a pressão de uma tecla de contador (``token`` identifica a
+        tecla). Toque curto soma ao largar; ao fim de ``long_ms`` com a tecla
+        ainda premida, repõe nesse momento, uma única vez."""
+        hold = _CounterHold(set_id, counter_id, time.monotonic(), long_ms)
+        hold.timer = threading.Timer(long_ms / 1000, self._counter_long_elapsed,
+                                     (token, hold))
+        hold.timer.daemon = True
+        with self._lock:
+            old = self._counter_down.pop(token, None)
+            if old is not None and old.timer is not None:
+                old.timer.cancel()
+            self._counter_down[token] = hold
+        hold.timer.start()
+        self._emit("counter_hold", set_id=set_id, id=counter_id, phase="start", ms=long_ms)
+
+    def end_counter_hold(self, token: str) -> tuple[bool, str]:
+        """A tecla ``token`` foi largada. Devolve o resultado do toque curto
+        (ou ``(True, "")`` se a pressão já tinha reposto, ou se não havia
+        pressão)."""
+        with self._lock:
+            hold = self._counter_down.pop(token, None)
+            if hold is None:
+                return True, ""
+            done = hold.reset_done
+            hold.reset_done = True          # o temporizador já não faz nada
+        if hold.timer is not None:
+            hold.timer.cancel()
+        result = (True, "")
+        if not done:
+            # Revalida ao largar: a suspensão, o âmbito, o conjunto ou o próprio
+            # contador podem ter mudado desde que a tecla foi premida. O tempo
+            # cobre o caso raro de largar no instante em que o temporizador
+            # ainda não correu.
+            result = self.counter_press_id(hold.set_id, hold.counter_id,
+                                           held_s=time.monotonic() - hold.t0)
+        self._emit("counter_hold", set_id=hold.set_id, id=hold.counter_id, phase="end")
+        return result
+
+    def cancel_counter_holds(self, prefix: str) -> None:
+        """Esquece as pressões cujas teclas começam por ``prefix`` (sem contar)."""
+        with self._lock:
+            gone = [t for t in self._counter_down if t.startswith(prefix)]
+            holds = [self._counter_down.pop(t) for t in gone]
+        for h in holds:
+            h.reset_done = True
+            if h.timer is not None:
+                h.timer.cancel()
+            self._emit("counter_hold", set_id=h.set_id, id=h.counter_id, phase="end")
+
+    def _counter_long_elapsed(self, key: str, hold: _CounterHold) -> None:
+        """O tempo da pressão longa passou com a tecla ainda premida: repõe já,
+        uma única vez (manter premida não volta a repor)."""
+        with self._lock:
+            if self._counter_down.get(key) is not hold or hold.reset_done:
+                return
+            hold.reset_done = True
+            ok, _why = self.counter_press_id(hold.set_id, hold.counter_id, long_press=True)
+        if ok:
+            self._emit("counter_hold", set_id=hold.set_id, id=hold.counter_id,
+                       phase="reset")
 
     def counter_press_id(self, set_id: str, counter_id: str, *,
                          held_s: Optional[float] = None,
@@ -505,6 +574,9 @@ class Engine:
         return True, ""
 
     def shutdown(self) -> None:
+        for hold in list(self._counter_down.values()):
+            if hold.timer is not None:
+                hold.timer.cancel()
         run = self._running
         if run:
             run.cancel(CANCEL_SHUTDOWN)
@@ -521,9 +593,8 @@ class Engine:
         key = ev.key
         if not ev.down:
             if key in self._counter_down:
-                sid, cid, t0 = self._counter_down.pop(key)
                 self._held.discard(key)
-                self._counter_released(sid, cid, time.monotonic() - t0)
+                self.end_counter_hold(key)
                 return True
             if key in self._held:
                 self._held.discard(key)
@@ -578,10 +649,11 @@ class Engine:
             if cidx is None and ev.mods and self._settings.modificadores == "ignorar":
                 cidx = act.counters.get(Binding(key))
             if cidx is not None and self._target_ok(self.platform.foreground())[0]:
-                # contador: decide no keyup (toque soma, manter premida repõe)
+                # contador: toque curto soma (no keyup); manter premida repõe
+                # quando passa o tempo da pressão longa, sem esperar pelo keyup
+                m = act.ms.macros[cidx]
                 self._held.add(key)
-                self._counter_down[key] = (act.ms.id, act.ms.macros[cidx].id,
-                                           time.monotonic())
+                self.begin_counter_hold(key, act.ms.id, m.id, m.pressao_longa_ms)
                 return True
             self._passed.add(key)
             return False

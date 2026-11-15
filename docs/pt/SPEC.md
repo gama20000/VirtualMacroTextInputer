@@ -100,19 +100,34 @@ no ecrã, sem hardware adicional.
 - Editor de título, tecla, texto, repetições e intervalo; gravação automática
   quando válido; erros a vermelho (incluindo conflito de tecla); conteúdo
   duplicado (mesma sequência de texto e comandos) a amarelo, com explicação.
-- «Nova macro» cria exatamente uma macro, sem tecla e com texto vazio.
+- «Nova macro» cria exatamente uma macro, sem tecla e com texto vazio. «Nova
+  macro», «Contador» e «Espaço vazio» inserem o novo item logo a seguir à macro
+  selecionada na área Ativo (a seguir à última, com várias selecionadas); sem
+  seleção, ou com uma macro arquivada selecionada, no fim da área Ativo. O novo
+  item fica selecionado.
 - Espaços vazios: podem ser inseridos entre botões para compor a grelha. Não são
   macros, não executam, não vão para o Arquivo e só são visíveis (contorno
   tracejado) na configuração; no painel real ocupam a célula, invisíveis. A
   organização é gravada.
 - Contadores: botão que mostra uma contagem. Um clique curto (ou um toque na
-  tecla associada) soma o incremento (predefinição 1); manter premido durante o
-  tempo de pressão longa repõe o valor configurado (predefinição 0) sem somar.
-  Não escreve texto. A configuração e a contagem persistem entre sessões.
+  tecla associada) soma o incremento (predefinição 1). Enquanto está premido
+  (rato ou tecla), o botão do painel mostra o tempo decorrido numa linha que
+  percorre a borda; ao atingir o tempo de pressão longa, a contagem é reposta
+  no valor configurado (predefinição 0) nesse momento, sem somar e sem esperar
+  que se largue, com um breve sinal verde. Continuar premido não repete a
+  reposição. Som opcional ao repor, por contador (nenhum por omissão, ou um dos
+  sons do sistema do Windows), com botão «Testar». Não escreve texto. A
+  configuração e a contagem persistem entre sessões.
+- Teclas multimédia: Reproduzir/Pausa, faixa anterior e faixa seguinte podem
+  ser atribuídas a macros e contadores, pelo menu «Multimédia» junto ao campo
+  da tecla (premi-las para gravar faria também reagir o leitor de música). Os
+  conflitos com outras macros e com as teclas globais são indicados como para
+  qualquer tecla. Com as macros suspensas ou fora do âmbito, estas teclas
+  mantêm o comportamento normal.
 - Atribuir tecla por cima do botão: com o ponteiro sobre um botão da área de
   edição e o foco fora de campos de edição, premir uma tecla atribui-a (o botão
-  mostra que está à espera). Delete, Backspace, Tab, Ctrl+C e Ctrl+V mantêm as
-  suas funções. Se a tecla já estiver numa macro ativa, ou coincidir com uma
+  mostra que está à espera). Delete, Backspace, Tab, Ctrl+C, Ctrl+V, Ctrl+Z e
+  Ctrl+Y mantêm as suas funções. Se a tecla já estiver numa macro ativa, ou coincidir com uma
   tecla global (suspensão, painel), nada muda e aparece uma mensagem que
   identifica o conflito, com «Não voltar a mostrar» (reativável nas
   Preferências).
@@ -121,8 +136,12 @@ no ecrã, sem hardware adicional.
 - Fora de campos de edição: Delete/Backspace elimina (com confirmação e opção
   «Não voltar a perguntar»; várias macros pedem sempre confirmação com a
   quantidade), Ctrl+C copia, Ctrl+V cola. Colar com uma macro arquivada
-  selecionada cria a cópia no Arquivo, logo depois dela. Dentro de campos de
-  texto, comportamento normal.
+  selecionada cria a cópia no Arquivo, logo depois dela. Ctrl+Z anula a última
+  eliminação: as macros voltam à mesma área e posição, com as mesmas definições
+  e tecla (uma tecla que entretanto passou a estar em uso é retirada, com
+  mensagem); Ctrl+Y (ou Ctrl+Shift+Z) volta a eliminá-las. O histórico é por
+  conjunto e dura enquanto a janela estiver aberta. Dentro de campos de texto,
+  comportamento normal (Ctrl+Z desfaz o texto).
 - Preferência «Não pedir confirmação antes de eliminar macros»: marcada elimina
   sem perguntar; aplica-se e grava-se logo ao mudar.
 - Preferência «Arrancar automaticamente com o Windows»: ativa ou desativa de
@@ -145,11 +164,17 @@ no ecrã, sem hardware adicional.
   foco à aplicação de destino; sempre por cima por omissão; transparência
   ajustável (também com a roda do rato sobre o painel, passos de 5 %, com
   indicação breve); respeita suspensão, âmbito e regras de execução.
-- Aparência personalizável mantendo a grelha: colunas, tamanho, espaçamento,
-  arredondamento, borda, tamanho do texto, cores, elementos visíveis, posição do
-  título e da tecla (em cima, ao centro ou em baixo, de forma independente e sem
-  sobreposição ilegível), estilos predefinidos e «Repor predefinição». Os
-  botões não têm ícone.
+- Linhas: além das colunas, pode definir-se o número de linhas («Todas» por
+  omissão, sem limite). Com mais células do que linhas × colunas, o painel
+  mostra uma página de cada vez, com setas ◀ 1 / 2 ▶ por baixo da grelha, que
+  não tiram o foco; todas as páginas têm o mesmo tamanho. Com menos células, o
+  painel só ocupa as linhas necessárias. Os espaços vazios contam como células.
+  As teclas funcionam para as macros de todas as páginas.
+- Aparência personalizável mantendo a grelha: colunas, linhas, tamanho,
+  espaçamento, arredondamento, borda, tamanho do texto, cores, elementos
+  visíveis, posição do título e da tecla (em cima, ao centro ou em baixo, de
+  forma independente e sem sobreposição ilegível), estilos predefinidos e
+  «Repor predefinição». Os botões não têm ícone.
 - Pré-visualização centrada nas preferências, idêntica ao painel real
   (incluindo a barra de título com as cores do tema) e atualizada a cada
   alteração.
