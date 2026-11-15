@@ -62,7 +62,7 @@ wrong_type = "«{key}»{where} deve ser {type}"
 bad_option = "{field} «{value}» inválido; use {options}"
 schema_missing = "falta «versao_esquema» (use versao_esquema = 1)"
 schema_type = "«versao_esquema» deve ser um número inteiro"
-schema_newer = "versao_esquema {v} é mais recente do que a suportada ({max}); atualize o Macropad"
+schema_newer = "versao_esquema {v} é mais recente do que a suportada ({max}); atualize o Virtual Macro Text Inputer"
 schema_invalid = "«versao_esquema» inválida"
 not_table = "[{name}] deve ser uma tabela"
 hotkey_error = "tecla_suspensao: {err}"
@@ -110,7 +110,7 @@ copy_name = "{name} (cópia)"
 
 [eng]
 no_window = "sem janela em primeiro plano"
-own_window = "o Macropad está em primeiro plano"
+own_window = "o Virtual Macro Text Inputer está em primeiro plano"
 no_set = "nenhum conjunto ativo"
 out_of_scope = "fora do âmbito ({app})"
 status_suspended = "Macros suspensas"
@@ -123,7 +123,7 @@ busy = "já existe uma macro em execução"
 not_run = "não executada"
 
 [win]
-config_title = "Macropad — Configuração"
+config_title = "Virtual Macro Text Inputer — Configuração"
 sendinput_failed = "SendInput enviou {sent}/{total} eventos (erro {err}). A janela de destino pode estar a correr como administrador."
 clipboard_open = "não foi possível abrir a área de transferência"
 clipboard_set = "não foi possível escrever na área de transferência"
@@ -300,7 +300,7 @@ text_mode = "Modo de texto:"
 mode_type = "Simular escrita (Unicode)"
 mode_paste = "Colar via área de transferência (Ctrl+V)"
 hotkey_error = "Tecla de suspensão: {err}"
-info = "Pasta de configuração: {folder}<br>Os ficheiros TOML podem ser editados à mão; são recarregados automaticamente ao guardar.<br><br>Limitação: o Windows impede que o Macropad intercete teclas ou envie texto para aplicações executadas como administrador, a menos que o próprio Macropad também seja executado como administrador."
+info = "Pasta de configuração: {folder}<br>Os ficheiros TOML podem ser editados à mão; são recarregados automaticamente ao guardar.<br><br>Limitação: o Windows impede que o Virtual Macro Text Inputer intercete teclas ou envie texto para aplicações executadas como administrador, a menos que o próprio Virtual Macro Text Inputer também seja executado como administrador."
 
 [theme]
 diurno = "Diurno"
@@ -324,7 +324,7 @@ need_one = "Tem de existir pelo menos um conjunto."
 import_title = "Importar conjunto"
 import_invalid = "O ficheiro não é válido:"
 export_title = "Exportar conjunto"
-toml_filter = "Conjuntos Macropad (*.toml)"
+toml_filter = "Conjuntos Virtual Macro Text Inputer (*.toml)"
 
 [status]
 write_failed = "Não foi possível gravar: {err}"
@@ -355,7 +355,7 @@ exported = "Exportado para {path}"
 reloaded_from_files = "Configuração recarregada a partir dos ficheiros."
 
 [tray]
-header = "Macropad — macros: {state}"
+header = "Virtual Macro Text Inputer — macros: {state}"
 open_config = "Abrir configuração"
 show_panel = "Mostrar painel"
 hide_panel = "Ocultar painel"
@@ -363,7 +363,7 @@ active_set = "Conjunto ativo"
 suspend = "Suspender macros"
 resume = "Reativar macros"
 quit = "Sair"
-tooltip = "Macropad — {state}\nConjunto: {set}"
+tooltip = "Virtual Macro Text Inputer — {state}\nConjunto: {set}"
 no_set = "(nenhum)"
 
 [msg]
@@ -375,7 +375,7 @@ startup_errors = "Erros na configuração ao arrancar"
 invalid_config = "Configuração inválida"
 kept_last_valid = "Mantida a última configuração válida."
 and_more = "… e mais {n}"
-send_error = "Macropad — erro ao enviar"
+send_error = "Virtual Macro Text Inputer — erro ao enviar"
 
 [active]
 title = "Ativo ({n})"
@@ -385,3 +385,6 @@ dont_show = "Não voltar a mostrar (pode reativar nas Preferências)"
 conflict_global = "A tecla {key} é a {what}. Não foi atribuída."
 conflict = "A tecla {key} já está atribuída a «{title}». Não foi alterada."
 conflict_title = "Tecla em uso"
+
+[app]
+legacy_running = "O {old} (versão com o nome antigo) ainda está a correr. Feche-o (ícone junto ao relógio ▸ Sair) e volte a abrir o {new}; com os dois abertos, as macros seriam escritas duas vezes."

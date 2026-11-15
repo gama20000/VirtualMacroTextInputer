@@ -61,7 +61,7 @@ wrong_type = "«{key}»{where} must be {type}"
 bad_option = "invalid {field} «{value}»; use {options}"
 schema_missing = "missing «versao_esquema» (use versao_esquema = 1)"
 schema_type = "«versao_esquema» must be an integer"
-schema_newer = "versao_esquema {v} is newer than supported ({max}); update Macropad"
+schema_newer = "versao_esquema {v} is newer than supported ({max}); update Virtual Macro Text Inputer"
 schema_invalid = "invalid «versao_esquema»"
 not_table = "[{name}] must be a table"
 hotkey_error = "tecla_suspensao: {err}"
@@ -109,7 +109,7 @@ copy_name = "{name} (copy)"
 
 [eng]
 no_window = "no foreground window"
-own_window = "Macropad is in the foreground"
+own_window = "Virtual Macro Text Inputer is in the foreground"
 no_set = "no active set"
 out_of_scope = "out of scope ({app})"
 status_suspended = "Macros suspended"
@@ -122,7 +122,7 @@ busy = "a macro is already running"
 not_run = "not run"
 
 [win]
-config_title = "Macropad — Settings"
+config_title = "Virtual Macro Text Inputer — Settings"
 sendinput_failed = "SendInput sent {sent}/{total} events (error {err}). The target window may be running as administrator."
 clipboard_open = "could not open the clipboard"
 clipboard_set = "could not write to the clipboard"
@@ -299,7 +299,7 @@ text_mode = "Text mode:"
 mode_type = "Simulate typing (Unicode)"
 mode_paste = "Paste via clipboard (Ctrl+V)"
 hotkey_error = "Suspend hotkey: {err}"
-info = "Configuration folder: {folder}<br>The TOML files can be edited by hand; they are reloaded automatically when saved.<br><br>Limitation: Windows prevents Macropad from intercepting keys or sending text to applications running as administrator, unless Macropad itself also runs as administrator."
+info = "Configuration folder: {folder}<br>The TOML files can be edited by hand; they are reloaded automatically when saved.<br><br>Limitation: Windows prevents Virtual Macro Text Inputer from intercepting keys or sending text to applications running as administrator, unless Virtual Macro Text Inputer itself also runs as administrator."
 
 [theme]
 diurno = "Day"
@@ -323,7 +323,7 @@ need_one = "There must be at least one set."
 import_title = "Import set"
 import_invalid = "The file is not valid:"
 export_title = "Export set"
-toml_filter = "Macropad sets (*.toml)"
+toml_filter = "Virtual Macro Text Inputer sets (*.toml)"
 
 [status]
 write_failed = "Could not save: {err}"
@@ -354,7 +354,7 @@ exported = "Exported to {path}"
 reloaded_from_files = "Configuration reloaded from the files."
 
 [tray]
-header = "Macropad — macros: {state}"
+header = "Virtual Macro Text Inputer — macros: {state}"
 open_config = "Open settings"
 show_panel = "Show panel"
 hide_panel = "Hide panel"
@@ -362,7 +362,7 @@ active_set = "Active set"
 suspend = "Suspend macros"
 resume = "Resume macros"
 quit = "Quit"
-tooltip = "Macropad — {state}\nSet: {set}"
+tooltip = "Virtual Macro Text Inputer — {state}\nSet: {set}"
 no_set = "(none)"
 
 [msg]
@@ -374,7 +374,7 @@ startup_errors = "Configuration errors at startup"
 invalid_config = "Invalid configuration"
 kept_last_valid = "Kept the last valid configuration."
 and_more = "… and {n} more"
-send_error = "Macropad — error while sending"
+send_error = "Virtual Macro Text Inputer — error while sending"
 
 [active]
 title = "Active ({n})"
@@ -384,3 +384,6 @@ dont_show = "Don't show again (can be re-enabled in Preferences)"
 conflict_global = "The key {key} is the {what}. It was not assigned."
 conflict = "The key {key} is already assigned to «{title}». Nothing was changed."
 conflict_title = "Key in use"
+
+[app]
+legacy_running = "{old} (the version with the old name) is still running. Close it (icon next to the clock ▸ Quit) and open {new} again; with both open, macros would be typed twice."

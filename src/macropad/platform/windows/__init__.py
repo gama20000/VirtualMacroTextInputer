@@ -17,7 +17,9 @@ from .hook import KeyboardHook, current_modifiers
 
 log = logging.getLogger(__name__)
 
-APP_NAME = "Macropad"
+from ...branding import EXE_NAME, LEGACY_NAME
+
+APP_NAME = EXE_NAME          # nome da entrada de arranque no registo
 RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
 
 
@@ -125,7 +127,7 @@ class WindowsPlatform:
             ctypes.memmove(p, data, len(data))
         finally:
             w.GlobalUnlock(h)
-        owner = w.CreateWindowExW(0, "STATIC", "Macropad clipboard", 0, 0, 0, 0, 0,
+        owner = w.CreateWindowExW(0, "STATIC", f"{EXE_NAME} clipboard", 0, 0, 0, 0, 0,
                                   w.HWND_MESSAGE, None, None, None)
         if not owner:
             w.GlobalFree(h)
@@ -290,10 +292,23 @@ class WindowsPlatform:
                     winreg.DeleteValue(k, APP_NAME)
                 except FileNotFoundError:
                     pass
+        self._remove_legacy_autostart()
         if enabled:
             # Se o utilizador a tinha desativado no Gestor de Tarefas, reativa.
             with winreg.CreateKey(winreg.HKEY_CURRENT_USER, self.APPROVED_KEY) as k:
                 winreg.SetValueEx(k, APP_NAME, 0, winreg.REG_BINARY, bytes([2] + [0] * 11))
+
+    def _remove_legacy_autostart(self) -> None:
+        """Apaga a entrada de arranque com o nome antigo (Macropad), para o
+        programa não arrancar duas vezes depois da mudança de nome."""
+        import winreg
+        for key in (RUN_KEY, self.APPROVED_KEY):
+            try:
+                with winreg.OpenKey(winreg.HKEY_CURRENT_USER, key, 0,
+                                    winreg.KEY_SET_VALUE) as k:
+                    winreg.DeleteValue(k, LEGACY_NAME)
+            except OSError:
+                pass
 
     # -------------------------------------------------------- instância única
     def acquire_single_instance(self, name: str) -> bool:

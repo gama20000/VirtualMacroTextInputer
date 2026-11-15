@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (QAbstractSpinBox, QApplication, QButtonGroup, QCh
                                QSpinBox, QStackedWidget, QTabWidget, QTextEdit, QToolButton,
                                QVBoxLayout, QWidget)
 
+from ..branding import APP_NAME
 from ..core import macro_ops as ops
 from ..core.commands import CommandError, describe_steps, parse_action
 from ..core.configio import (ConfigError, Issue, macro_label, macros_from_clipboard,
@@ -131,7 +132,11 @@ class ConfigWindow(QWidget):
         logo = QLabel()
         logo.setPixmap(theme.logo_pixmap(30))
         row.addWidget(logo)
-        row.addWidget(QLabel("Macropad", objectName="h1"))
+        # nome em duas linhas, para não apertar o seletor e os botões de estado
+        name = QLabel(APP_NAME.replace("Macro ", "Macro\n", 1), objectName="h1")
+        name.setStyleSheet("font-size: 12pt; line-height: 100%;")
+        name.setToolTip(APP_NAME)
+        row.addWidget(name)
         row.addSpacing(10)
         self.set_combo = QComboBox()
         self.set_combo.setMinimumWidth(180)

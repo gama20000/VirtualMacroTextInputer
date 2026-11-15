@@ -273,3 +273,42 @@ conversa de 11-11-2026 e nos commits `6da0f2f`, `5d330ce` e `936fe38`.
 - **Rever quando:** O servidor ou o endereço mudar, ou for preciso acesso fora
   do Tailscale.
 
+## Q-026: Novo nome do programa
+
+- **Resolvido:** 2026-11-13
+- **Resposta:** O programa passa a chamar-se **Virtual Macro Text Inputer**
+  (janelas, ícone junto ao relógio, executável `VirtualMacroTextInputer.exe`,
+  pasta de dados `%APPDATA%\VirtualMacroTextInputer`, entrada de arranque
+  `VirtualMacroTextInputer`). O pacote Python e os ficheiros do código
+  continuam `macropad`.
+- **Justificação:** Pedido do utilizador, a seguir à mudança de nome do
+  repositório. Mudar também o pacote Python obrigaria a renomear todo o código
+  e os testes sem ganho visível.
+- **Evidência:** Mensagem do utilizador de 13-11-2026 («Quero o programa com o
+  novo nome (janelas, ícone junto ao relógio, `Macropad.exe`)»).
+- **Consequências:** No primeiro arranque, a pasta `%APPDATA%\Macropad` é
+  copiada para a nova (a antiga fica como cópia de segurança). A entrada de
+  arranque «Macropad» é apagada quando a nova é escrita. Se a versão antiga
+  estiver a correr, o programa novo avisa e não arranca (dois hooks
+  escreveriam as macros duas vezes). Nome visível centralizado em
+  `src/macropad/branding.py`. Passos manuais 87–89.
+- **Rever quando:** O nome mudar outra vez, ou se quiser renomear também o
+  pacote Python.
+
+## Q-027: Localização do repositório no PC
+
+- **Resolvido:** 2026-11-15
+- **Resposta:** O repositório passa a estar em
+  `%USERPROFILE%\source\VirtualMacroTextInputer`, fora do Google Drive. Foi
+  criado com `git clone` local a partir da pasta antiga (todo o histórico), com
+  o `origin` a apontar para o Forgejo e as mesmas definições de autor.
+- **Justificação:** O utilizador não quer o repositório dentro da pasta
+  sincronizada pelo Google Drive. `Documents` foi posto de parte porque mostra
+  sinais de também ser sincronizada (`.tmp.drivedownload`).
+- **Evidência:** Mensagens do utilizador de 15-11-2026 e a escolha «Pasta
+  source».
+- **Consequências:** O ambiente `.venv` não é copiado (não é portável):
+  recria-se com `run-dev.ps1`. A pasta antiga no Google Drive fica até o
+  utilizador decidir apagá-la.
+- **Rever quando:** O repositório mudar outra vez de sítio.
+

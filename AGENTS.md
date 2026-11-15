@@ -1,17 +1,19 @@
-# AGENTS.md — Macropad
+# AGENTS.md — Virtual Macro Text Inputer
 
 Instruções para agentes de código (Codex, Claude Code, etc.) que trabalhem
 neste repositório. Responde e escreve comentários em **português europeu**.
 
 ## O projeto
 
-Macro pad para Windows (inspirado no Virtual Stream Deck). As teclas
+Macro pad para Windows (inspirado no Virtual Stream Deck). Chamava-se
+Macropad até à versão 0.4; o nome visível vem de `src/macropad/branding.py` e o
+pacote Python continua a ser `macropad`. As teclas
 configuráveis do teclado (por omissão 1–4 da fila superior) e um painel
 flutuante enviam texto com os comandos `{Enter}`, `{Tab}` e `{Delay:ms}` para
 a aplicação em primeiro plano, e a tecla original é suprimida.
 
 - Python 3.11+, PySide6 (Qt 6), Win32 via `ctypes`; distribuição com PyInstaller.
-- Configuração em TOML em `%APPDATA%\Macropad\` (`config.toml`,
+- Configuração em TOML em `%APPDATA%\VirtualMacroTextInputer\` (`config.toml`,
   `conjuntos\*.toml`, `estado.toml`). Os nomes dos campos TOML são em
   português e fazem parte do formato: não os traduzas nem os renomeies sem
   aumentar `versao_esquema` e manter compatibilidade.
@@ -72,7 +74,7 @@ $env:PYTHONDONTWRITEBYTECODE=1; .\.venv\Scripts\python -m pytest -q -p no:cachep
 # executar a partir do código
 .\run-dev.ps1
 
-# gerar a distribuição (dist\Macropad\Macropad.exe)
+# gerar a distribuição (dist\VirtualMacroTextInputer\VirtualMacroTextInputer.exe)
 .\build.ps1
 ```
 
@@ -106,7 +108,7 @@ Zonas de maior risco, por prioridade:
 3. **Supressão de teclas.** keydown/keyup desemparelhados, auto-repetição,
    modificadores (`exatos`/`ignorar`, AltGr = Ctrl+Alt), tecla de suspensão
    (também durante `{Delay}`), eventos injetados pelo próprio programa
-   (`MAGIC_EXTRA_INFO`), teclas nas janelas do próprio Macropad e mudança de
+   (`MAGIC_EXTRA_INFO`), teclas nas janelas do próprio programa e mudança de
    janela durante a execução.
 4. **Configuração** (`core/store.py`, `core/watcher.py`, `core/configio.py`).
    Um ficheiro inválido nunca pode substituir a última configuração válida.

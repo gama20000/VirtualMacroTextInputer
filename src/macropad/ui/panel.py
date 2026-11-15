@@ -14,6 +14,7 @@ from PySide6.QtGui import QColor, QFontMetrics, QGuiApplication, QPainter, QPen
 from PySide6.QtWidgets import (QButtonGroup, QGraphicsOpacityEffect, QGridLayout, QHBoxLayout,
                                QLabel, QPushButton, QSizePolicy, QVBoxLayout, QWidget)
 
+from ..branding import APP_NAME
 from ..core.model import MacroSet, PanelSettings
 from ..i18n import tr
 from . import theme
@@ -46,7 +47,7 @@ class PanelTitleBar(QWidget):
 
     def __init__(self, interactive: bool = True, parent=None):
         super().__init__(parent)
-        self.title = "Macropad"
+        self.title = APP_NAME
         self.hint = ""
         self.caption, self.text = "#000000", "#ffffff"
         self.interactive = interactive
@@ -402,8 +403,8 @@ class PanelWindow(QWidget):
     def rebuild(self, style: Optional[PanelSettings] = None) -> None:
         style = style or self.app.engine.settings.painel
         ms = self.app.engine.active_set
-        self.setWindowTitle(f"Macropad — {ms.nome}" if ms else "Macropad")
-        self.titlebar.title = ms.nome if ms else "Macropad"
+        self.setWindowTitle(f"{APP_NAME} — {ms.nome}" if ms else APP_NAME)
+        self.titlebar.title = ms.nome if ms else APP_NAME
         self.titlebar.hint = panel_hint(self.app.engine.settings)
         self.titlebar.setToolTip(self.titlebar.hint)
         self.titlebar.caption, self.titlebar.text = self.app.pal.caption, self.app.pal.caption_text
@@ -488,7 +489,7 @@ class PanelPreview(QWidget):
                        counts: Optional[dict[str, int]] = None) -> None:
         self.window_frame.setStyleSheet(f"#previewframe {{ background: {pal.border}; }}")
         self.titlebar.caption, self.titlebar.text = pal.caption, pal.caption_text
-        self.titlebar.title = ms.nome if ms else "Macropad"
+        self.titlebar.title = ms.nome if ms else APP_NAME
         self.titlebar.hint = hint
         self.titlebar.update()
         self.view.rebuild(style, pal, ms, counts)

@@ -83,6 +83,15 @@ parte da Fase 3.
 - [ ] README: como clonar e enviar — espera por `Q-010` (se o README pode ter
   o endereço privado).
 
+## Novo nome: Virtual Macro Text Inputer (concluído a 13-11-2026)
+
+- [x] Nome visível em janelas, ícone, executável, pasta de dados e arranque
+  (`Q-026`); cópia da pasta antiga; limpeza da entrada de arranque antiga;
+  aviso se a versão antiga estiver a correr. `pytest`: 171 passam, 1 ignorado
+  (novo `tests/test_branding.py`). Captura da configuração e do painel revista.
+  - Risco residual: cópia da pasta, registo e aviso só se confirmam no Windows
+    (passos 87–89).
+
 ## Fase atual: Fase 3 — Validação manual no Windows e distribuição (em pausa)
 
 

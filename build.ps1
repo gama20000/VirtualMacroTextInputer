@@ -1,4 +1,4 @@
-# Gera a distribuição Windows em dist\Macropad\Macropad.exe
+# Gera a distribuição Windows em dist\VirtualMacroTextInputer\VirtualMacroTextInputer.exe
 # Uso (PowerShell, na pasta do projeto):   .\build.ps1
 # Requer Python 3.11+ no PATH (ou indique-o: .\build.ps1 -Python "C:\caminho\python.exe").
 param([string]$Python = "python")
@@ -16,7 +16,7 @@ if ($LASTEXITCODE -ne 0) { throw "Os testes falharam." }
 
 Write-Host "== PyInstaller =="
 & $py -m PyInstaller --noconfirm --clean --windowed `
-    --name Macropad `
+    --name VirtualMacroTextInputer `
     --icon assets\macropad.ico `
     --paths src `
     --add-data "src\macropad\ui\assets;macropad\ui\assets" `
@@ -25,8 +25,8 @@ Write-Host "== PyInstaller =="
     launcher.py
 if ($LASTEXITCODE -ne 0) { throw "PyInstaller falhou." }
 
-Copy-Item README.md dist\Macropad\ -Force
-Copy-Item examples\conjunto-exemplo.toml dist\Macropad\ -Force
+Copy-Item README.md dist\VirtualMacroTextInputer\ -Force
+Copy-Item examples\conjunto-exemplo.toml dist\VirtualMacroTextInputer\ -Force
 Write-Host ""
-Write-Host "Pronto: dist\Macropad\Macropad.exe"
-Write-Host "Copie a pasta dist\Macropad para onde quiser (ex.: %LOCALAPPDATA%\Programs\Macropad) e execute Macropad.exe."
+Write-Host "Pronto: dist\VirtualMacroTextInputer\VirtualMacroTextInputer.exe"
+Write-Host "Copie a pasta dist\VirtualMacroTextInputer para onde quiser (ex.: %LOCALAPPDATA%\Programs\VirtualMacroTextInputer) e execute VirtualMacroTextInputer.exe."

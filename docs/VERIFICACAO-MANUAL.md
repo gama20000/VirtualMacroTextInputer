@@ -169,3 +169,11 @@ Antes de começar: na configuração de teste, a tecla de suspensão anterior
 | 84 | Preferências: desmarque e marque «Arrancar automaticamente com o Windows»; veja Gestor de Tarefas ▸ Aplicações de arranque | aplicado logo; Macropad aparece «Ativado»; desativado no Gestor de Tarefas e voltado a marcar → volta a «Ativado» | 👤 |
 | 85 | Reinicie sessão do Windows com o arranque ativo | o Macropad arranca sozinho com a mesma pasta de configuração | 👤 |
 | 86 | Preferências ▸ Modo de texto «Colar»; copie «antigo» para a área de transferência; no Bloco de Notas prima a tecla de uma macro com `Olá{Enter}mundo` | escreve «Olá», muda de linha e escreve «mundo» (com acentos); a área de transferência fica com o texto da macro; nenhum erro | ☐ |
+
+## Novo nome — Virtual Macro Text Inputer
+
+| # | Ação | Esperado | OK |
+|---|---|---|---|
+| 87 | Com o Macropad antigo a correr, abra o programa novo (`run-dev.ps1`) | aviso para fechar o Macropad antigo; o novo não arranca | ☐ |
+| 88 | Feche o antigo e abra o novo | janelas, ícone e menus com «Virtual Macro Text Inputer»; as suas macros e preferências estão lá (copiadas de `%APPDATA%\Macropad`, que continua a existir) | ☐ |
+| 89 | Com «Arrancar com o Windows» ativo, veja Gestor de Tarefas ▸ Aplicações de arranque | aparece só a entrada nova, ativada; a «Macropad» desapareceu | 👤 |

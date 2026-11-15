@@ -1,4 +1,6 @@
-# Macropad
+# Virtual Macro Text Inputer
+
+Até à versão 0.4 chamava-se **Macropad** (o pacote Python continua a chamar-se `macropad`, por isso os comandos `python -m macropad` mantêm-se).
 
 Macro pad para Windows. Usa teclas normais do teclado (por omissão, 1, 2, 3 e 4 da fila superior) e um painel flutuante opcional para escrever texto pré-definido na aplicação que está em primeiro plano. Quando uma macro dispara, a tecla original é suprimida. Premir **1** escreve `3E03305` e o 1 não aparece.
 
@@ -6,6 +8,7 @@ Macro pad para Windows. Usa teclas normais do teclado (por omissão, 1, 2, 3 e 4
 - Fechar a configuração ou o painel não termina a aplicação. Para sair, use o menu do ícone ▸ **Sair**.
 - Arranca com o Windows por omissão (pode desativar nas Preferências). Não cria atalhos no ambiente de trabalho.
 - Só pode haver uma instância. Abrir o programa outra vez apenas mostra a configuração.
+- **Mudança de nome.** No primeiro arranque com o nome novo, as macros e preferências de `%APPDATA%\Macropad` são copiadas para `%APPDATA%\VirtualMacroTextInputer` (a pasta antiga fica intacta, como cópia de segurança). A entrada antiga de arranque com o Windows («Macropad») é substituída pela nova. Se a versão antiga ainda estiver a correr, o programa pede para a fechar, para as macros não serem escritas duas vezes.
 
 ## Executar
 
@@ -24,10 +27,10 @@ python -m venv .venv
 ### Gerar a distribuição Windows
 
 ```powershell
-.\build.ps1        # cria .venv, corre os testes e gera dist\Macropad\Macropad.exe
+.\build.ps1        # cria .venv, corre os testes e gera dist\VirtualMacroTextInputer\VirtualMacroTextInputer.exe
 ```
 
-Copie a pasta `dist\Macropad` para onde quiser (por exemplo `%LOCALAPPDATA%\Programs\Macropad`) e execute `Macropad.exe`. O registo de arranque automático (`HKCU\...\Run`) aponta para o executável que estiver a correr. Se mudar a pasta de sítio, abra o programa uma vez a partir da nova localização e volte a ativar "Arrancar com o Windows".
+Copie a pasta `dist\VirtualMacroTextInputer` para onde quiser (por exemplo `%LOCALAPPDATA%\Programs\VirtualMacroTextInputer`) e execute `VirtualMacroTextInputer.exe`. O registo de arranque automático (`HKCU\...\Run`) aponta para o executável que estiver a correr. Se mudar a pasta de sítio, abra o programa uma vez a partir da nova localização e volte a ativar "Arrancar com o Windows".
 
 ### Testes
 
@@ -102,7 +105,7 @@ Para acrescentar um idioma, copie `src/macropad/locales/pt.toml` para `<código>
 - Enquanto uma macro está a ser executada, novos disparos são ignorados (a tecla continua a ser suprimida).
 - Se a macro tiver sido disparada com modificadores premidos, a execução espera que sejam largados (até 1,5 s). Se continuarem premidos, a macro não é executada e aparece um aviso. Assim, um `{Enter}` nunca é enviado como `Ctrl+Enter`.
 - Se mudar de janela durante a execução, os passos pendentes são cancelados.
-- O texto que o Macropad envia nunca dispara macros. As teclas premidas nas janelas do próprio Macropad também não.
+- O texto que o programa envia nunca dispara macros. As teclas premidas nas janelas do próprio programa também não.
 
 ## Comandos no texto
 
@@ -125,7 +128,7 @@ Os comandos são executados pela ordem e na posição em que aparecem. Por exemp
 
 ## Ficheiros de configuração (TOML)
 
-Ficam em `%APPDATA%\Macropad\`:
+Ficam em `%APPDATA%\VirtualMacroTextInputer\`:
 
 | Ficheiro | Conteúdo |
 |---|---|
@@ -195,7 +198,7 @@ pressao_longa_ms = 800
 
 O campo `mostrar_icone` das versões anteriores é aceite e ignorado.
 
-**Recarregamento automático.** Ao guardar um destes ficheiros num editor, o Macropad deteta a alteração, espera que o ficheiro fique estável (o que agrupa gravações seguidas e evita ler ficheiros a meio da escrita), valida-o e aplica-o. Funciona também com editores que gravam substituindo o ficheiro.
+**Recarregamento automático.** Ao guardar um destes ficheiros num editor, o programa deteta a alteração, espera que o ficheiro fique estável (o que agrupa gravações seguidas e evita ler ficheiros a meio da escrita), valida-o e aplica-o. Funciona também com editores que gravam substituindo o ficheiro.
 - Se o ficheiro for **inválido**, mantém-se a última configuração válida e aparece um aviso com o ficheiro, a linha e a coluna, por exemplo `conjuntos/predefinido.toml, linha 12, coluna 9: macro 2: comando desconhecido {Entr}`.
 - As alterações aplicam-se às execuções seguintes. Uma execução em curso termina com a configuração com que começou, a menos que seja suspensa ou que a janela mude.
 - Um recarregamento nunca reativa macros suspensas.
@@ -209,12 +212,12 @@ O campo `mostrar_icone` das versões anteriores é aceite e ignorado.
 
 ## Limitações
 
-- **Aplicações executadas como administrador.** O Windows (UIPI) impede que um processo sem privilégios intercete teclas ou envie texto para janelas elevadas. Com uma dessas janelas em primeiro plano, as teclas funcionam normalmente e o painel não consegue escrever. Para usar macros nelas, execute o Macropad como administrador. Nesse caso, o arranque automático pelo registo `Run` não eleva o programa e terá de usar o Agendador de Tarefas com "Executar com privilégios mais elevados".
+- **Aplicações executadas como administrador.** O Windows (UIPI) impede que um processo sem privilégios intercete teclas ou envie texto para janelas elevadas. Com uma dessas janelas em primeiro plano, as teclas funcionam normalmente e o painel não consegue escrever. Para usar macros nelas, execute o programa como administrador. Nesse caso, o arranque automático pelo registo `Run` não eleva o programa e terá de usar o Agendador de Tarefas com "Executar com privilégios mais elevados".
 - O ecrã de UAC, o ecrã de bloqueio, o Ctrl+Alt+Del e alguns jogos com anti-cheat ou entrada "raw" não recebem nem deixam intercetar estes eventos.
-- O Windows remove hooks de teclado que respondem devagar (LowLevelHooksTimeout). O callback do Macropad só consulta dados em memória, mas uma máquina muito sobrecarregada pode fazê-lo perder o hook. Nesse caso, reinicie o programa.
+- O Windows remove hooks de teclado que respondem devagar (LowLevelHooksTimeout). O callback do programa só consulta dados em memória, mas uma máquina muito sobrecarregada pode fazê-lo perder o hook. Nesse caso, reinicie o programa.
 - No modo *Colar*, aplicações que leiam a área de transferência de forma muito lenta podem colar o texto anterior. O programa espera 80 ms depois de cada Ctrl+V.
 - `AltGr` é tratado pelo Windows como `Ctrl+Alt`.
-- As teclas de suspensão e do painel são globais e intercetadas mesmo nas janelas do Macropad, exceto enquanto um campo **Tecla** está a gravar ou o rato está sobre um botão da configuração (com a janela ativa).
+- As teclas de suspensão e do painel são globais e intercetadas mesmo nas janelas do programa, exceto enquanto um campo **Tecla** está a gravar ou o rato está sobre um botão da configuração (com a janela ativa).
 - O contador decide entre toque e pressão longa quando a tecla é largada. O Windows repete a tecla enquanto está premida; essas repetições são ignoradas.
 
 ## Arquitetura

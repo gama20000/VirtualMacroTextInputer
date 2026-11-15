@@ -64,6 +64,8 @@ falta o GitHub (Fase 4).
 - [x] [Atribuição de tecla por cima do botão e atalhos existentes](ANSWERS.md#q-022-atribuição-de-tecla-por-cima-do-botão-e-atalhos-existentes) (`Q-022`): Delete, Backspace, Tab, Ctrl+C e Ctrl+V mantêm-se.
 - [x] [Barra de título do painel](ANSWERS.md#q-023-barra-de-título-do-painel) (`Q-023`): o painel desenha a sua própria barra.
 - [x] [Servidor para o Forgejo](ANSWERS.md#q-012-servidor-para-o-forgejo) (`Q-012`): instalado pelo utilizador; `VirtualMacroTextInputer` pelo Tailscale. Torna `Q-014`, `Q-015` e `Q-016` desnecessárias.
+- [x] [Localização do repositório no PC](ANSWERS.md#q-027-localizacao-do-repositorio-no-pc) (`Q-027`): `%USERPROFILE%\source\VirtualMacroTextInputer`, fora do Google Drive.
+- [x] [Novo nome do programa](ANSWERS.md#q-026-novo-nome-do-programa) (`Q-026`): Virtual Macro Text Inputer; dados copiados da pasta antiga.
 - [x] [Tratamento dos resultados da revisão](ANSWERS.md#q-017-tratamento-dos-resultados-da-revisão) (`Q-017`): P1 e P2 confirmados e corrigidos.
 
 ## Fase 1: Revisão independente e correções — concluída (12-11-2026)

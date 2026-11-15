@@ -227,7 +227,7 @@ def test_tema_e_idioma(app, qapp):
     w2 = app.config_window
     assert w2 is not w
     assert w2.tabs.tabText(1) == "Panel"
-    assert w2.windowTitle() == "Macropad — Settings"
+    assert w2.windowTitle() == "Virtual Macro Text Inputer — Settings"
     app._fill_menu()
     assert "Open settings" in [a.text() for a in app.menu.actions()]
     # conteúdos das macros não são traduzidos

@@ -2,7 +2,7 @@
 
 Opções:
   --config-dir PASTA   usar outra pasta de configuração (por omissão
-                       %APPDATA%\\Macropad; também via MACROPAD_HOME)
+                       %APPDATA%\\VirtualMacroTextInputer; também via MACROPAD_HOME)
   --show-config        abrir a configuração ao arrancar
 """
 from __future__ import annotations
@@ -12,17 +12,40 @@ import getpass
 import logging
 import logging.handlers
 import os
+import shutil
 import sys
 from pathlib import Path
+
+from .branding import (APP_NAME, EXE_NAME, LEGACY_LINUX_DIR_NAME, LEGACY_NAME,
+                       LINUX_DIR_NAME)
+
+
+def _base_dir() -> Path:
+    if sys.platform == "win32":
+        return Path(os.environ.get("APPDATA", Path.home()))
+    return Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
 
 
 def default_root() -> Path:
     env = os.environ.get("MACROPAD_HOME")
     if env:
         return Path(env)
-    if sys.platform == "win32":
-        return Path(os.environ.get("APPDATA", Path.home())) / "Macropad"
-    return Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "macropad"
+    return _base_dir() / (EXE_NAME if sys.platform == "win32" else LINUX_DIR_NAME)
+
+
+def legacy_root() -> Path:
+    """Pasta de dados do nome anterior (Macropad)."""
+    return _base_dir() / (LEGACY_NAME if sys.platform == "win32" else LEGACY_LINUX_DIR_NAME)
+
+
+def migrate_legacy_root(root: Path, legacy: Path) -> bool:
+    """Primeiro arranque com o nome novo: copia as macros e preferências da
+    pasta antiga. A pasta antiga fica intacta (serve de cópia de segurança).
+    Devolve True se copiou."""
+    if root.exists() or not legacy.is_dir():
+        return False
+    shutil.copytree(legacy, root)
+    return True
 
 
 def setup_logging(root: Path) -> None:
@@ -44,7 +67,15 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--show-config", action="store_true")
     args = ap.parse_args(argv)
     root = args.config_dir or default_root()
+    migrated = False
+    if args.config_dir is None and not os.environ.get("MACROPAD_HOME"):
+        try:
+            migrated = migrate_legacy_root(root, legacy_root())
+        except OSError:
+            migrated = False      # continua com uma pasta nova; o erro fica no registo
     setup_logging(root)
+    if migrated:
+        logging.info("dados copiados de %s para %s", legacy_root(), root)
 
     from PySide6.QtNetwork import QLocalServer, QLocalSocket
     from PySide6.QtWidgets import QApplication, QSystemTrayIcon
@@ -57,12 +88,26 @@ def main(argv: list[str] | None = None) -> int:
         user = getpass.getuser()
     except Exception:
         user = "user"
-    instance_name = f"Macropad-{user}"
+    instance_name = f"{EXE_NAME}-{user}"
+    legacy_instance = f"{LEGACY_NAME}-{user}"
 
     qapp = QApplication(sys.argv[:1])
-    qapp.setApplicationName("Macropad")
+    qapp.setApplicationName(APP_NAME)
     qapp.setQuitOnLastWindowClosed(False)      # fechar janelas não termina a app
     qapp.setWindowIcon(theme.app_icon())
+
+    # A versão com o nome antigo (Macropad) ainda a correr teria o seu próprio
+    # hook: as macros seriam escritas duas vezes. Pede para a fechar.
+    old = QLocalSocket()
+    old.connectToServer(legacy_instance)
+    if old.waitForConnected(300):
+        old.disconnectFromServer()
+        from PySide6.QtWidgets import QMessageBox
+
+        from . import i18n
+        QMessageBox.warning(None, APP_NAME, i18n.tr("app.legacy_running", old=LEGACY_NAME,
+                                                     new=APP_NAME))
+        return 1
 
     platform = create_platform()
     if not platform.acquire_single_instance(instance_name):

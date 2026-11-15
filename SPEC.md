@@ -2,7 +2,8 @@
 
 ## Destino
 
-Uma aplicação de macro pad para Windows (Macropad) que transforma teclas
+Uma aplicação de macro pad para Windows, **Virtual Macro Text Inputer**
+(chamava-se Macropad até à versão 0.4; o pacote Python continua `macropad`), que transforma teclas
 configuráveis do teclado habitual, e os botões de um painel flutuante opcional,
 em ações de texto enviadas para a aplicação em primeiro plano. A tecla original
 é suprimida quando a macro está ativa e dentro do âmbito configurado.
@@ -16,13 +17,13 @@ destino, mas a arquitetura tem de a continuar a permitir.
 
 Quem escreve repetidamente os mesmos códigos e textos (ex.: `3E03305`,
 `Z51.11{Enter}`) perde tempo e erra. Um Stream Deck físico ou virtual resolve
-isto com botões; o Macropad usa as teclas que já existem no teclado e um painel
+isto com botões; o programa usa as teclas que já existem no teclado e um painel
 no ecrã, sem hardware adicional.
 
 ## Utilizadores
 
 - Um utilizador principal, em Windows 10/11, que trabalha sobretudo noutras
-  aplicações e quer o Macropad discreto, em segundo plano.
+  aplicações e quer o programa discreto, em segundo plano.
 - Edita macros pela interface ou diretamente nos ficheiros TOML.
 - Fala português europeu; a interface também tem de existir em inglês.
 
@@ -50,7 +51,7 @@ no ecrã, sem hardware adicional.
 - Modificadores: por omissão só a tecla isolada dispara (Ctrl+1, Alt+1, Shift+1
   mantêm o comportamento normal); configurável para «ignorar».
 - Manter a tecla premida não volta a disparar; os eventos gerados pela
-  aplicação nunca disparam macros; teclas nas janelas do próprio Macropad
+  aplicação nunca disparam macros; teclas nas janelas do próprio programa
   não disparam.
 - Associações duplicadas e conflitos com a tecla de suspensão são erros.
 
@@ -153,7 +154,7 @@ no ecrã, sem hardware adicional.
 
 ### Ficheiros TOML e recarregamento
 
-- `config.toml` e `conjuntos/<id>.toml` em `%APPDATA%\Macropad\`, legíveis,
+- `config.toml` e `conjuntos/<id>.toml` em `%APPDATA%\VirtualMacroTextInputer\` (copiados de `%APPDATA%\Macropad\` no primeiro arranque com o nome novo), legíveis,
   com `versao_esquema`; campos novos são opcionais (ficheiros antigos válidos).
 - Recarregamento automático ao guardar, incluindo editores que substituem o
   ficheiro; eventos agrupados; validação antes de aplicar; um ficheiro inválido
@@ -185,7 +186,7 @@ no ecrã, sem hardware adicional.
 - O callback do hook tem de responder bem abaixo do LowLevelHooksTimeout
   (~1 s).
 - Limitação documentada: sem interceção nem envio para aplicações executadas
-  como administrador, a menos que o Macropad também o seja.
+  como administrador, a menos que o programa também o seja.
 
 ## Restrições
 
@@ -199,7 +200,7 @@ no ecrã, sem hardware adicional.
 - Outras categorias de ações (programas, scripts, atalhos de sistema).
 - Sintaxe para escrever `{Enter}`/`{Tab}` literalmente.
 - Preservar o conteúdo anterior da área de transferência.
-- Instalador (o pacote é uma pasta com `Macropad.exe`).
+- Instalador (o pacote é uma pasta com `VirtualMacroTextInputer.exe`).
 - Ícones personalizados nos botões (removidos por agora).
 - Reescrita noutra linguagem (ex.: Rust); ver ROADMAP.
 
@@ -219,6 +220,6 @@ no ecrã, sem hardware adicional.
   no Windows real.
 - Revisão independente concluída, com os problemas P0/P1 corrigidos ou
   aceites por decisão registada.
-- `build.ps1` gera `dist\Macropad\Macropad.exe` que arranca e passa os critérios
+- `build.ps1` gera `dist\VirtualMacroTextInputer\VirtualMacroTextInputer.exe` que arranca e passa os critérios
   acima.
 - O repositório está publicado nos dois remotos acordados.

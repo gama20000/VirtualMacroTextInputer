@@ -11,6 +11,7 @@ from PySide6.QtGui import QAction, QActionGroup, QGuiApplication
 from PySide6.QtNetwork import QLocalServer
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon, QWidget
 
+from ..branding import APP_NAME
 from .. import i18n
 from ..core.engine import Engine
 from ..core.engine import CANCEL_MODIFIERS
@@ -94,7 +95,7 @@ class MacropadApp(QObject):
         hook_error = platform.start_hook(self.engine.handle_key)
         if hook_error:
             log.warning(hook_error)
-            self.notify("Macropad", hook_error, error=True)
+            self.notify(APP_NAME, hook_error, error=True)
 
         self.watcher = FileWatcher(self.store.watched_files,
                                    lambda paths: self.bridge.files_changed.emit(paths))
@@ -107,9 +108,9 @@ class MacropadApp(QObject):
             self._report_issues(startup_issues, tr("msg.startup_errors"))
         for msg in migration_msgs:
             log.info(msg)
-            self.notify("Macropad", msg)
+            self.notify(APP_NAME, msg)
         if autostart_err:
-            self.notify("Macropad", autostart_err, error=True)
+            self.notify(APP_NAME, autostart_err, error=True)
         if self.state.painel_visivel:
             self.set_panel_visible(True)
         self._persist_state()
@@ -320,7 +321,7 @@ class MacropadApp(QObject):
             issues = self.store.save_settings(s)
         except OSError as e:
             log.exception("não foi possível gravar a transparência do painel")
-            self.notify("Macropad", tr("status.write_failed", err=e.strerror or e), error=True)
+            self.notify(APP_NAME, tr("status.write_failed", err=e.strerror or e), error=True)
             return
         if not issues:
             self.engine.set_config(self.store.config())
@@ -365,9 +366,9 @@ class MacropadApp(QObject):
         que ficou aplicado. Devolve None ou a mensagem de erro."""
         want = self.store.settings.arrancar_com_windows
         try:
-            if want or self.platform.get_autostart():
-                # reescreve sempre ao ativar (o comando pode ter mudado)
-                self.platform.set_autostart(want, self.autostart_args())
+            # Sempre: ao ativar reescreve o comando (pode ter mudado); ao
+            # desativar apaga a entrada, e em ambos os casos a do nome antigo.
+            self.platform.set_autostart(want, self.autostart_args())
             if self.platform.get_autostart() != want:
                 raise OSError(tr("msg.autostart_blocked"))
         except OSError as e:
@@ -406,7 +407,7 @@ class MacropadApp(QObject):
             if payload.get("error"):
                 self.notify(tr("msg.send_error"), payload["error"], error=True)
             elif payload.get("cancelled") == CANCEL_MODIFIERS:
-                self.notify("Macropad", tr("msg.cancel_modifiers", title=payload["title"]),
+                self.notify(APP_NAME, tr("msg.cancel_modifiers", title=payload["title"]),
                             error=True)
             self.panel.refresh_status()
         elif ev == "started":
