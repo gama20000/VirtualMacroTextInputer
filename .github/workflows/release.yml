@@ -1,0 +1,57 @@
+# Compila o executável único no Windows e publica-o numa release do GitHub.
+#
+# - Ao enviar uma etiqueta vX.Y.Z (ex.: git tag v0.5.0 && git push origin v0.5.0):
+#   testes, compilação e release com o .exe e o respetivo SHA-256.
+# - Actions ▸ Release ▸ Run workflow: só compila; o .exe fica como artefacto
+#   da execução (sem release), para experimentar.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write          # criar a release e anexar o .exe
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: A etiqueta coincide com a versão do pyproject.toml
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        run: |
+          $v = (Select-String -Path pyproject.toml -Pattern '^version = "(.+)"').Matches[0].Groups[1].Value
+          if ("v$v" -ne "${{ github.ref_name }}") {
+            throw "A etiqueta ${{ github.ref_name }} não coincide com a versão $v do pyproject.toml"
+          }
+
+      - name: Testes e compilação (um só .exe)
+        shell: pwsh
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: ./build.ps1 -OneFile -Python python
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VirtualMacroTextInputer
+          path: |
+            dist/VirtualMacroTextInputer.exe
+            dist/VirtualMacroTextInputer.exe.sha256
+
+      - name: Publicar a release
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" `
+            dist/VirtualMacroTextInputer.exe dist/VirtualMacroTextInputer.exe.sha256 `
+            --title "Virtual Macro Text Inputer ${{ github.ref_name }}" --generate-notes
