@@ -2,6 +2,16 @@
 
 *English version: [README.md](../../README.md). Os comandos e caminhos abaixo são relativos à raiz do repositório.*
 
+> Feito em «vibe coding» com o Claude e revisto pelo Codex.
+>
+> Esta aplicação permite-me introduzir rapidamente pequenos excertos de texto clicando num botão de um painel transparente no ecrã ou premindo uma tecla de atalho. Pedi ao Claude que a construísse para responder a uma necessidade muito específica do meu trabalho. Inspirei-me muito no Virtual Stream Deck. Um dia esqueci-me de levar o meu Stream Deck físico e pedi ao Claude que recriasse o conceito em software. O Claude construiu as funcionalidades principais de uma só vez, sem erros que eu notasse.
+
+<p align="center">
+  <img src="../images/settings.png" alt="Janela de configuração: a área Ativo com o aspeto do painel, um espaço vazio e um contador; o editor por baixo" width="460">
+  &nbsp;
+  <img src="../images/panel.png" alt="Painel flutuante no tema Noturno, com a barra de título própria" width="340">
+</p>
+
 Até à versão 0.4 chamava-se **Macropad** (o pacote Python continua a chamar-se `macropad`, por isso os comandos `python -m macropad` mantêm-se).
 
 Macro pad para Windows. Usa teclas normais do teclado (por omissão, 1, 2, 3 e 4 da fila superior) e um painel flutuante opcional para escrever texto pré-definido na aplicação que está em primeiro plano. Quando uma macro dispara, a tecla original é suprimida. Premir **1** escreve `3E03305` e o 1 não aparece.

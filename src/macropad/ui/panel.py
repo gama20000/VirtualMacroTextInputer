@@ -192,6 +192,10 @@ class PanelView(QWidget):
         """``counts``: contagem atual de cada contador (id -> valor)."""
         self.style_, self.pal = style, pal
         counts = counts or {}
+        # textos dos botões de estado: refeitos a cada reconstrução, para
+        # acompanhar uma mudança de idioma sem recriar o painel
+        self.btn_on.setText("● " + tr("state.active"))
+        self.btn_off.setText(theme.PAUSE + " " + tr("state.suspended"))
         for w in self.buttons + self.spacers:
             w.setParent(None)
             w.deleteLater()

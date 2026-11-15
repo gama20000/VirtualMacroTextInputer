@@ -2,6 +2,16 @@
 
 *Documentação em português: [docs/pt/README.md](docs/pt/README.md).*
 
+> Vibe-coded with Claude and reviewed by Codex.
+>
+> This app lets me quickly enter short text snippets by clicking a button on a transparent on-screen panel or pressing a keyboard hotkey. I asked Claude to build it to meet a very specific need at work. It was strongly inspired by Virtual Stream Deck. One day, I forgot to bring my physical Stream Deck, so I asked Claude to recreate the concept in software. Claude built the core functionality in a single pass, with no errors that I noticed.
+
+<p align="center">
+  <img src="docs/images/settings.png" alt="Settings window: the Active area looks like the panel, with an empty space and a counter; the editor below" width="460">
+  &nbsp;
+  <img src="docs/images/panel.png" alt="Floating panel in the Night theme, with its own title bar" width="340">
+</p>
+
 Until version 0.4 it was called **Macropad**. The Python package is still called `macropad`, so the `python -m macropad` commands are unchanged.
 
 A macro pad for Windows. It uses ordinary keyboard keys (by default 1, 2, 3 and 4 on the top row) and an optional floating panel to type predefined text into the application in the foreground. When a macro fires, the original key is suppressed: pressing **1** types `3E03305` and the 1 does not appear.

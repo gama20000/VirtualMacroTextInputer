@@ -794,3 +794,16 @@ def test_falhas_ao_gravar_opacidade_e_nao_perguntar(app, qapp, monkeypatch):
     assert app.store.settings.confirmar_eliminacao is True
     assert not w.p_no_confirm.isChecked()
     assert "Acesso negado" in w.status.text()
+
+
+def test_painel_muda_de_idioma_sem_recriar(app, qapp):
+    """Os botões Ativo/Suspenso do painel acompanham a mudança de idioma."""
+    app.set_panel_visible(True)
+    assert "Ativo" in app.panel.view.btn_on.text()
+    s = app.store.settings.clone()
+    s.idioma = "en"
+    app.store.save_settings(s)
+    app.apply_config()
+    qapp.processEvents()
+    assert "Active" in app.panel.view.btn_on.text()
+    assert "Suspended" in app.panel.view.btn_off.text()
