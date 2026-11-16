@@ -175,7 +175,9 @@ has and an on-screen panel, with no extra hardware.
 - Customisable look while keeping the grid: columns, rows, size, spacing,
   rounding, border, text size, colours, visible elements, title and key
   position (top, centre or bottom, independently and without unreadable
-  overlap), preset styles and «Restore default». Buttons have no icon.
+  overlap), preset styles and «Restore default». Buttons have no icon, except
+  a simple drawn symbol (▶❚❚, ⏮, ⏭, ■, speaker) on a button whose text is only
+  a media command.
 - Centred preview in the preferences, identical to the real panel (including
   the title bar in the theme colours) and updated on every change.
 

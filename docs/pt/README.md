@@ -136,7 +136,7 @@ Para acrescentar um idioma, copie `src/macropad/locales/pt.toml` para `<código>
 - As teclas 1 a 4 da fila superior são diferentes de `Numpad1` a `Numpad4`.
 - Manter a tecla premida não volta a disparar a macro. É preciso largar e premir outra vez.
 - Enquanto uma macro está a ser executada, novos disparos são ignorados (a tecla continua a ser suprimida).
-- Se a macro tiver sido disparada com modificadores premidos, a execução espera que sejam largados (até 1,5 s). Se continuarem premidos, a macro não é executada e aparece um aviso. Assim, um `{Enter}` nunca é enviado como `Ctrl+Enter`.
+- Antes de enviar alguma coisa (no início e antes de cada bloco de texto ou tecla, por exemplo depois de um `{Delay}`), a execução espera que Ctrl, Alt, Shift e Win sejam largadas (até 1,5 s). Se continuarem premidas, a macro para aí e aparece um aviso. Assim, um `{Enter}` nunca é enviado como `Ctrl+Enter`, mesmo que prima Ctrl a meio de uma macro.
 - Se mudar de janela durante a execução, os passos pendentes são cancelados. No modo *Colar*, a janela de destino é confirmada outra vez mesmo antes do Ctrl+V.
 - O texto que o programa envia nunca dispara macros. As teclas premidas nas janelas do próprio programa também não (exceto as teclas dos contadores, que só contam).
 
@@ -150,7 +150,7 @@ Para acrescentar um idioma, copie `src/macropad/locales/pt.toml` para `<código>
 | `{MediaPlayPause}`, `{MediaPrev}`, `{MediaNext}`, `{MediaStop}` | pressiona a tecla multimédia (Reproduzir/Pausa, faixa anterior, faixa seguinte, parar) |
 | `{VolumeUp}`, `{VolumeDown}`, `{VolumeMute}` | pressiona a tecla de volume |
 
-Uma macro cujo texto é só `{MediaPlayPause}` transforma o botão do painel num botão Reproduzir/Pausa. **Multimédia ▸ O botão envia**, no editor, insere estes comandos na posição do cursor.
+Uma macro cujo texto é só `{MediaPlayPause}` transforma o botão do painel num botão Reproduzir/Pausa, com um símbolo simples de Play/Pausa ao centro (cada comando multimédia tem o seu símbolo). Ao escolher uma ação multimédia numa macro que ainda tem o título predefinido («Nova macro»), o título passa a ser o nome curto da ação, no idioma atual (por exemplo «Play/Pausa» ou «Volume +»); um título escrito por si fica como está. **Multimédia ▸ O botão envia**, no editor, insere estes comandos na posição do cursor.
 
 Os comandos são executados pela ordem e na posição em que aparecem. Por exemplo, `ABC{Tab}DEF{Delay:500}{Enter}` escreve ABC, prime Tab, escreve DEF, espera 500 ms e prime Enter.
 

@@ -82,3 +82,14 @@ def test_comandos_de_teclas_multimedia():
         parse_action("{MediaNext:2}")
     with pytest.raises(CommandError):
         parse_action("{MediaPlay}")                 # erro de escrita
+
+
+def test_acao_multimedia_para_o_icone():
+    from macropad.core.commands import media_action
+    assert media_action("{MediaPlayPause}") == "MediaPlayPause"
+    assert media_action("{volumeup}{VolumeUp}") == "VolumeUp"     # repetida: conta
+    assert media_action("{MediaNext}{MediaPrev}") is None          # duas ações
+    assert media_action("olá{MediaNext}") is None                  # com texto
+    assert media_action("{Enter}") is None
+    assert media_action("") is None
+    assert media_action("{MediaNext:1}") is None                   # inválido

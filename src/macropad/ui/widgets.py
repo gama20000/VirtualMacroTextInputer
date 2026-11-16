@@ -6,8 +6,8 @@ from __future__ import annotations
 import sys
 from typing import Callable, Optional
 
-from PySide6.QtCore import (QElapsedTimer, QEvent, QPoint, QRect, QRectF, QSize, Qt, QTimer,
-                            Signal)
+from PySide6.QtCore import (QElapsedTimer, QEvent, QPoint, QPointF, QRect, QRectF, QSize, Qt,
+                            QTimer, Signal)
 from PySide6.QtGui import (QColor, QCursor, QFont, QFontMetrics, QKeyEvent, QPainter,
                            QPainterPath, QPen)
 from PySide6.QtWidgets import (QAbstractButton, QAbstractItemView, QLineEdit, QListWidget,
@@ -26,6 +26,7 @@ INDEX_ROLE = Qt.UserRole + 4
 DUP_ROLE = Qt.UserRole + 5
 KIND_ROLE = Qt.UserRole + 6
 COUNT_ROLE = Qt.UserRole + 7
+ICON_ROLE = Qt.UserRole + 8      # ação multimédia do botão (ícone), ou None
 
 DEFAULT_STYLE = PanelSettings()
 
@@ -79,11 +80,71 @@ def _draw_progress(p: QPainter, path: QPainterPath, r: QRectF, frac: float,
     p.drawPath(poly)
 
 
+def draw_media_icon(p: QPainter, box: QRectF, name: str, color: QColor) -> None:
+    """Símbolo simples de uma ação multimédia, desenhado com formas (não
+    depende de o tipo de letra ter os caracteres ⏯ ⏭ 🔊)."""
+    x, y, s = box.left(), box.top(), box.width()
+    p.save()
+    p.setPen(Qt.NoPen)
+    p.setBrush(color)
+
+    def tri(x0, x1):                 # triângulo de x0 (base) até x1 (ponta)
+        path = QPainterPath(QPointF(x0, y + s * 0.18))
+        path.lineTo(QPointF(x1, y + s * 0.5))
+        path.lineTo(QPointF(x0, y + s * 0.82))
+        path.closeSubpath()
+        p.drawPath(path)
+
+    def bar(x0, w):
+        p.drawRect(QRectF(x0, y + s * 0.18, w, s * 0.64))
+
+    def speaker():
+        path = QPainterPath(QPointF(x + s * 0.05, y + s * 0.36))
+        path.lineTo(QPointF(x + s * 0.22, y + s * 0.36))
+        path.lineTo(QPointF(x + s * 0.45, y + s * 0.16))
+        path.lineTo(QPointF(x + s * 0.45, y + s * 0.84))
+        path.lineTo(QPointF(x + s * 0.22, y + s * 0.64))
+        path.lineTo(QPointF(x + s * 0.05, y + s * 0.64))
+        path.closeSubpath()
+        p.drawPath(path)
+
+    if name == "MediaPlayPause":
+        tri(x + s * 0.02, x + s * 0.50)
+        bar(x + s * 0.60, s * 0.13)
+        bar(x + s * 0.83, s * 0.13)
+    elif name == "MediaNext":
+        tri(x + s * 0.05, x + s * 0.42)
+        tri(x + s * 0.40, x + s * 0.77)
+        bar(x + s * 0.80, s * 0.12)
+    elif name == "MediaPrev":
+        bar(x + s * 0.08, s * 0.12)
+        tri(x + s * 0.60, x + s * 0.23)
+        tri(x + s * 0.95, x + s * 0.58)
+    elif name == "MediaStop":
+        p.drawRect(QRectF(x + s * 0.2, y + s * 0.2, s * 0.6, s * 0.6))
+    elif name in ("VolumeUp", "VolumeDown", "VolumeMute"):
+        speaker()
+        pen = QPen(color, max(1.5, s * 0.08))
+        pen.setCapStyle(Qt.RoundCap)
+        p.setPen(pen)
+        p.setBrush(Qt.NoBrush)
+        if name == "VolumeMute":
+            p.drawLine(QPointF(x + s * 0.60, y + s * 0.35), QPointF(x + s * 0.90, y + s * 0.65))
+            p.drawLine(QPointF(x + s * 0.90, y + s * 0.35), QPointF(x + s * 0.60, y + s * 0.65))
+        else:
+            arcs = (0.18,) if name == "VolumeDown" else (0.18, 0.34)
+            for k in arcs:
+                d = s * k * 2
+                p.drawArc(QRectF(x + s * 0.45 - d / 2, y + s * 0.5 - d / 2, d, d),
+                          -50 * 16, 100 * 16)
+    p.restore()
+
+
 def paint_tile(p: QPainter, rect: QRect, title: str, key: str, style: PanelSettings,
                pal: theme.Palette, *, selected=False, error=False, dup=False, hover=False,
                pressed=False, dim=False, running=False, waiting=False,
                count: Optional[int] = None, progress: Optional[float] = None,
-               flash: bool = False) -> None:
+               flash: bool = False, icon: Optional[str] = None) -> None:
     """Desenha um botão de macro (ou de contador, se ``count`` não for None).
 
     O título e a tecla ocupam as faixas indicadas no estilo (em cima, ao centro,
@@ -92,6 +153,9 @@ def paint_tile(p: QPainter, rect: QRect, title: str, key: str, style: PanelSetti
 
     ``progress`` (0–1) desenha o progresso de uma pressão longa ao longo da
     borda, a partir do meio do lado de cima; ``flash`` assinala a reposição.
+
+    ``icon`` (nome de uma tecla multimédia, ex.: ``"MediaPlayPause"``) desenha
+    o símbolo da ação no centro, como a contagem de um contador.
     """
     p.save()
     p.setRenderHint(QPainter.Antialiasing)
@@ -150,22 +214,25 @@ def paint_tile(p: QPainter, rect: QRect, title: str, key: str, style: PanelSetti
 
     key_label = (tr("tile.press_key") if waiting else (display_binding(key) or "—"))
     key_h = fmk.height() + 2
-    # faixas: o contador ocupa sempre o centro; o título vai para cima se
-    # também tiver sido posto ao centro.
+    icon_h = max(10.0, r.height() * 0.30 * scale) if icon else 0.0
+    # faixas: a contagem ou o ícone ocupam sempre o centro; o título vai para
+    # cima se também tiver sido posto ao centro.
     pos_title = style.posicao_titulo
     pos_key = style.posicao_tecla
-    if count is not None and pos_title == "centro":
+    if (count is not None or icon) and pos_title == "centro":
         pos_title = "cima"
     show_key = style.mostrar_tecla or waiting
     bands: dict[str, list[str]] = {"cima": [], "centro": [], "baixo": []}
     if count is not None:
         bands["centro"].append("count")
+    elif icon:
+        bands["centro"].append("icon")
     bands[pos_title].append("title")
     if show_key:
         bands[pos_key].append("key")
 
     def fixed_h(el: str) -> float:
-        return key_h if el == "key" else (fmc.height() if el == "count" else 0)
+        return {"key": key_h, "count": fmc.height(), "icon": icon_h}.get(el, 0)
 
     # altura disponível para o título (o resto é fixo)
     fixed_total = sum(fixed_h(e) for b in bands.values() for e in b) + 4 * (
@@ -201,6 +268,9 @@ def paint_tile(p: QPainter, rect: QRect, title: str, key: str, style: PanelSetti
             for k, ln in enumerate(lines):
                 p.drawText(QRectF(inner.left(), y + k * fmt.lineSpacing(), inner.width(),
                                   fmt.lineSpacing()), Qt.AlignHCenter | Qt.AlignVCenter, ln)
+        elif el == "icon":
+            draw_media_icon(p, QRectF(r.center().x() - icon_h / 2, y, icon_h, icon_h),
+                            icon or "", fg)
         elif el == "count":
             p.setFont(fc)
             p.setPen(fg)
@@ -272,9 +342,11 @@ class TileButton(QAbstractButton):
     long_pressed = Signal()
 
     def __init__(self, title: str, key: str, style: PanelSettings, pal: theme.Palette,
-                 count: Optional[int] = None, long_ms: int = 800, parent=None):
+                 count: Optional[int] = None, long_ms: int = 800,
+                 icon: Optional[str] = None, parent=None):
         super().__init__(parent)
         self.title, self.key = title, key
+        self.icon = icon
         self.tile_style, self.pal = style, pal
         self.count = count
         self.running = False
@@ -356,7 +428,7 @@ class TileButton(QAbstractButton):
         paint_tile(p, self.rect(), self.title, self.key, self.tile_style, self.pal,
                    hover=self.underMouse(), pressed=self.isDown(), dim=not self.isEnabled(),
                    running=self.running, count=self.count, progress=self.progress,
-                   flash=self.flashing)
+                   flash=self.flashing, icon=self.icon)
         p.end()
 
     def enterEvent(self, e):
@@ -388,7 +460,7 @@ class _TileDelegate(QStyledItemDelegate):
                    error=bool(index.data(ERROR_ROLE)), dup=bool(index.data(DUP_ROLE)),
                    hover=hover, dim=g.archived,
                    waiting=g.capture_hover and real == g.hovered,
-                   count=index.data(COUNT_ROLE))
+                   count=index.data(COUNT_ROLE), icon=index.data(ICON_ROLE))
 
     def sizeHint(self, option, index):
         c = self.grid.cell()
@@ -491,6 +563,7 @@ class MacroGrid(QListWidget):
             it.setData(INDEX_ROLE, t["index"])
             it.setData(KIND_ROLE, t.get("kind", "texto"))
             it.setData(COUNT_ROLE, t.get("count"))
+            it.setData(ICON_ROLE, t.get("icon"))
             it.setToolTip(t["tip"])
             it.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled)
             self.addItem(it)

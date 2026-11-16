@@ -1082,3 +1082,39 @@ def test_menu_multimedia_insere_comando_no_texto(app, qapp):
     texts = [a.text() for a in menu.actions()]
     assert texts[0] == "O botão envia (insere no texto)"
     assert "A tecla do teclado ativa esta macro" in texts
+
+
+def test_titulo_predefinido_passa_a_nome_da_acao_multimedia(app, qapp):
+    """Numa macro nova, escolher uma ação multimédia troca «Nova macro» pelo
+    nome curto da ação, no idioma atual; um título próprio fica. O botão
+    passa a mostrar o ícone da ação."""
+    from macropad.ui.widgets import ICON_ROLE
+    w = app.config_window
+    w._select(-1)
+    w._last_add = 0
+    w._add_item("texto")
+    assert w.f_title.text() == "Nova macro"
+    w._insert_media("MediaNext")
+    w.flush()
+    m = app.store.sets["predefinido"].macros[w.cur]
+    assert m.titulo == "Seguinte" and m.texto == "{MediaNext}"
+    row = next(r for r in range(w.grid.count())
+               if w.grid.item(r).data(Qt.UserRole + 4) == w.cur)
+    assert w.grid.item(row).data(ICON_ROLE) == "MediaNext"
+    app.set_panel_visible(True)
+    qapp.processEvents()
+    b = next(b for b, i in zip(app.panel.view.buttons, app.panel.view.indices) if i == w.cur)
+    assert b.icon == "MediaNext"
+    b.grab()                                           # desenha sem erros
+    # título predefinido noutro idioma (criada em inglês): também é trocado
+    w.f_title.setText("New macro")
+    w.f_text.setPlainText("")
+    w._insert_media("MediaPlayPause")
+    assert w.f_title.text() == "Play/Pausa"
+    # título próprio: fica
+    w.f_title.setText("Música")
+    w.f_text.setPlainText("")
+    w._insert_media("VolumeUp")
+    w.flush()
+    m = app.store.sets["predefinido"].macros[w.cur]
+    assert m.titulo == "Música" and m.texto == "{VolumeUp}"

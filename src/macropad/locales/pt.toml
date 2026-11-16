@@ -429,3 +429,13 @@ BrowserForward = "Navegador: seguinte"
 [media]
 send_section = "O botão envia (insere no texto)"
 trigger_section = "A tecla do teclado ativa esta macro"
+
+# títulos curtos dos botões multimédia (cabem por cima do ícone)
+[mediatitle]
+MediaPlayPause = "Play/Pausa"
+MediaPrev = "Anterior"
+MediaNext = "Seguinte"
+MediaStop = "Parar"
+VolumeUp = "Volume +"
+VolumeDown = "Volume −"
+VolumeMute = "Silenciar"

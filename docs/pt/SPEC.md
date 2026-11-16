@@ -178,7 +178,9 @@ no ecrã, sem hardware adicional.
   espaçamento, arredondamento, borda, tamanho do texto, cores, elementos
   visíveis, posição do título e da tecla (em cima, ao centro ou em baixo, de
   forma independente e sem sobreposição ilegível), estilos predefinidos e
-  «Repor predefinição». Os botões não têm ícone.
+  «Repor predefinição». Os botões não têm ícone, exceto um símbolo simples
+  desenhado (▶❚❚, ⏮, ⏭, ■, altifalante) num botão cujo texto é só um comando
+  multimédia.
 - Pré-visualização centrada nas preferências, idêntica ao painel real
   (incluindo a barra de título com as cores do tema) e atualizada a cada
   alteração.

@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Union
+from typing import Optional, Union
 
 from ..i18n import tr
 from .keys import display_binding
@@ -160,6 +160,21 @@ def parse_action(text: str) -> list[Step]:
 
     flush()
     return steps
+
+
+def media_action(text: str) -> Optional[str]:
+    """A tecla multimédia que a macro envia, se o texto for só esse comando
+    (ex.: ``"{MediaPlayPause}"``; a mesma tecla repetida também conta). Serve
+    para desenhar o ícone do botão. Qualquer outro texto: ``None``."""
+    try:
+        steps = parse_action(text)
+    except CommandError:
+        return None
+    keys = {s.key for s in steps if isinstance(s, KeyStep)}
+    if steps and len(keys) == 1 and all(isinstance(s, KeyStep) for s in steps):
+        key = keys.pop()
+        return key if key in MEDIA_COMMANDS else None
+    return None
 
 
 def describe_steps(steps: list[Step]) -> str:

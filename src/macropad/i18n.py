@@ -93,3 +93,14 @@ def tr(msg_id: str, /, **kw) -> str:
 
 def keys(code: str) -> set[str]:
     return set(_load(code))
+
+
+def all_translations(msg_id: str) -> set[str]:
+    """O texto de ``msg_id`` em todos os idiomas disponíveis (ex.: para
+    reconhecer um título predefinido criado noutro idioma)."""
+    out = set()
+    for code, _ in available():
+        msg = _load(code).get(msg_id)
+        if msg is not None:
+            out.add(msg)
+    return out

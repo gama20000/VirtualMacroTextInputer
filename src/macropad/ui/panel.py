@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (QButtonGroup, QGraphicsOpacityEffect, QGridLayout
                                QLabel, QPushButton, QSizePolicy, QVBoxLayout, QWidget)
 
 from ..branding import APP_NAME
+from ..core.commands import media_action
 from ..core.model import MacroSet, PanelSettings
 from ..i18n import tr
 from . import theme
@@ -288,7 +289,8 @@ class PanelView(QWidget):
                     b.long_pressed.connect(lambda idx=i: self.counter_pressed.emit(idx, True))
                     self.counter_buttons[m.id] = b
                 else:
-                    b = TileButton(m.display_title(), m.tecla, style, pal)
+                    b = TileButton(m.display_title(), m.tecla, style, pal,
+                                   icon=media_action(m.texto))
                     b.clicked.connect(lambda _=False, idx=i: self.clicked.emit(idx))
                 self.grid.addWidget(b, r, c)
                 b.show()      # senão o tamanho é calculado sem os botões novos

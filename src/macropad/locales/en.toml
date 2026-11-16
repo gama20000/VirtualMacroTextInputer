@@ -428,3 +428,13 @@ BrowserForward = "Browser forward"
 [media]
 send_section = "The button sends (inserted in the text)"
 trigger_section = "The keyboard key triggers this macro"
+
+# short titles for media buttons (fit above the icon)
+[mediatitle]
+MediaPlayPause = "Play/Pause"
+MediaPrev = "Previous"
+MediaNext = "Next"
+MediaStop = "Stop"
+VolumeUp = "Volume +"
+VolumeDown = "Volume −"
+VolumeMute = "Mute"

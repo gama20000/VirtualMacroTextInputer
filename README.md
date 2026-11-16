@@ -136,7 +136,7 @@ To add a language, copy `src/macropad/locales/pt.toml` to `<code>.toml` (for exa
 - Keys 1 to 4 on the top row are different from `Numpad1` to `Numpad4`.
 - Holding the key does not fire the macro again. You have to release it and press it again.
 - While a macro is running, new triggers are ignored (the key is still suppressed).
-- If the macro was triggered with modifiers held, execution waits for them to be released (up to 1.5 s). If they are still held, the macro is not run and a warning appears. This way an `{Enter}` is never sent as `Ctrl+Enter`.
+- Before sending anything (at the start and before every text block or key, for example after a `{Delay}`), execution waits for Ctrl, Alt, Shift and Win to be released (up to 1.5 s). If they are still held, the macro stops there and a warning appears. This way an `{Enter}` is never sent as `Ctrl+Enter`, even if you press Ctrl in the middle of a macro.
 - If you switch windows during execution, the pending steps are cancelled. In *Paste* mode the target window is checked again right before Ctrl+V.
 - Text sent by the program never triggers macros. Keys pressed in the program's own windows do not either (except counter keys, which only count).
 
@@ -150,7 +150,7 @@ To add a language, copy `src/macropad/locales/pt.toml` to `<code>.toml` (for exa
 | `{MediaPlayPause}`, `{MediaPrev}`, `{MediaNext}`, `{MediaStop}` | presses the media key (Play/Pause, previous track, next track, stop) |
 | `{VolumeUp}`, `{VolumeDown}`, `{VolumeMute}` | presses the volume key |
 
-A macro whose text is only `{MediaPlayPause}` turns its panel button into a Play/Pause button. **Media ▸ The button sends** in the editor inserts these commands at the cursor.
+A macro whose text is only `{MediaPlayPause}` turns its panel button into a Play/Pause button, with a simple Play/Pause symbol in the centre (each media command has its own symbol). Choosing a media action on a macro that still has the default title («New macro») renames it to the action's short name, in the current language (for example «Play/Pause» or «Volume +»); a title you typed yourself is kept. **Media ▸ The button sends** in the editor inserts these commands at the cursor.
 
 Commands run in order, at the position where they appear. For example, `ABC{Tab}DEF{Delay:500}{Enter}` types ABC, presses Tab, types DEF, waits 500 ms and presses Enter.
 

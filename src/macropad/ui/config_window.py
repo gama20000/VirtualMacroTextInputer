@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (QAbstractSpinBox, QApplication, QButtonGroup, QCh
 
 from ..branding import APP_NAME
 from ..core import macro_ops as ops
-from ..core.commands import MEDIA_COMMANDS
+from ..core.commands import MEDIA_COMMANDS, media_action
 from ..core.store import export_filename
 from ..core.commands import CommandError, describe_steps, parse_action
 from ..core.configio import (ConfigError, Issue, macro_label, macros_from_clipboard,
@@ -31,7 +31,7 @@ from ..core.model import (MAX_INTERVAL_MS, MAX_REPEAT, PANEL_PRESETS, PANEL_RANG
                           RESET_SOUNDS, MacroSet, PanelSettings, Settings, apply_preset,
                           matching_preset)
 from ..i18n import available as available_languages
-from ..i18n import tr
+from ..i18n import all_translations, tr
 from . import theme
 from .dialogs import ask, get_text, info
 from .panel import PanelPreview, panel_hint
@@ -868,7 +868,8 @@ class ConfigWindow(QWidget):
             counts = self._counts() if counts is None else counts
             count = counts.get(m.id, m.reposicao)
         return {"index": i, "kind": m.tipo, "title": m.display_title(), "key": m.tecla,
-                "error": i in bad, "dup": i in dups, "tip": tip, "count": count}
+                "error": i in bad, "dup": i in dups, "tip": tip, "count": count,
+                "icon": None if m.is_counter else media_action(m.texto)}
 
     def _refresh_grid(self) -> None:
         if not self.ms:
@@ -1091,7 +1092,8 @@ class ConfigWindow(QWidget):
             # atualização leve dos tiles (sem reconstruir a grelha)
             bad = {i.macro_index for i in issues if i.macro_index is not None}
             dups = ops.duplicate_groups(self.ms.macros)
-            from .widgets import COUNT_ROLE, DUP_ROLE, ERROR_ROLE, INDEX_ROLE, KEY_ROLE, TITLE_ROLE
+            from .widgets import (COUNT_ROLE, DUP_ROLE, ERROR_ROLE, ICON_ROLE, INDEX_ROLE,
+                                  KEY_ROLE, TITLE_ROLE)
             counts = self._counts()
             for g in (self.grid, self.archive_grid):
                 for r in range(g.count()):
@@ -1099,6 +1101,7 @@ class ConfigWindow(QWidget):
                     i = it.data(INDEX_ROLE)
                     t = self._tile(i, bad, dups, counts)
                     it.setData(COUNT_ROLE, t["count"])
+                    it.setData(ICON_ROLE, t.get("icon"))
                     it.setData(TITLE_ROLE, t["title"])
                     it.setData(KEY_ROLE, t["key"])
                     it.setData(ERROR_ROLE, t["error"])
@@ -1580,6 +1583,11 @@ class ConfigWindow(QWidget):
             return
         if self.ms.macros[self.cur].is_counter or self.ms.macros[self.cur].is_space:
             return
+        # numa macro com o título predefinido («Nova macro», em qualquer
+        # idioma), o título passa a ser o nome da ação; um título próprio fica
+        m = self.ms.macros[self.cur]
+        if m.titulo.strip() in all_translations("macros.new_title") | {""}:
+            self.f_title.setText(tr(f"mediatitle.{name}"))
         self.f_text.insertPlainText("{" + name + "}")
         self.f_text.setFocus()
 
