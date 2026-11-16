@@ -633,3 +633,54 @@ def test_botao_do_painel_envia_tecla_multimedia(fake):
     while e.running is not None and time.monotonic() < end:
         time.sleep(0.01)
     assert fake.log == [("key", "MediaPlayPause")]
+
+
+def test_ctrl_premida_durante_um_delay_nao_combina_com_o_enter(fake, monkeypatch):
+    """Revisão Codex: Ctrl premida durante {Delay} já não faz o {Enter}
+    seguinte sair como Ctrl+Enter. Se for largada a tempo, a macro continua;
+    se continuar premida, a macro é cancelada sem enviar."""
+    import threading
+    import time
+    from macropad.core.engine import CANCEL_MODIFIERS, Execution
+    from macropad.core.model import Macro
+    monkeypatch.setattr(Execution, "MOD_WAIT", 0.4)
+    sent_mods = []
+    fake.on_send = lambda ev: sent_mods.append((ev, fake.mods))
+    e = Engine(fake)
+    e.set_config(make_config([Macro("A", "1", "a{Delay:150}{Enter}b")]))
+    # 1) Ctrl premida durante o delay e largada 0,2 s depois: espera e continua
+    assert e.trigger(0)[0]
+    time.sleep(0.05)
+    fake.mods = frozenset({"Ctrl"})
+    threading.Timer(0.3, lambda: setattr(fake, "mods", frozenset())).start()
+    wait_idle(e)
+    assert fake.typed() == "a{Enter}b"
+    assert all(m == frozenset() for _, m in sent_mods)       # nada saiu com Ctrl
+    # 2) Ctrl premida até ao fim: cancela antes do Enter
+    fake.log.clear()
+    sent_mods.clear()
+    got = _events(e)
+    assert e.trigger(0)[0]
+    time.sleep(0.05)
+    fake.mods = frozenset({"Ctrl"})
+    wait_idle(e)
+    fake.mods = frozenset()
+    assert fake.typed() == "a"
+    fin = [p for ev, p in got if ev == "finished"]
+    assert fin and fin[0]["cancelled"] == CANCEL_MODIFIERS
+
+
+def test_colar_espera_pelos_modificadores_antes_do_ctrl_v(fake, monkeypatch):
+    from macropad.core.engine import CANCEL_MODIFIERS, Execution
+    from macropad.core.model import Macro, Settings
+    monkeypatch.setattr(Execution, "MOD_WAIT", 0.1)
+    # Alt premida enquanto se prepara a área de transferência
+    fake.before_paste = lambda: setattr(fake, "mods", frozenset({"Alt"}))
+    e = Engine(fake)
+    e.set_config(make_config([Macro("A", "1", "olá")], settings=Settings(modo_texto="colar")))
+    got = _events(e)
+    assert e.trigger(0)[0]
+    wait_idle(e)
+    assert fake.log == []
+    fin = [p for ev, p in got if ev == "finished"]
+    assert fin and fin[0]["cancelled"] == CANCEL_MODIFIERS

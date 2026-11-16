@@ -143,3 +143,15 @@ O Codex confirmou as correções da quinta revisão e reportou um ponto.
 | P2 — `PlatformAPI` sem o parâmetro `still_ok` | o `Protocol` declara `still_ok: Optional[Callable[[], bool]] = None`, com a descrição do contrato | `test_backends_seguem_o_contrato_da_plataforma` (compara a assinatura do `Protocol` com a de cada backend: simulado, de testes e, no Windows, o real) |
 
 Validação: `pytest` com 168 testes a passar e 1 ignorado (só Windows).
+
+---
+
+# Sétima revisão do Codex (16-11-2026)
+
+O Codex reviu o commit `bf7e06c` (teclas multimédia enviadas pelos botões) e reportou um ponto.
+
+| Ponto | Correção | Teste |
+|---|---|---|
+| P2 — Os modificadores só eram verificados antes de a macro começar: Ctrl premida durante um `{Delay}` fazia o `{Enter}` seguinte sair como Ctrl+Enter | a execução espera que Ctrl/Alt/Shift/Win sejam largadas antes de cada envio (cada bloco de texto, cada tecla e o Ctrl+V no modo colar, depois de preparar a área de transferência); se continuarem premidas mais de 1,5 s, a macro é cancelada sem enviar | `test_ctrl_premida_durante_um_delay_nao_combina_com_o_enter`, `test_colar_espera_pelos_modificadores_antes_do_ctrl_v` |
+
+Validação: `pytest` com 196 testes a passar e 1 ignorado (só Windows).

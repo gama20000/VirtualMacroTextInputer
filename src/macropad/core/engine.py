@@ -134,7 +134,10 @@ class Execution:
 
     def _wait_modifiers(self) -> bool:
         """Espera que os modificadores sejam largados (até MOD_WAIT). Se
-        continuarem premidos, cancela: um {Enter} sairia como Ctrl+Enter."""
+        continuarem premidos, cancela: um {Enter} sairia como Ctrl+Enter.
+
+        Chamado antes de cada envio, e não só no início: Ctrl premida durante
+        um {Delay} faria o envio seguinte sair como atalho."""
         end = time.monotonic() + self.MOD_WAIT
         while self.platform.modifiers_down():
             if time.monotonic() >= end:
@@ -143,6 +146,10 @@ class Execution:
             if self._cancel.wait(0.015):
                 return False
         return not self._cancel.is_set()
+
+    def _ready_to_send(self) -> bool:
+        """Janela ainda certa e nenhum modificador premido (espera um pouco)."""
+        return self._check() and self._wait_modifiers()
 
     def _run(self) -> None:
         try:
@@ -154,18 +161,21 @@ class Execution:
                 for step in self.plan.steps:
                     if not self._check():
                         return
+                    if not isinstance(step, DelayStep) and not self._wait_modifiers():
+                        return
                     if isinstance(step, TextStep):
                         if self.plan.text_mode == "colar":
                             # Preparar a área de transferência pode demorar
                             # (outra aplicação pode tê-la aberta): a janela é
                             # confirmada outra vez mesmo antes do Ctrl+V.
-                            self.platform.send_text(step.text, "colar", still_ok=self._check)
+                            self.platform.send_text(step.text, "colar",
+                                                    still_ok=self._ready_to_send)
                             if not self._check():
                                 return
                         else:
                             t = step.text
                             for i in range(0, len(t), self.CHUNK):
-                                if i and not self._check():
+                                if i and not (self._check() and self._wait_modifiers()):
                                     return
                                 self.platform.send_text(t[i:i + self.CHUNK], "escrever")
                     elif isinstance(step, KeyStep):
