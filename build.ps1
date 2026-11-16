@@ -40,7 +40,7 @@ if ($OneFile) {
     return
 }
 
-Copy-Item README.md dist\VirtualMacroTextInputer\ -Force
+Copy-Item README.md, ARCHITECTURE.md, EXAMPLES.md dist\VirtualMacroTextInputer\ -Force
 Copy-Item docs\pt\README.md dist\VirtualMacroTextInputer\LEIA-ME.md -Force
 Copy-Item examples\conjunto-exemplo.toml dist\VirtualMacroTextInputer\ -Force
 Write-Host ""

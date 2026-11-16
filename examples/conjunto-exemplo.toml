@@ -1,82 +1,106 @@
 # ==========================================================================
-#  Macropad — exemplo comentado de um conjunto de macros
+#  Virtual Macro Text Inputer — commented example of a macro set
 # ==========================================================================
 #
-# Onde fica: %APPDATA%\Macropad\conjuntos\<nome>.toml
-#   (um ficheiro por conjunto; o nome do ficheiro identifica o conjunto)
-# Para usar este exemplo: Configuração ▸ ⋯ ▸ Importar conjunto…,
-#   ou copie o ficheiro para a pasta "conjuntos".
+# Where it lives: %APPDATA%\VirtualMacroTextInputer\conjuntos\<name>.toml
+#   (one file per set; the file name identifies the set)
+# To use this example: Settings ▸ ⋯ ▸ Import set…,
+#   or copy the file into the "conjuntos" folder.
 #
-# O Macropad recarrega o ficheiro automaticamente sempre que é guardado.
-# Se tiver um erro, a última versão válida continua ativa e é mostrada uma
-# mensagem com o ficheiro, a linha e a coluna do problema.
+# The program reloads the file automatically every time it is saved.
+# If it has an error, the last valid version stays active and a message
+# shows the file, line and column of the problem.
+#
+# Field names are in Portuguese (titulo = title, tecla = key, texto = text,
+# repeticoes = repetitions, intervalo_ms = interval); see ARCHITECTURE.md.
 
-# Versão do formato. Obrigatória; permite evoluções futuras.
+# Format version. Required; allows future changes.
 versao_esquema = 1
 
-# Nome mostrado na interface e no menu do ícone junto ao relógio.
-nome = "Exemplo — Codificação"
+# Name shown in the interface and in the menu of the icon next to the clock.
+nome = "Example — Coding"
 
 # --------------------------------------------------------------------------
-# Âmbito: onde as teclas deste conjunto funcionam (vale para o conjunto todo)
+# Scope: where the keys of this set work (applies to the whole set)
 # --------------------------------------------------------------------------
 [ambito]
-# "global"     -> em todas as aplicações
-# "aplicacoes" -> apenas nas aplicações da lista abaixo; nas restantes as
-#                 teclas funcionam normalmente (e o painel não envia nada).
+# "global"     -> in every application
+# "aplicacoes" -> only in the applications listed below; in the others the
+#                 keys work normally (and the panel does not send anything).
 modo = "global"
-# Nome do executável (sem distinção de maiúsculas). Também aceita o caminho
-# completo, ex.: "C:\\Program Files\\App\\app.exe" (barras invertidas duplicadas).
+# Executable name (case-insensitive). The full path is also accepted, e.g.
+# "C:\\Program Files\\App\\app.exe" (with doubled backslashes).
 aplicacoes = ["notepad.exe", "WINWORD.EXE"]
 
 # --------------------------------------------------------------------------
-# Macros. A ordem das secções [[macros]] é a ordem dos botões na grelha;
-# mudar a ordem não altera a tecla de cada macro.
+# Macros. The order of the [[macros]] sections is the order of the buttons
+# in the grid; changing the order does not change each macro's key.
 # --------------------------------------------------------------------------
 
 [[macros]]
-titulo = "3E03305"          # texto mostrado no botão (máx. 40 caracteres)
-tecla = "1"                  # tecla 1 da fila superior (Numpad1 é outra tecla)
-texto = "3E03305"            # o que é escrito
-repeticoes = 1               # quantas vezes executar por cada pressão (1–1000)
-intervalo_ms = 0             # pausa entre repetições, em milissegundos
-# arquivada = true           # (opcional) envia a macro para o Arquivo: fica fora
-#                            # das teclas e do painel até ser restaurada
+titulo = "3E03305"          # text shown on the button (max. 40 characters)
+tecla = "1"                  # key 1 on the top row (Numpad1 is a different key)
+texto = "3E03305"            # what is typed
+repeticoes = 1               # how many times to run per key press (1–1000)
+intervalo_ms = 0             # pause between repetitions, in milliseconds
+# arquivada = true           # (optional) moves the macro to the Archive: no
+#                            # key and not on the panel until it is restored
 
 [[macros]]
 titulo = "Z51.11 ⏎"
 tecla = "2"
-# Comandos intercalados no texto:
-#   {Enter}  pressiona Enter
-#   {Tab}    pressiona Tab
-#   {Delay:500}  espera 500 ms (0 a 600000)
+# Commands inside the text:
+#   {Enter}  presses Enter
+#   {Tab}    presses Tab
+#   {Delay:500}  waits 500 ms (0 to 600000)
 texto = "Z51.11{Enter}"
 
 [[macros]]
-titulo = "Formulário"
+titulo = "Form"
 tecla = "3"
-# Escreve ABC, Tab, DEF, espera meio segundo e pressiona Enter.
+# Types ABC, Tab, DEF, waits half a second and presses Enter.
 texto = "ABC{Tab}DEF{Delay:500}{Enter}"
 
 [[macros]]
-titulo = "Acentos"
+titulo = "Accents"
 tecla = "4"
-texto = "Ação, coração, pão — €"   # Unicode é suportado
+texto = "Ação, coração, pão — €"   # Unicode is supported
 
 [[macros]]
-titulo = "3× linha"
-tecla = "Ctrl+F1"            # com modificadores: dispara só com exatamente Ctrl+F1
-texto = "linha{Enter}"
+titulo = "3× line"
+tecla = "Ctrl+F1"            # with modifiers: fires only with exactly Ctrl+F1
+texto = "line{Enter}"
 repeticoes = 3
 intervalo_ms = 250
 
 [[macros]]
-titulo = "Só painel"
-tecla = ""                   # sem tecla: só pode ser executada no painel
+titulo = "Panel only"
+tecla = ""                   # no key: can only be run from the panel
 texto = "aratumuma"
 
 [[macros]]
-titulo = "Versão antiga"
-tecla = "1"                  # uma macro arquivada pode partilhar a tecla de uma ativa
+tipo = "espaco"              # empty cell: keeps a place in the grid
+
+[[macros]]
+titulo = "Play/Pause"
+tecla = ""
+# Media commands: {MediaPlayPause}, {MediaPrev}, {MediaNext}, {MediaStop},
+# {VolumeUp}, {VolumeDown}, {VolumeMute}. A button whose text is only a media
+# command shows its symbol (here ▶❚❚).
+texto = "{MediaPlayPause}"
+
+[[macros]]
+tipo = "contador"            # a button that counts; it types nothing
+id = "parts"                 # identifies the count in estado.toml
+titulo = "Parts"
+tecla = "F9"
+incremento = 1               # added on each short press
+reposicao = 0                # value after a long press
+pressao_longa_ms = 800       # how long to hold to reset
+som_reposicao = "aviso"      # optional sound on reset: "padrao", "aviso", "erro", "pergunta"
+
+[[macros]]
+titulo = "Old version"
+tecla = "1"                  # an archived macro can share the key of an active one
 texto = "3E0330"
 arquivada = true

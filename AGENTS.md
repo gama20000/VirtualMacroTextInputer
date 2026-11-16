@@ -20,7 +20,8 @@ application in the foreground, and the original key is suppressed.
   `conjuntos\*.toml`, `estado.toml`). TOML field names are in Portuguese and
   are part of the format: do not translate or rename them without raising
   `versao_esquema` and keeping compatibility.
-- User documentation: `README.md`. Manual check on Windows:
+- User documentation: `README.md` (short overview), `ARCHITECTURE.md` (full
+  guide and reference) and `EXAMPLES.md`. Manual check on Windows:
   `docs/MANUAL-CHECKLIST.md` (results recorded in
   `docs/pt/VERIFICACAO-MANUAL.md`).
 
@@ -35,8 +36,11 @@ do not mark tasks as done without the required validation.
 ## Documentation
 
 - English at the root and in `docs/` is the reference; `docs/pt/` holds the
-  Portuguese versions (`README.md`, `SPEC.md`, `ROADMAP.md`, `TASKS.md`,
-  `ANSWERS.md`, `VERIFICACAO-MANUAL.md`, `revisao-codex.md`).
+  Portuguese versions (`README.md`, `ARQUITETURA.md`, `EXEMPLOS.md`,
+  `SPEC.md`, `ROADMAP.md`, `TASKS.md`, `ANSWERS.md`,
+  `VERIFICACAO-MANUAL.md`, `revisao-codex.md`).
+- Comments in user-facing files (examples, generated TOML files) are in
+  English.
 - When a document changes, update both languages in the same commit.
 - Links inside `docs/pt/` are relative to that folder.
 - Do not put personal data in the repository (it is public on GitHub): no
@@ -97,7 +101,8 @@ On Linux/macOS the tests also run: Qt uses `QT_QPA_PLATFORM=offscreen` and the
 platform is simulated (`DummyPlatform`).
 
 Before calling a task done: the tests pass, and behaviour changes are
-reflected in `README.md` (both languages) and, where relevant, in the manual
+reflected in `ARCHITECTURE.md` (and `README.md` / `EXAMPLES.md` when
+relevant), in both languages, and, where relevant, in the manual
 checklist.
 
 ## Review guidelines
@@ -139,5 +144,5 @@ Highest-risk areas, by priority:
    go through `tr()`.
 
 Do not report as bugs: code style, Portuguese names, limitations already
-documented in the README (applications run as administrator, UIPI, title bar
+documented in `ARCHITECTURE.md` (applications run as administrator, UIPI, title bar
 colour on Windows 10).

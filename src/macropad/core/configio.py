@@ -490,21 +490,24 @@ def _val(v) -> str:
 
 
 SETTINGS_HEADER = """\
-# Macropad — preferências gerais
-# Este ficheiro é recarregado automaticamente quando é guardado.
-# Se tiver erros, o Macropad mantém a última configuração válida e mostra o erro.
-# Nota: ao gravar a partir da interface, este ficheiro é reescrito neste formato
-# (comentários acrescentados à mão não são preservados).
+# Virtual Macro Text Inputer — general preferences
+# This file is reloaded automatically when it is saved.
+# If it has errors, the program keeps the last valid configuration and shows the error.
+# Note: saving from the interface rewrites this file in this format
+# (comments added by hand are not kept).
+# Field names are in Portuguese; see ARCHITECTURE.md for the reference.
 """
 
 _PANEL_COMMENTS = {
-    "opacidade": "# 0.2 (quase transparente) a 1.0 (opaco)",
-    "tamanho_botao": "# Aparência (a predefinição corresponde ao aspeto original)\n"
+    "opacidade": "# 0.2 (almost transparent) to 1.0 (opaque)",
+    "linhas": "# 0 = all rows; otherwise pages with arrows when the buttons do not fit",
+    "tamanho_botao": "# Look (the defaults match the original look)\n"
                      "# tamanho_botao: 40–160 px; espacamento: 0–30 px",
-    "arredondamento": "# arredondamento: 0 (quadrado) a 50 (redondo), em % do lado; borda: 0–8 px",
+    "arredondamento": "# arredondamento: 0 (square) to 50 (round), % of the side; borda: 0–8 px",
     "escala_texto": "# escala_texto: 60–180 %",
-    "cor_fundo": "# Cores #RRGGBB. cor_fundo = \"\" segue o tema (Diurno/Noturno).",
-    "posicao_titulo": "# Posição do título e da tecla no botão: \"cima\", \"centro\" ou \"baixo\".",
+    "cor_fundo": "# Colours #RRGGBB. cor_fundo = \"\" follows the theme (day/night).",
+    "posicao_titulo": "# Title and key position on the button: \"cima\" (top), \"centro\" "
+                      "or \"baixo\" (bottom).",
 }
 
 
@@ -514,25 +517,25 @@ def dump_settings(s: Settings) -> str:
         f"versao_esquema = {SCHEMA_VERSION}",
         "",
         "[geral]",
-        "# Arrancar automaticamente com o Windows.",
+        "# Start automatically with Windows.",
         f"arrancar_com_windows = {_bool(s.arrancar_com_windows)}",
-        "# \"escrever\" = simula a escrita (Unicode); \"colar\" = área de transferência + Ctrl+V.",
+        "# \"escrever\" = simulated typing (Unicode); \"colar\" = clipboard + Ctrl+V.",
         f"modo_texto = {toml_str(s.modo_texto)}",
-        "# \"exatos\" = a tecla só dispara com exatamente os modificadores indicados",
-        "#   (\"1\" não dispara com Ctrl+1, que mantém o comportamento normal).",
-        "# \"ignorar\" = teclas sem modificadores disparam também com Ctrl/Alt/Shift/Win premidos.",
+        "# \"exatos\" = a key only fires with exactly the modifiers given",
+        "#   (\"1\" does not fire with Ctrl+1, which keeps its normal behaviour).",
+        "# \"ignorar\" = keys without modifiers also fire with Ctrl/Alt/Shift/Win held.",
         f"modificadores = {toml_str(s.modificadores)}",
-        "# Alterna entre macros ativas e suspensas (funciona mesmo durante um {Delay}).",
+        "# Toggles between active and suspended macros (works even during a {Delay}).",
         f"tecla_suspensao = {toml_str(s.tecla_suspensao)}",
-        "# Mostra/oculta o painel (\"\" = sem tecla).",
+        "# Shows/hides the panel (\"\" = no key).",
         f"tecla_painel = {toml_str(s.tecla_painel)}",
-        "# Tema: \"diurno\", \"noturno\" ou \"automatico\" (segue o Windows).",
+        "# Theme: \"automatico\" (follows Windows), \"diurno\" (day) or \"noturno\" (night).",
         f"tema = {toml_str(s.tema)}",
-        "# Idioma da interface (código de um ficheiro em locales/, ex.: \"pt\", \"en\").",
+        "# Interface language (code of a file in locales/, e.g. \"pt\", \"en\").",
         f"idioma = {toml_str(s.idioma)}",
-        "# Pedir confirmação antes de eliminar macros.",
+        "# Ask for confirmation before deleting macros.",
         f"confirmar_eliminacao = {_bool(s.confirmar_eliminacao)}",
-        "# Avisar quando se tenta atribuir uma tecla que já está em uso.",
+        "# Warn when assigning a key that is already in use.",
         f"avisar_conflito_tecla = {_bool(s.avisar_conflito_tecla)}",
         "",
         "[painel]",
@@ -545,23 +548,27 @@ def dump_settings(s: Settings) -> str:
 
 
 SET_HEADER = """\
-# Macropad — conjunto de macros
+# Virtual Macro Text Inputer — macro set
 #
-# Texto das macros: texto literal com comandos intercalados:
-#   {Enter}       pressiona Enter
-#   {Tab}         pressiona Tab
-#   {Delay:500}   espera 500 ms (0 a 600000)
-# Exemplo: "ABC{Tab}DEF{Delay:500}{Enter}"
+# Macro text: literal text with commands in between:
+#   {Enter}           presses Enter
+#   {Tab}             presses Tab
+#   {Delay:500}       waits 500 ms (0 to 600000)
+#   {MediaPlayPause}  media keys: also {MediaPrev}, {MediaNext}, {MediaStop},
+#                     {VolumeUp}, {VolumeDown}, {VolumeMute}
+# Example: "ABC{Tab}DEF{Delay:500}{Enter}"
 #
-# tecla: "1", "F13", "Numpad5", "Ctrl+Alt+F1"... ou "" (só disponível no painel).
-# As teclas 1–4 da fila superior são distintas de Numpad1–Numpad4.
-# A ordem das secções [[macros]] é a ordem dos botões; não depende da tecla.
-# arquivada = true: a macro fica no arquivo (fora das teclas e do painel).
-# tipo = "espaco": célula vazia na grelha. tipo = "contador": botão que conta
-#   (id, incremento, reposicao, pressao_longa_ms; som_reposicao opcional:
-#   "padrao", "aviso", "erro" ou "pergunta"); a contagem fica em estado.toml.
+# tecla: "1", "F13", "Numpad5", "Ctrl+Alt+F1"... or "" (panel only).
+# Keys 1–4 on the top row are different from Numpad1–Numpad4.
+# The order of the [[macros]] sections is the order of the buttons; it does
+#   not depend on the key.
+# arquivada = true: the macro is archived (no key, not on the panel).
+# tipo = "espaco": empty grid cell. tipo = "contador": a button that counts
+#   (id, incremento, reposicao, pressao_longa_ms; optional som_reposicao:
+#   "padrao", "aviso", "erro" or "pergunta"); the count is kept in estado.toml.
 #
-# Este ficheiro é recarregado automaticamente quando é guardado.
+# Field names are in Portuguese; see ARCHITECTURE.md for the reference.
+# This file is reloaded automatically when it is saved.
 """
 
 
@@ -594,7 +601,7 @@ def dump_set(ms: MacroSet) -> str:
     lines = [SET_HEADER, f"versao_esquema = {SCHEMA_VERSION}",
              f"nome = {toml_str(ms.nome)}", "",
              "[ambito]",
-             "# \"global\" = em todas as aplicações; \"aplicacoes\" = só nas indicadas abaixo.",
+             "# \"global\" = in every application; \"aplicacoes\" = only in the ones listed below.",
              f"modo = {toml_str(ms.ambito.modo)}",
              "aplicacoes = [" + ", ".join(toml_str(a) for a in ms.ambito.aplicacoes) + "]"]
     for m in ms.macros:
