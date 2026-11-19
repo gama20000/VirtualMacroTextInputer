@@ -195,3 +195,12 @@ Before starting: in the test configuration, the previous suspend hotkey
 | 97 | Suspend (Shift+Esc) and press ⏭; then, active but with a window outside the scope, press ⏭ | the music player skips track in both cases | ☐ |
 | 98 | Assign «Next track» to a second macro | «already assigned» warning; nothing changes | ☐ |
 | 99 | Delete two macros (one active, one archived), Ctrl+Z, Ctrl+Y, Ctrl+Z; then in the Title field type text and press Ctrl+Z | they come back in the same places with the same keys; Ctrl+Y deletes them again; in the field Ctrl+Z only undoes the text | ☐ |
+
+## Preview zoom and swapping
+
+| # | Action | Expected | OK |
+|---|---|---|---|
+| 100 | *Macros*: −, +, click the percentage; Ctrl+mouse wheel over the grid | the Active and Archive previews shrink and grow (30–200 %); the percentage goes back to 100 %; the real panel keeps its size | ☐ |
+| 101 | With many macros, drag the divider above the editor up, then click **Fit** and resize the window | the whole Active grid fits in the visible area and keeps fitting while resizing; −/+ turn Fit off | ☐ |
+| 102 | At 50 % and at 150 %: drag a macro to the centre of another, near its edge, and onto an empty space | centre: dashed frame and the two swap; edge: blue line and it is inserted; empty space: they swap | ☐ |
+| 103 | Drag an active macro to the centre of an archived one with the same key as another active macro | confirmation as in «Restore»; Cancel changes nothing; Replace swaps them and sends the conflicting one to the Archive | ☐ |

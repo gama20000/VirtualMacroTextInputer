@@ -1118,3 +1118,92 @@ def test_titulo_predefinido_passa_a_nome_da_acao_multimedia(app, qapp):
     w.flush()
     m = app.store.sets["predefinido"].macros[w.cur]
     assert m.titulo == "Música" and m.texto == "{VolumeUp}"
+
+
+def _grid_rect(grid, real):
+    for r in range(grid.count()):
+        if grid.item(r).data(Qt.UserRole + 4) == real:
+            return grid.visualItemRect(grid.item(r))
+    raise AssertionError(real)
+
+
+def _seed(app, macros):
+    w = app.config_window
+    w.ms.macros = macros
+    w._changed()
+    w.flush()
+    app.qapp_process() if hasattr(app, "qapp_process") else None
+    return w
+
+
+def test_largar_no_centro_troca_e_na_margem_insere(app, qapp):
+    from PySide6.QtCore import QPoint
+    from macropad.core.model import Macro
+    w = _seed(app, [Macro("A", "1", "a"), Macro("B", "2", "b"), Macro("C", "3", "c"),
+                    Macro(tipo="espaco"), Macro("X", "", "x", arquivada=True)])
+    qapp.processEvents()
+    g = w.grid
+    rb = _grid_rect(g, 1)
+    # centro de B, a arrastar A: troca
+    assert g._target(rb.center(), [0])[2] == 1
+    # junto à margem direita de B: insere depois
+    edge = QPoint(rb.right() - 2, rb.center().y())
+    anchor, after, swap, _ = g._target(edge, [0])
+    assert (anchor, after, swap) == (1, True, -1)
+    # várias arrastadas: no centro também insere (não troca)
+    assert g._target(rb.center(), [0, 2])[2] == -1
+    # espaço vazio: troca, como antes
+    assert g._target(_grid_rect(g, 3).center(), [0, 2])[2] == 3
+    # aplicar: A largada no centro de C → trocam
+    w._on_drop(False, g, [0], 2, False, 2)
+    assert [m.titulo for m in app.store.sets["predefinido"].macros][:3] == ["C", "B", "A"]
+
+
+def test_trocar_entre_ativo_e_arquivo_com_conflito_de_tecla(app, qapp):
+    from macropad.core.model import Macro
+    w = _seed(app, [Macro("A", "1", "a"), Macro("B", "2", "b"),
+                    Macro("X", "2", "x", arquivada=True)])
+    # A (ativa) para o centro de X (arquivada): X fica ativa com a tecla 2 de B
+    app.answers.append((False, False))                  # Cancelar: nada muda
+    w._on_drop(True, w.grid, [0], 2, False, 2)
+    assert [(m.titulo, m.arquivada) for m in w.ms.macros] == [
+        ("A", False), ("B", False), ("X", True)]
+    app.answers.append((True, False))                   # Substituir: B vai para o Arquivo
+    w._on_drop(True, w.grid, [0], 2, False, 2)
+    got = [(m.titulo, m.arquivada) for m in app.store.sets["predefinido"].macros]
+    assert got == [("X", False), ("A", True), ("B", True)]
+    # dentro do Arquivo: A ↔ B
+    w._on_drop(True, w.archive_grid, [1], 2, False, 2)
+    assert [m.titulo for m in w.ms.macros if m.arquivada] == ["B", "A"]
+
+
+def test_zoom_da_previsualizacao_nao_muda_o_painel(app, qapp):
+    from macropad.core.model import Macro
+    w = _seed(app, [Macro(f"M{k}", "", "t") for k in range(10)])
+    app.set_panel_visible(True)
+    qapp.processEvents()
+    panel_size = app.panel.size()
+    cell0 = w.grid.cell()
+    w._zoom_step(1)
+    assert w._zoom == 1.1 and w.grid.cell() > cell0 and w.archive_grid.zoom == 1.1
+    assert w.zoom_label.text() == "110 %"
+    for _ in range(20):
+        w._zoom_step(-1)
+    assert w._zoom == w.ZOOM_MIN and not w.zoom_out_btn.isEnabled()
+    assert w.grid.cell() < cell0
+    # o arrastar continua a funcionar com o zoom: o centro de um botão troca
+    qapp.processEvents()
+    assert w.grid._target(_grid_rect(w.grid, 3).center(), [0])[2] == 3
+    w._zoom_reset()
+    assert w._zoom == 1.0 and w.grid.cell() == cell0
+    # ajustar à área disponível
+    w.resize(700, 600)
+    w.show()
+    qapp.processEvents()
+    w.zoom_fit_btn.setChecked(True)
+    qapp.processEvents()
+    assert w.ZOOM_MIN <= w._zoom <= w.ZOOM_MAX and w.zoom_fit_btn.isChecked()
+    w._zoom_step(1)                                     # mexer no zoom desliga o ajuste
+    assert not w.zoom_fit_btn.isChecked()
+    assert app.panel.size() == panel_size               # o painel real não mudou
+    assert app.store.settings.painel.tamanho_botao == 78

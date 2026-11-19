@@ -10,13 +10,14 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
-from PySide6.QtCore import QEvent, QMimeData, QObject, QTimer, Qt, QUrl
+from PySide6.QtCore import QEvent, QMimeData, QObject, QPoint, QTimer, Qt, QUrl
 from PySide6.QtGui import QColor, QCursor, QDesktopServices, QKeySequence
 from PySide6.QtWidgets import (QAbstractSpinBox, QApplication, QButtonGroup, QCheckBox,
                                QColorDialog, QComboBox, QFileDialog, QFormLayout, QFrame,
                                QGridLayout, QHBoxLayout, QLabel, QLineEdit, QListWidget, QMenu,
                                QPlainTextEdit, QPushButton, QRadioButton, QScrollArea, QSlider,
-                               QSpinBox, QStackedWidget, QTabWidget, QTextEdit, QToolButton,
+                               QSpinBox, QSplitter, QStackedWidget, QTabWidget, QTextEdit,
+                               QToolButton,
                                QVBoxLayout, QWidget)
 
 from ..branding import APP_NAME
@@ -239,6 +240,23 @@ class ConfigWindow(QWidget):
         line = QFrame(objectName="divider")
         line.setFrameShape(QFrame.HLine)
         hrow.addWidget(line, 1)
+        # zoom da pré-visualização (só aqui; o painel real não muda)
+        self._zoom = 1.0
+        self.zoom_out_btn = QToolButton(text="−")
+        self.zoom_out_btn.setToolTip(tr("macros.zoom_out"))
+        self.zoom_out_btn.clicked.connect(lambda: self._zoom_step(-1))
+        self.zoom_label = QToolButton(text="100 %")
+        self.zoom_label.setToolTip(tr("macros.zoom_reset"))
+        self.zoom_label.clicked.connect(self._zoom_reset)
+        self.zoom_in_btn = QToolButton(text="+")
+        self.zoom_in_btn.setToolTip(tr("macros.zoom_in"))
+        self.zoom_in_btn.clicked.connect(lambda: self._zoom_step(1))
+        self.zoom_fit_btn = QToolButton(text=tr("macros.zoom_fit"), checkable=True)
+        self.zoom_fit_btn.setToolTip(tr("macros.zoom_fit_tip"))
+        self.zoom_fit_btn.toggled.connect(self._zoom_fit_toggled)
+        for b in (self.zoom_out_btn, self.zoom_label, self.zoom_in_btn, self.zoom_fit_btn):
+            b.setFocusPolicy(Qt.NoFocus)
+            hrow.addWidget(b)
         al.addLayout(hrow)
         self.active_box = QFrame(objectName="activebox")
         bl = QHBoxLayout(self.active_box)
@@ -247,6 +265,7 @@ class ConfigWindow(QWidget):
         self.grid.itemSelectionChanged.connect(lambda: self._on_selection(self.grid))
         self.grid.dropped.connect(lambda *a: self._on_drop(False, *a))
         self.grid.hover_changed.connect(lambda r: self._on_hover(self.grid, r))
+        self.grid.zoom_requested.connect(self._zoom_step)
         bl.addWidget(self.grid)
         self.empty_label = QLabel(tr("macros.empty"), objectName="hint")
         self.empty_label.setAlignment(Qt.AlignCenter)
@@ -294,9 +313,11 @@ class ConfigWindow(QWidget):
         arow.addWidget(self.archive_search)
         zl.addLayout(arow)
         self.archive_grid = MacroGrid(self.pal, archived=True)
-        self.archive_grid.itemSelectionChanged.connect(lambda: self._on_selection(self.archive_grid))
+        self.archive_grid.itemSelectionChanged.connect(
+            lambda: self._on_selection(self.archive_grid))
         self.archive_grid.dropped.connect(lambda *a: self._on_drop(True, *a))
         self.archive_grid.hover_changed.connect(lambda r: self._on_hover(self.archive_grid, r))
+        self.archive_grid.zoom_requested.connect(self._zoom_step)
         zl.addWidget(self.archive_grid)
         self.archive_empty = QLabel(objectName="hint")
         self.archive_empty.setMinimumHeight(48)
@@ -306,7 +327,15 @@ class ConfigWindow(QWidget):
         gl.addWidget(self.archive_zone)
         gl.addStretch(1)
         scroll.setWidget(well)
-        v.addWidget(scroll, 5)
+        self.macros_scroll = scroll
+        scroll.viewport().installEventFilter(self)     # ajustar o zoom ao redimensionar
+        # divisor arrastável entre as grelhas e o editor (mais espaço para ver
+        # a grelha completa)
+        self.macros_split = QSplitter(Qt.Vertical)
+        self.macros_split.setChildrenCollapsible(False)
+        self.macros_split.setHandleWidth(7)
+        self.macros_split.addWidget(scroll)
+        v.addWidget(self.macros_split, 1)
 
         ed = QWidget(objectName="editor")
         el = QVBoxLayout(ed)
@@ -482,7 +511,9 @@ class ConfigWindow(QWidget):
         self.f_error.setWordWrap(True)
         el.addWidget(self.f_error)
         el.addStretch(1)
-        v.addWidget(ed, 4)
+        self.macros_split.addWidget(ed)
+        self.macros_split.setStretchFactor(0, 5)
+        self.macros_split.setStretchFactor(1, 4)
         self.editor = ed
         return w
 
@@ -892,8 +923,8 @@ class ConfigWindow(QWidget):
         sel = set(self.selected)
         counts = self._counts()
         style = self.settings.painel
-        self.grid.apply_style(style, columns=style.colunas)
-        self.archive_grid.apply_style(style)
+        self.grid.apply_style(style, columns=style.colunas, zoom=self._zoom)
+        self.archive_grid.apply_style(style, zoom=self._zoom)
         bg = style.cor_fundo or self.pal.panel_bg
         self.active_box.setStyleSheet(
             f"QFrame#activebox {{ background: {bg}; border: 1px solid {self.pal.border};"
@@ -903,6 +934,8 @@ class ConfigWindow(QWidget):
         self.archive_grid.set_tiles([self._tile(i, bad, dups, counts) for i in shown], sel,
                                     self.cur)
         self.empty_label.setVisible(not act)
+        if self.zoom_fit_btn.isChecked():
+            QTimer.singleShot(0, self._zoom_fit)        # o número de linhas pode mudar
         self.grid.setVisible(bool(act))
         self.active_title.setText(tr("active.title", n=len(act)))
         self.archive_title.setText(tr("archive.title", n=len(arch)))
@@ -1280,8 +1313,9 @@ class ConfigWindow(QWidget):
         """Macros largadas numa área (Ativo ou Arquivo), na posição indicada.
 
         * ``anchor``/``after``: inserir antes/depois desse item (-1 = no fim);
-        * ``space``: largou-se um único item sobre um espaço vazio da mesma
-          área — trocam de lugar.
+        * ``space``: item com que trocar de lugar — um espaço vazio da mesma
+          área, ou uma macro (também da outra área) em cujo centro se largou
+          uma única macro.
         Ao passar do Arquivo para Ativo, um conflito de tecla pede
         confirmação (como «Restaurar»). Grava logo a seguir."""
         if not self.ms:
@@ -1294,11 +1328,18 @@ class ConfigWindow(QWidget):
         anchor_m = self.ms.macros[anchor] if 0 <= anchor < n else None
         # troca com um espaço vazio (mesma área, um só item)
         if (0 <= space < n and len(items) == 1 and space != idxs[0]
+                and self.ms.macros[space].is_space
                 and self.ms.macros[space].arquivada == items[0].arquivada == to_archive):
             ops.swap(self.ms, idxs[0], space)
             self._select_many([ops.index_of(self.ms, items[0])])
             self._changed()
             self.flush()
+            return
+        # troca com outra macro (largada no centro dela), também entre áreas
+        if (0 <= space < n and len(items) == 1 and space != idxs[0]
+                and not self.ms.macros[space].is_space
+                and self.ms.macros[space].arquivada == to_archive):
+            self._swap_macros(items[0], self.ms.macros[space])
             return
         left_out = 0
         if to_archive:
@@ -1356,6 +1397,91 @@ class ConfigWindow(QWidget):
                              else tr(key + "_n", n=len(items)))
         if left_out:
             self.show_status(tr("status.group_key_conflict", n=left_out), error=True)
+
+    # ------------------------------------------------- zoom da pré-visualização
+    ZOOM_STEPS = (0.4, 0.5, 0.6, 0.75, 0.9, 1.0, 1.1, 1.25, 1.5, 1.75, 2.0)
+    ZOOM_MIN, ZOOM_MAX = 0.3, 2.0
+
+    def _set_zoom(self, z: float) -> None:
+        """Zoom das grelhas «Ativo» e «Arquivo» (só a pré-visualização)."""
+        z = max(self.ZOOM_MIN, min(self.ZOOM_MAX, z))
+        if abs(z - self._zoom) < 1e-3:
+            return
+        self._zoom = z
+        self.zoom_label.setText(f"{round(z * 100)} %")
+        self.zoom_out_btn.setEnabled(z > self.ZOOM_MIN + 1e-3)
+        self.zoom_in_btn.setEnabled(z < self.ZOOM_MAX - 1e-3)
+        style = self.settings.painel
+        self.grid.apply_style(style, columns=style.colunas, zoom=z)
+        self.archive_grid.apply_style(style, zoom=z)
+
+    def _zoom_step(self, direction: int) -> None:
+        """Passo seguinte (+1) ou anterior (-1); desliga o ajuste automático."""
+        self.zoom_fit_btn.setChecked(False)
+        z = self._zoom
+        if direction > 0:
+            nxt = next((s for s in self.ZOOM_STEPS if s > z + 1e-3), self.ZOOM_MAX)
+        else:
+            nxt = next((s for s in reversed(self.ZOOM_STEPS) if s < z - 1e-3), self.ZOOM_MIN)
+        self._set_zoom(nxt)
+
+    def _zoom_reset(self) -> None:
+        self.zoom_fit_btn.setChecked(False)
+        self._set_zoom(1.0)
+
+    def _zoom_fit_toggled(self, on: bool) -> None:
+        if on:
+            self._zoom_fit()
+
+    def _zoom_fit(self) -> None:
+        """Zoom que mostra a grelha «Ativo» completa na área visível."""
+        if not self.ms:
+            return
+        style = self.settings.painel
+        cell = style.tamanho_botao + style.espacamento
+        n = max(1, len(self.ms.active_indices()))
+        cols = max(1, style.colunas)
+        rows = -(-n // cols)
+        vp = self.macros_scroll.viewport()
+        # largura: margens da página, da área «Ativo» e da caixa; altura: o
+        # que está por cima da grelha (os botões e a dica por baixo podem ficar
+        # fora de vista: o que interessa é ver a grelha completa)
+        top = self.grid.mapTo(self.macros_scroll.widget(), QPoint(0, 0)).y()
+        avail_w = vp.width() - 28 - 16 - 20 - 12
+        avail_h = vp.height() - top - 10 - 8
+        if avail_w <= 0 or avail_h <= 0:
+            return
+        z = min((avail_w - 4) / (cols * cell), (avail_h - 4) / (rows * cell))
+        self._set_zoom(round(max(self.ZOOM_MIN, min(self.ZOOM_MAX, z)), 2))
+
+    def _swap_macros(self, a, b) -> None:
+        """Troca ``a`` (arrastada) com ``b``. Entre áreas, a que passa para
+        «Ativo» pode ter a tecla de outra macro ativa: pergunta como em
+        «Restaurar» (Substituir manda essa para o Arquivo; Cancelar desfaz)."""
+        ia, ib = ops.index_of(self.ms, a), ops.index_of(self.ms, b)
+        between = a.arquivada != b.arquivada
+        if not ops.swap_places(self.ms, ia, ib):
+            self.show_status(tr("status.space_not_archived"), error=True)
+            return
+        if between:
+            restored = b if a.arquivada else a        # a que ficou ativa
+            j = ops.key_conflict(self.ms, ops.index_of(self.ms, restored))
+            if j is not None:
+                other = self.ms.macros[j]
+                ok, _ = ask(self, tr("restore.title"),
+                            tr("restore.conflict", key=restored.tecla,
+                               title=restored.display_title(), other=other.display_title()),
+                            yes=tr("restore.replace"))
+                if not ok:
+                    ops.swap_places(self.ms, ops.index_of(self.ms, a), ops.index_of(self.ms, b))
+                    return
+                # a ativa em conflito vai para o Arquivo, logo a seguir à arquivada
+                archived = a if a.arquivada else b
+                ops.move_items(self.ms, [other], True, archived, True)
+        self._select_many([ops.index_of(self.ms, a)])
+        self._changed()
+        self.flush()
+        self.show_status(tr("status.swapped", a=a.display_title(), b=b.display_title()))
 
     def _archive_indices(self, idxs: list[int]) -> None:
         """Arquiva as macros ativas indicadas (botão, menu ou arrasto)."""
@@ -1450,6 +1576,11 @@ class ConfigWindow(QWidget):
         Só atuam quando o foco não está num campo de edição (aí mantêm o
         comportamento normal de texto). As teclas dos contadores também
         contam com esta janela à frente."""
+        if (e.type() == QEvent.Resize and hasattr(self, "macros_scroll")
+                and obj is self.macros_scroll.viewport()):
+            if self.zoom_fit_btn.isChecked():
+                QTimer.singleShot(0, self._zoom_fit)
+            return False
         if e.type() not in (QEvent.KeyPress, QEvent.KeyRelease) or not self.isVisible() \
                 or not self.isActiveWindow():
             return False

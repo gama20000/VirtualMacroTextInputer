@@ -224,3 +224,18 @@ def test_anular_eliminacao_retira_tecla_entretanto_usada():
     ops.delete_many(ms2, [1])
     _, lost = ops.undo_deletion(ms2, rec, global_keys=("F12",))
     assert lost == ["B"]                                     # tecla global
+
+
+def test_trocar_posicoes_tambem_entre_areas():
+    ms = mk(Macro("A", "1", "a"), Macro("B", "2", "b"), Macro("C", "3", "c"),
+            Macro("X", "", "x", arquivada=True), Macro("Y", "", "y", arquivada=True))
+    assert ops.swap_places(ms, 0, 2)                         # mesma área
+    assert [m.titulo for m in ms.macros] == ["C", "B", "A", "X", "Y"]
+    assert ops.swap_places(ms, 1, 4)                         # B ↔ Y, entre áreas
+    assert [(m.titulo, m.arquivada) for m in ms.macros] == [
+        ("C", False), ("Y", False), ("A", False), ("X", True), ("B", True)]
+    assert ops.swap_places(ms, 3, 4)                         # dentro do Arquivo
+    assert [m.titulo for m in ms.macros if m.arquivada] == ["B", "X"]
+    ms.macros.insert(0, Macro(tipo="espaco"))
+    assert not ops.swap_places(ms, 0, 4)                     # espaço não vai para o Arquivo
+    assert not ops.swap_places(ms, 2, 2)

@@ -467,6 +467,19 @@ class _TileDelegate(QStyledItemDelegate):
         return QSize(c, c)
 
 
+def _zoomed(style: PanelSettings, zoom: float) -> PanelSettings:
+    """Cópia do estilo com tamanhos multiplicados por ``zoom`` (o texto
+    acompanha, porque se mede pelo lado do botão)."""
+    if abs(zoom - 1.0) < 1e-6:
+        return style
+    z = style.clone()
+    z.tamanho_botao = max(16, round(style.tamanho_botao * zoom))
+    z.espacamento = round(style.espacamento * zoom)
+    if style.borda:
+        z.borda = max(1, round(style.borda * zoom))
+    return z
+
+
 class MacroGrid(QListWidget):
     """Grelha de macros (área Ativo ou Arquivo).
 
@@ -480,15 +493,23 @@ class MacroGrid(QListWidget):
     """
 
     # origem, índices reais arrastados, índice real da âncora (-1 = fim),
-    # depois da âncora?, índice real do espaço vazio sob o ponteiro (-1 = nenhum)
+    # depois da âncora?, índice real do item com que trocar (-1 = nenhum): um
+    # espaço vazio, ou uma macro largada no centro de outra
     dropped = Signal(object, list, int, bool, int)
     hover_changed = Signal(int)            # índice real sob o ponteiro (-1 = nenhum)
+    zoom_requested = Signal(int)           # Ctrl+roda: +1 aumenta, -1 reduz
+
+    # zona central de um botão onde largar troca de posição (frações do lado);
+    # fora dela, junto às margens, insere antes/depois como antes
+    SWAP_MARGIN = 0.25
 
     def __init__(self, pal: theme.Palette, archived: bool = False, parent=None):
         super().__init__(parent)
         self.pal = pal
         self.archived = archived
         self.style_ = PanelSettings()
+        self.base_style = self.style_          # estilo real (sem zoom)
+        self.zoom = 1.0                        # só a pré-visualização; o painel não muda
         self.columns: Optional[int] = None
         self.hovered = -1
         self.capture_hover = False
@@ -517,11 +538,18 @@ class MacroGrid(QListWidget):
     def cell(self) -> int:
         return self.style_.tamanho_botao + self.style_.espacamento
 
-    def apply_style(self, style: PanelSettings, columns: Optional[int] = None) -> None:
-        self.style_ = style
+    def apply_style(self, style: PanelSettings, columns: Optional[int] = None,
+                    zoom: Optional[float] = None) -> None:
+        """Estilo do painel; ``zoom`` amplia ou reduz só esta grelha."""
+        if zoom is not None:
+            self.zoom = zoom
+        self.base_style = style
+        self.style_ = _zoomed(style, self.zoom)
         self.columns = columns
         c = self.cell()
-        self.setGridSize(QSize(c, c))
+        if self.gridSize() != QSize(c, c):
+            self.setGridSize(QSize(c, c))
+            self.doItemsLayout()              # volta a dispor com o novo tamanho
         self.setSpacing(0)
         self.fit_size()
         self.viewport().update()
@@ -614,14 +642,27 @@ class MacroGrid(QListWidget):
         self._set_hover(-1)
         super().leaveEvent(e)
 
+    def wheelEvent(self, e):
+        if e.modifiers() & Qt.ControlModifier:      # Ctrl+roda: zoom
+            dy = e.angleDelta().y()
+            if dy:
+                self.zoom_requested.emit(1 if dy > 0 else -1)
+            e.accept()
+            return
+        super().wheelEvent(e)
+
     def mouseMoveEvent(self, e):
         if self.itemAt(e.position().toPoint()) is None:
             self._set_hover(-1)
         super().mouseMoveEvent(e)
 
     # ------------------------------------------------------ arrastar/largar
-    def _target(self, pos: QPoint):
-        """(âncora real, depois?, espaço real, retângulo da linha)"""
+    def _target(self, pos: QPoint, dragged: Optional[list] = None):
+        """(âncora real, depois?, item com que trocar, retângulo a desenhar)
+
+        * sobre um espaço vazio: troca (como antes);
+        * no centro de outra macro, com uma só macro arrastada: troca;
+        * junto às margens: insere antes/depois (linha)."""
         it = self.itemAt(pos)
         if it is None:
             # depois do último item da linha mais próxima, ou fim da grelha
@@ -629,6 +670,11 @@ class MacroGrid(QListWidget):
         rect = self.visualItemRect(it)
         real = it.data(INDEX_ROLE)
         if it.data(KIND_ROLE) == "espaco":
+            return real, False, real, rect
+        dragged = dragged or []
+        mx, my = rect.width() * self.SWAP_MARGIN, rect.height() * self.SWAP_MARGIN
+        centre = QRectF(rect).adjusted(mx, my, -mx, -my)
+        if len(dragged) == 1 and dragged[0] != real and centre.contains(QPointF(pos)):
             return real, False, real, rect
         after = pos.x() > rect.center().x()
         x = rect.right() if after else rect.left()
@@ -650,7 +696,8 @@ class MacroGrid(QListWidget):
         if not self._accepts(e):
             e.ignore()
             return
-        anchor, after, space, line = self._target(e.position().toPoint())
+        anchor, after, space, line = self._target(e.position().toPoint(),
+                                                  e.source().selected_real())
         self._drop_line = line
         self._drop_space = space
         self.viewport().update()
@@ -670,7 +717,7 @@ class MacroGrid(QListWidget):
             return
         src = e.source()
         idxs = src.selected_real()
-        anchor, after, space, _ = self._target(e.position().toPoint())
+        anchor, after, space, _ = self._target(e.position().toPoint(), idxs)
         e.setDropAction(Qt.CopyAction)
         e.accept()
         # depois de o arrasto terminar (a origem ainda está no QDrag.exec)

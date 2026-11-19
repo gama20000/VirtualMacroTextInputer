@@ -194,3 +194,12 @@ Antes de começar: na configuração de teste, a tecla de suspensão anterior
 | 97 | Suspenda (Shift+Esc) e prima ⏭; depois, ativo mas com uma janela fora do âmbito, prima ⏭ | o leitor de música muda de faixa nos dois casos | ☐ |
 | 98 | Atribua «Faixa seguinte» a uma segunda macro | aviso «já atribuída»; nada muda | ☐ |
 | 99 | Elimine duas macros (uma ativa, uma arquivada), Ctrl+Z, Ctrl+Y, Ctrl+Z; depois escreva no campo Título e prima Ctrl+Z | voltam aos mesmos sítios com as mesmas teclas; Ctrl+Y elimina-as de novo; no campo, Ctrl+Z só desfaz o texto | ☐ |
+
+## Zoom da pré-visualização e troca de posição
+
+| # | Ação | Esperado | OK |
+|---|---|---|---|
+| 100 | *Macros*: −, +, clicar na percentagem; Ctrl+roda do rato sobre a grelha | as pré-visualizações Ativo e Arquivo reduzem e aumentam (30–200 %); a percentagem volta a 100 %; o painel real mantém o tamanho | ☐ |
+| 101 | Com muitas macros, subir o divisor por cima do editor, clicar em **Ajustar** e redimensionar a janela | a grelha Ativo completa cabe na área visível e continua a caber ao redimensionar; −/+ desligam o Ajustar | ☐ |
+| 102 | A 50 % e a 150 %: arrastar uma macro para o centro de outra, junto à margem e para um espaço vazio | centro: contorno tracejado e trocam; margem: linha azul e insere; espaço vazio: trocam | ☐ |
+| 103 | Arrastar uma macro ativa para o centro de uma arquivada com a tecla de outra ativa | confirmação como em «Restaurar»; Cancelar não muda nada; Substituir troca-as e manda a que estava em conflito para o Arquivo | ☐ |

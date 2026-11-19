@@ -222,6 +222,20 @@ def swap(ms: MacroSet, a: int, b: int) -> None:
         ms.macros[a], ms.macros[b] = ms.macros[b], ms.macros[a]
 
 
+def swap_places(ms: MacroSet, a: int, b: int) -> bool:
+    """Troca as posições de duas macros, também entre Ativo e Arquivo: cada
+    uma fica no lugar (e na área) da outra. Um espaço vazio não vai para o
+    Arquivo: nesse caso não troca e devolve ``False``. Não verifica conflitos
+    de tecla (ver ``key_conflict``)."""
+    ma, mb = ms.macros[a], ms.macros[b]
+    if a == b or (ma.is_space and mb.arquivada) or (mb.is_space and ma.arquivada):
+        return False
+    ma.arquivada, mb.arquivada = mb.arquivada, ma.arquivada
+    ms.macros[a], ms.macros[b] = mb, ma
+    normalize_order(ms)
+    return True
+
+
 # ---------------------------------------------------------------- reordenar
 def reorder_group(ms: MacroSet, archived: bool, order: list[int]) -> None:
     """Aplica uma nova ordem a parte de um grupo.

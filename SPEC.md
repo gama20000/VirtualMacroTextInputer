@@ -91,11 +91,18 @@ has and an on-screen panel, with no extra hardware.
   The Active area uses the panel's look (dimensions, colours, title and key
   positions, spacing, number of columns, empty spaces) and is centred; if it
   does not fit, it can be scrolled without cutting macros.
+- The Active and Archive preview in «Macros» can be zoomed (−, +, the
+  percentage resets to 100 %, «Fit» fits the whole Active grid in the visible
+  area and follows resizes; also Ctrl+mouse wheel) without changing the real
+  panel; a movable divider gives the grids more height. Drag and drop works at
+  every zoom level.
 - Dragging reorganises within each area and moves between Active and Archive
   in both directions. On drop, the item lands at the indicated position, before
-  or after the item under the pointer, not at the end. Dropping on an empty
-  space swaps the button with the space. The interface updates and saves
-  immediately. The key never changes with the position; restoring by dragging
+  or after the item under the pointer (near its edge), not at the end. Dropping
+  on an empty space swaps the button with the space. Dropping a single macro on
+  the centre of another swaps the two, also between Active and Archive (a key
+  conflict for the one that becomes active asks for the same confirmation as
+  restoring). The interface updates and saves immediately. The key never changes with the position; restoring by dragging
   with the key in use asks for the same confirmation.
 - Editor for title, key, text, repetitions and interval; automatic save when
   valid; errors in red (including key conflicts); duplicate content (same

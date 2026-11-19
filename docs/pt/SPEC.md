@@ -92,10 +92,18 @@ no ecrã, sem hardware adicional.
   área Ativo usa o mesmo aspeto do painel (dimensões, cores, posições do título
   e da tecla, espaçamento, número de colunas, espaços vazios) e fica centrada;
   se não couber, pode ser percorrida sem cortar macros.
+- A pré-visualização Ativo e Arquivo em «Macros» tem zoom (−, +, a
+  percentagem repõe 100 %, «Ajustar» encaixa a grelha Ativo completa na área
+  visível e acompanha o redimensionamento; também Ctrl+roda do rato) sem mudar
+  o painel real; um divisor móvel dá mais altura às grelhas. Arrastar e largar
+  funciona em todos os níveis de zoom.
 - Arrastar reorganiza dentro de cada área e move entre Ativo e Arquivo nos dois
   sentidos. Ao largar, o item fica na posição indicada, antes ou depois do item
-  sob o ponteiro, e não no fim. Largar sobre um espaço vazio troca o botão com
-  o espaço. A interface atualiza-se e grava logo. A tecla nunca muda com a
+  sob o ponteiro (junto à margem), e não no fim. Largar sobre um espaço vazio
+  troca o botão com o espaço. Largar uma só macro no centro de outra troca as
+  duas, também entre Ativo e Arquivo (um conflito de tecla da que passa a ativa
+  pede a mesma confirmação que restaurar). A interface atualiza-se e grava
+  logo. A tecla nunca muda com a
   posição; restaurar por arrasto com a tecla ocupada pede a mesma confirmação.
 - Editor de título, tecla, texto, repetições e intervalo; gravação automática
   quando válido; erros a vermelho (incluindo conflito de tecla); conteúdo
