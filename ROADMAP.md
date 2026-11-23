@@ -8,14 +8,17 @@ See [SPEC.md](SPEC.md#destination).
 
 ## Current state
 
-The code is at version 0.5 and the program is now called Virtual Macro Text
+The code is at version 0.6 and the program is now called Virtual Macro Text
 Inputer. Phase 1 (independent review) and Phase 2 (version 0.4, including the
-panel's own title bar) are complete. Since then, six Codex reviews have been
-addressed, and version 0.5 (counter progress and reset while held, insertion
-after the selection, panel rows with pages, media keys, undoing a deletion)
-is implemented; 187 automated tests pass (one skipped outside Windows). Manual validation on Windows is still
-missing (Phase 3, paused since 12-11-2026, with 16 steps checked and 3
-partial; steps 62–89 cover 0.4 and the rename, steps 90–99 cover 0.5). The
+panel's own title bar) are complete. Since then, seven Codex reviews have been
+addressed; version 0.5 (counter progress and reset while held, insertion after
+the selection, panel rows with pages, media keys, undoing a deletion) and
+version 0.6 (buttons that send media keys, with icons; preview zoom; swapping
+by dropping on a button's centre; export with the set's current name;
+Automatic theme by default) are implemented; 200 automated tests pass (one
+skipped outside Windows). Manual validation on Windows is still missing
+(Phase 3, paused since 12-11-2026, with 16 steps checked and 3 partial; steps
+62–89 cover 0.4 and the rename, steps 90–103 cover 0.5 and 0.6). The
 repository is on the user's Forgejo (private, through Tailscale) and public on
 GitHub; releases with a single `.exe` are built by GitHub Actions (Phase 4).
 

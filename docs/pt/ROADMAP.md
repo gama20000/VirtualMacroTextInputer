@@ -8,16 +8,19 @@ Ver [SPEC.md](SPEC.md#destino).
 
 ## Estado atual
 
-O código está na versão 0.5 e o programa chama-se agora Virtual Macro Text
+O código está na versão 0.6 e o programa chama-se agora Virtual Macro Text
 Inputer. A Fase 1 (revisão independente) e a Fase 2 (versão 0.4, incluindo a
-barra de título própria do painel) estão concluídas. Depois disso, seis
-revisões do Codex foram corrigidas e a versão 0.5 (progresso e reposição do
+barra de título própria do painel) estão concluídas. Depois disso, sete
+revisões do Codex foram corrigidas; a versão 0.5 (progresso e reposição do
 contador com a tecla premida, inserção a seguir à seleção, linhas do painel
-com páginas, teclas multimédia, anular a eliminação) está implementada; 187
-testes automáticos passam (um ignorado fora do Windows). Falta a
-validação manual no Windows (Fase 3, em pausa desde 12-11-2026, com 16 passos
-verificados e 3 parciais; os passos 62–89 cobrem a 0.4 e a mudança de nome,
-os passos 90–99 cobrem a 0.5). O
+com páginas, teclas multimédia, anular a eliminação) e a versão 0.6 (botões
+que enviam teclas multimédia, com ícones; zoom da pré-visualização; troca ao
+largar no centro de um botão; exportar com o nome atual do conjunto; tema
+Automático por omissão) estão implementadas; 200 testes automáticos passam
+(um ignorado fora do Windows). Falta a validação manual no Windows (Fase 3, em
+pausa desde 12-11-2026, com 16 passos verificados e 3 parciais; os passos
+62–89 cobrem a 0.4 e a mudança de nome, os passos 90–103 cobrem a 0.5 e a
+0.6). O
 repositório está no Forgejo do utilizador (privado, pelo Tailscale) e é
 público no GitHub; as releases com um só `.exe` são geradas pelo GitHub
 Actions (Fase 4).
