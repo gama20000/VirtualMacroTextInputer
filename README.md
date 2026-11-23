@@ -12,7 +12,7 @@
   <img src="docs/images/panel.png" alt="Floating panel in the Night theme, with its own title bar" width="340">
 </p>
 
-A software macro pad for Windows. Ordinary keyboard keys (by default 1–4 on the top row) and an optional floating panel type predefined text into the application in the foreground. Pressing **1** types `3E03305`, and the 1 itself does not appear.
+A software macro pad for Windows. Ordinary keyboard keys (by default 1–4 on the top row) and an optional floating panel type predefined text into the application in the foreground. Pressing **1** types `Greetings`, and the 1 itself does not appear.
 
 ## Main features
 
